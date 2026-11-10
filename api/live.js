@@ -2,11 +2,11 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   
   try {
-    // Intentamos consultar la raíz del servidor o un endpoint alternativo común
-    const response = await fetch('https://br.assettohosting.com:10314/', {
+    // Apuntamos al endpoint de la API interna del servidor en lugar de la raíz HTML
+    const response = await fetch('https://br.assettohosting.com:10314/api/v1/session', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json, text/html'
+        'Accept': 'application/json'
       }
     });
 
@@ -14,18 +14,10 @@ export default async function handler(req, res) {
       throw new Error(`El servidor respondió con status: ${response.status}`);
     }
 
-    const contentType = response.headers.get('content-type');
-    let data;
-    
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = { text: await response.text() };
-    }
-
+    const data = await response.json();
     return res.status(200).json(data);
 
   } catch (error) {
-    return res.status(500).json({ error: 'No se pudo conectar con el servidor', detalle: error.message });
+    return res.status(500).json({ error: 'No se pudo conectar con la API de Assetto', detalle: error.message });
   }
 }
