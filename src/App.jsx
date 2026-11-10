@@ -197,7 +197,6 @@ export default function App() {
     if (!error) cargarAlbumes();
   };
 
-  // SUBIDA MÚLTIPLE DE FOTOS AL ÁLBUM (CORREGIDA)
   const handleSubirFotosMultiples = async (e) => {
     try {
       const files = Array.from(e.target.files);
@@ -461,7 +460,7 @@ export default function App() {
         
         {/* 1. INICIO */}
         {pestanaActiva === 'inicio' && (
-          <div className="min-h-[75vh] flex items-center justify-center">
+          <div className="min-h-[75vh] flex flex-col items-center justify-center">
             <div className="max-w-4xl mx-auto text-center space-y-6 py-12">
               <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
                 Temporada Oficial 2026 • Espíndola Competición {esAdmin && '• Modo Admin'}
@@ -472,7 +471,7 @@ export default function App() {
               </h1>
 
               {/* BOTONES SOCIALES */}
-              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
                 <a
                   href={config.instagram || '#'}
                   target="_blank"
@@ -510,8 +509,22 @@ export default function App() {
                 </a>
               </div>
 
+              {/* SECCIÓN DE SPONSORS CON SOMBRADO NEGRO */}
+              <div className="pt-8 flex flex-col items-center justify-center space-y-3">
+                <span className="font-wrc text-sm text-neutral-300 tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  Sponsors:
+                </span>
+                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)] opacity-95">
+                  <img 
+                    src="https://files.catbox.moe/97gq03.svg" 
+                    alt="Pack Logos Sponsors" 
+                    className="max-h-14 md:max-h-16 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" 
+                  />
+                </div>
+              </div>
+
               {esAdmin && (
-                <div className="pt-8 max-w-xl mx-auto">
+                <div className="pt-4 max-w-xl mx-auto">
                   {!editandoConfig ? (
                     <button
                       onClick={() => setEditandoConfig(true)}
