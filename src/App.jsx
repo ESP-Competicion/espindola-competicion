@@ -461,7 +461,7 @@ export default function App() {
         {/* 1. INICIO */}
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[75vh] flex flex-col items-center justify-center">
-            <div className="max-w-5xl mx-auto text-center space-y-6 py-12">
+            <div className="max-w-xl mx-auto text-center space-y-6 py-12">
               <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
                 Temporada Oficial 2026 • Espíndola Competición {esAdmin && '• Modo Admin'}
               </span>
@@ -509,18 +509,15 @@ export default function App() {
                 </a>
               </div>
 
-              {/* SECCIÓN DE SPONSORS DISCRETOS EN UNA SOLA LÍNEA */}
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-3 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)] max-w-xl mx-auto opacity-90">
-                <span className="font-wrc text-xs text-neutral-400 tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                  Sponsors:
-                </span>
-                <div className="flex flex-wrap items-center justify-center gap-4">
-                  <img src="https://files.catbox.moe/bqghq5.png" alt="Sponsor 1" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/ft0x4k.png" alt="Sponsor 2" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/1dri8l.png" alt="Sponsor 3" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/p7aax8.png" alt="Sponsor 4" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/gc66x8.png" alt="Sponsor 5" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/89s38r.png" alt="Sponsor 6" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
+              {/* SECCIÓN DE SPONSORS ULTRA SUTIL Y COMPACTA */}
+              <div className="pt-3 flex items-center justify-center gap-2 filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)] max-w-lg mx-auto opacity-85">
+                <div className="flex items-center gap-2.5">
+                  <img src="https://files.catbox.moe/bqghq5.png" alt="Sponsor 1" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/ft0x4k.png" alt="Sponsor 2" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/1dri8l.png" alt="Sponsor 3" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/p7aax8.png" alt="Sponsor 4" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/gc66x8.png" alt="Sponsor 5" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/89s38r.png" alt="Sponsor 6" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
                 </div>
               </div>
 
