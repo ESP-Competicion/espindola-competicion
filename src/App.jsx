@@ -84,28 +84,43 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* ----------------- ENCABEZADO FLOTANTE GLASSMORPHISM REAL ----------------- */}
-      <header className="sticky top-0 z-50 bg-black/30 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-lg">
+      {/* Importación directa de la tipografía WRC Clean Negrita (Barlow Condensed) */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700&display=swap');
+        
+        .font-wrc {
+          font-family: 'Barlow Condensed', sans-serif !important;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          font-weight: 800;
+        }
+      `}</style>
+
+      {/* ----------------- ENCABEZADO 100% FLOTANTE Y TRANSLÚCIDO REAL ----------------- */}
+      <header 
+        className="sticky top-0 z-50 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-xl"
+        style={{ backgroundColor: 'rgba(5, 5, 5, 0.35)' }}
+      >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
           {/* Logo y Nombre de la Escudería */}
           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setPestanaActiva('inicio')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center font-black text-black text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center font-wrc font-black text-black text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition">
               E
             </div>
             <div>
-              <h1 className="font-wrc text-lg md:text-xl font-extrabold tracking-wider text-white">ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span></h1>
+              <h1 className="font-wrc text-xl font-black tracking-wider text-white">ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span></h1>
               <p className="text-[10px] tracking-widest text-neutral-400 font-mono uppercase">Official WRC Hub</p>
             </div>
           </div>
 
           {/* Menú de Navegación Central */}
-          <nav className="flex items-center gap-1 bg-white/5 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto">
+          <nav className="flex items-center gap-1 p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
             <button
               onClick={() => setPestanaActiva('inicio')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
+              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'inicio' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -113,7 +128,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setPestanaActiva('livetiming')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
+              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -121,7 +136,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setPestanaActiva('eventos')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
+              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'eventos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -129,7 +144,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setPestanaActiva('fama')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
+              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'fama' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -140,12 +155,12 @@ export default function App() {
           {/* Bloque de Usuario / Perfil a la derecha */}
           <div className="flex items-center gap-3">
             {usuario ? (
-              <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-2xl shadow-inner">
+              <div className="flex items-center gap-3 border border-white/10 px-4 py-1.5 rounded-2xl shadow-inner" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
                 <button 
                   onClick={() => setMostrarPerfilModal(true)}
                   className="flex items-center gap-2 text-left group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-neutral-800 border border-amber-500/50 flex items-center justify-center overflow-hidden font-bold text-amber-400 text-xs">
+                  <div className="w-8 h-8 rounded-full bg-neutral-800 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc font-bold text-amber-400 text-xs">
                     {perfil?.avatar_url ? (
                       <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -167,7 +182,7 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => setMostrarPerfilModal(true)}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-extrabold text-sm px-5 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 uppercase tracking-wider"
+                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-5 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
               >
                 Acceder / Registrarse
               </button>
@@ -179,19 +194,19 @@ export default function App() {
 
       {/* ----------------- HERO SECTION CON CARRUSEL DE FONDOS DE RALLY ----------------- */}
       {pestanaActiva === 'inicio' && (
-        <div className="relative min-h-[82vh] flex items-center justify-center overflow-hidden">
+        <div className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
           {fotosRally.map((foto, index) => (
             <div
               key={index}
               className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-                index === fondoActual ? 'opacity-55 scale-105' : 'opacity-0 scale-100'
+                index === fondoActual ? 'opacity-50 scale-105' : 'opacity-0 scale-100'
               }`}
               style={{ backgroundImage: `url(${foto})` }}
             />
           ))}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/40 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/70 via-transparent to-[#030303]/70"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/70 via-transparent to-[#050505]/70"></div>
 
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6 py-20">
             <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md">
@@ -209,13 +224,13 @@ export default function App() {
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
               <button
                 onClick={() => setPestanaActiva('livetiming')}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
+                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
               >
                 🏁 Ver Live Timing
               </button>
               <button
                 onClick={() => setPestanaActiva('eventos')}
-                className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20 font-wrc font-bold text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
               >
                 📅 Inscribirse a Fechas
               </button>
@@ -235,7 +250,7 @@ export default function App() {
               
               <div className="flex flex-wrap justify-between items-center mb-6 border-b border-neutral-800 pb-4 gap-4">
                 <div>
-                  <h2 className="font-wrc text-3xl font-extrabold text-amber-400 tracking-wide">Live Timing & Telemetría - Servidor Oficial</h2>
+                  <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">Live Timing & Telemetría - Servidor Oficial</h2>
                   <p className="text-neutral-400 text-sm font-sans">Monitoreo en tiempo real de tramos y clasificaciones.</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -246,7 +261,7 @@ export default function App() {
                     href="https://br.assettohosting.com:10314/live-timing" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="font-wrc bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-sm tracking-wider font-bold px-4 py-2 rounded-xl border border-white/10 transition flex items-center gap-1.5 shadow-md"
+                    className="font-wrc bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-sm tracking-wider px-4 py-2 rounded-xl border border-white/10 transition flex items-center gap-1.5 shadow-md"
                   >
                     <span>↗</span> Pantalla Completa
                   </a>
@@ -269,11 +284,11 @@ export default function App() {
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="font-wrc text-4xl font-black text-amber-400 tracking-wide">Próximos Eventos y Rallies</h2>
+                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Próximos Eventos y Rallies</h2>
                 <p className="text-neutral-400 text-sm font-sans">Inscribite a las fechas oficiales del campeonato.</p>
               </div>
               {esAdmin && (
-                <span className="font-wrc bg-amber-500/20 text-amber-400 text-xs tracking-wider font-bold px-3 py-1.5 rounded-lg border border-amber-500/40">
+                <span className="font-wrc bg-amber-500/20 text-amber-400 text-xs tracking-wider px-3 py-1.5 rounded-lg border border-amber-500/40">
                   Modo Administrador Activo
                 </span>
               )}
@@ -281,7 +296,7 @@ export default function App() {
 
             {esAdmin && (
               <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
-                <h3 className="font-wrc text-xl font-extrabold text-amber-400 mb-4 tracking-wider">Crear Nueva Fecha de Campeonato</h3>
+                <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider">Crear Nueva Fecha de Campeonato</h3>
                 <form onSubmit={handleCrearEvento} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <input 
                     type="text" 
@@ -305,7 +320,7 @@ export default function App() {
                   />
                   <button 
                     type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm rounded-xl py-2.5 transition shadow-lg shadow-amber-500/20 tracking-wider"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc uppercase text-sm rounded-xl py-2.5 transition shadow-lg shadow-amber-500/20 tracking-wider"
                   >
                     Publicar Evento
                   </button>
@@ -319,13 +334,13 @@ export default function App() {
                   <div className="absolute top-4 right-4 text-amber-400 font-mono text-xs bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                     {ev.fecha}
                   </div>
-                  <h3 className="font-wrc text-3xl font-extrabold text-white mb-2 group-hover:text-amber-400 transition">{ev.titulo}</h3>
+                  <h3 className="font-wrc text-3xl text-white mb-2 group-hover:text-amber-400 transition">{ev.titulo}</h3>
                   <p className="text-neutral-400 text-sm mb-4 font-sans">📍 Tramo: <span className="text-white font-medium">{ev.circuito}</span></p>
                   <div className="flex justify-between items-center pt-4 border-t border-neutral-800">
                     <span className="text-xs text-neutral-400 font-medium font-sans">Pilotos Inscriptos: <strong className="text-amber-400">{ev.inscriptos}</strong></span>
                     <button 
                       onClick={() => alert(`¡Te has inscripto exitosamente a ${ev.titulo}!`)}
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-bold text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider"
                     >
                       Inscribirse Ahora
                     </button>
@@ -340,31 +355,31 @@ export default function App() {
         {pestanaActiva === 'fama' && (
           <div className="space-y-6">
             <div>
-              <h2 className="font-wrc text-4xl font-black text-amber-400 tracking-wide">Salón de la Fama - Espindola Competición</h2>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Espindola Competición</h2>
               <p className="text-neutral-400 text-sm font-sans">Historial de títulos, podios y campeonatos obtenidos por nuestros pilotos.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-amber-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-amber-500 text-black font-wrc font-black text-xs px-4 py-1 rounded-bl-xl tracking-wider">CAMPEÓN 2026</div>
+                <div className="absolute top-0 right-0 bg-amber-500 text-black font-wrc text-xs px-4 py-1 rounded-bl-xl tracking-wider">CAMPEÓN 2026</div>
                 <div className="text-4xl mb-3">🥇</div>
-                <h3 className="font-wrc text-2xl font-extrabold text-white">MIT CUP Championship</h3>
+                <h3 className="font-wrc text-2xl text-white">MIT CUP Championship</h3>
                 <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Piloto: Lucas Negri</p>
                 <p className="text-neutral-400 text-xs mt-3 font-sans">Categoría Rally4 - Renault Clio Rally5</p>
               </div>
 
               <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-wrc font-bold text-xs px-4 py-1 rounded-bl-xl border-l border-b border-neutral-700 tracking-wider">PODIO</div>
+                <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-1 rounded-bl-xl border-l border-b border-neutral-700 tracking-wider">PODIO</div>
                 <div className="text-4xl mb-3">🥉</div>
-                <h3 className="font-wrc text-2xl font-extrabold text-white">SIMRALLY Series</h3>
+                <h3 className="font-wrc text-2xl text-white">SIMRALLY Series</h3>
                 <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Piloto: Pedro Laninha</p>
                 <p className="text-neutral-400 text-xs mt-3 font-sans">Categoría Rally2 - Peugeot 208</p>
               </div>
 
               <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-wrc font-bold text-xs px-4 py-1 rounded-bl-xl tracking-wider">TOP 2 MUNDIAL</div>
+                <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-1 rounded-bl-xl tracking-wider">TOP 2 MUNDIAL</div>
                 <div className="text-4xl mb-3">🌍</div>
-                <h3 className="font-wrc text-2xl font-extrabold text-white">Greece Gravel Challenge</h3>
+                <h3 className="font-wrc text-2xl text-white">Greece Gravel Challenge</h3>
                 <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Equipo Espíndola</p>
                 <p className="text-neutral-400 text-xs mt-3 font-sans">Setup por defecto - Etapa extrema</p>
               </div>
