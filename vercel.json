@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/assetto/:path*",
+      "destination": "http://br.assettohosting.com:10314/api/v1/:path*"
+    }
+  ]
+}
