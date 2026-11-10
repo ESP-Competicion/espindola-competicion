@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import Navbar from './Navbar';
+import PerfilModal from './PerfilModal';
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
@@ -9,6 +11,7 @@ export default function App() {
   
   // Modales
   const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
+  const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
   const [esRegistro, setEsRegistro] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -93,57 +96,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans relative overflow-x-hidden">
-      {/* Header */}
-      <header className="relative z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-black font-black text-xl">
-            E
-          </div>
-          <h1 className="text-xl font-black tracking-wider uppercase text-amber-500">
-            Espíndola Competición
-          </h1>
-        </div>
-
-        {/* Menú de Navegación */}
-        <nav className="flex gap-2">
-          <button 
-            onClick={() => setTab('tiempos')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === 'tiempos' ? 'bg-amber-500 text-black' : 'hover:bg-neutral-800'}`}
-          >
-            Tiempos en Vivo
-          </button>
-          <button 
-            onClick={() => setTab('campeonatos')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === 'campeonatos' ? 'bg-amber-500 text-black' : 'hover:bg-neutral-800'}`}
-          >
-            Campeonatos
-          </button>
-        </nav>
-
-        {/* Zona de Usuario */}
-        <div>
-          {usuario ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-neutral-300">
-                🏎️ {perfil?.nombre_piloto || usuario.email}
-              </span>
-              <button 
-                onClick={handleLogout}
-                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs text-red-400 rounded-md border border-neutral-700 transition"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          ) : (
-            <button 
-              onClick={() => { setEsRegistro(false); setMostrarAuthModal(true); }}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-lg transition"
-            >
-              Iniciar Sesión / Registrarse
-            </button>
-          )}
-        </div>
-      </header>
+      {/* Componente Encabezado / Navbar */}
+      <Navbar 
+        usuario={usuario}
+        perfil={perfil}
+        tab={tab}
+        setTab={setTab}
+        onOpenAuth={() => { setEsRegistro(false); setMostrarAuthModal(true); }}
+        onOpenPerfil={() => setMostrarPerfilModal(true)}
+        onLogout={handleLogout}
+      />
 
       {/* Contenido Principal */}
       <main className="relative z-10 max-w-6xl mx-auto p-6">
@@ -300,6 +262,16 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Perfil de Piloto */}
+      {mostrarPerfilModal && usuario && (
+        <PerfilModal 
+          usuario={usuario}
+          perfilActual={perfil}
+          onClose={() => setMostrarPerfilModal(false)}
+          onPerfilGuardado={() => cargarPerfil(usuario.id)}
+        />
       )}
     </div>
   );
