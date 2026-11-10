@@ -84,21 +84,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen bg-[#030303] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* Estilos inyectados para la tipografía WRC Clean Negrita */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700&display=swap');
-        
-        .font-wrc {
-          font-family: 'Barlow Condensed', sans-serif;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-      `}</style>
-
-      {/* ----------------- ENCABEZADO 100% TRANSLÚCIDO / GLASSMORPHISM ----------------- */}
-      <header className="sticky top-0 z-50 bg-neutral-950/10 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-xl shadow-black/20">
+      {/* ----------------- ENCABEZADO FLOTANTE GLASSMORPHISM REAL ----------------- */}
+      <header className="sticky top-0 z-50 bg-black/30 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
           {/* Logo y Nombre de la Escudería */}
@@ -113,11 +102,11 @@ export default function App() {
           </div>
 
           {/* Menú de Navegación Central */}
-          <nav className="flex items-center gap-1 bg-neutral-900/40 backdrop-blur-lg p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto">
+          <nav className="flex items-center gap-1 bg-white/5 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto">
             <button
               onClick={() => setPestanaActiva('inicio')}
               className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
-                pestanaActiva === 'inicio' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-neutral-800/40'
+                pestanaActiva === 'inicio' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
               Inicio
@@ -125,7 +114,7 @@ export default function App() {
             <button
               onClick={() => setPestanaActiva('livetiming')}
               className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
-                pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-neutral-800/40'
+                pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
               Live Timing
@@ -133,7 +122,7 @@ export default function App() {
             <button
               onClick={() => setPestanaActiva('eventos')}
               className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
-                pestanaActiva === 'eventos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-neutral-800/40'
+                pestanaActiva === 'eventos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
               Eventos
@@ -141,7 +130,7 @@ export default function App() {
             <button
               onClick={() => setPestanaActiva('fama')}
               className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
-                pestanaActiva === 'fama' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-neutral-800/40'
+                pestanaActiva === 'fama' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
               Salón de la Fama
@@ -151,7 +140,7 @@ export default function App() {
           {/* Bloque de Usuario / Perfil a la derecha */}
           <div className="flex items-center gap-3">
             {usuario ? (
-              <div className="flex items-center gap-3 bg-neutral-900/40 backdrop-blur-lg border border-white/10 px-4 py-1.5 rounded-2xl shadow-inner">
+              <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-2xl shadow-inner">
                 <button 
                   onClick={() => setMostrarPerfilModal(true)}
                   className="flex items-center gap-2 text-left group"
@@ -169,7 +158,7 @@ export default function App() {
                 </button>
                 <button 
                   onClick={handleLogout}
-                  className="font-wrc text-xs tracking-wider text-neutral-400 hover:text-red-400 transition pl-2 border-l border-neutral-800"
+                  className="font-wrc text-xs tracking-wider text-neutral-400 hover:text-red-400 transition pl-2 border-l border-white/10"
                   title="Cerrar sesión"
                 >
                   Salir
@@ -195,14 +184,14 @@ export default function App() {
             <div
               key={index}
               className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-                index === fondoActual ? 'opacity-50 scale-105' : 'opacity-0 scale-100'
+                index === fondoActual ? 'opacity-55 scale-105' : 'opacity-0 scale-100'
               }`}
               style={{ backgroundImage: `url(${foto})` }}
             />
           ))}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/80 via-transparent to-neutral-950/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/70 via-transparent to-[#030303]/70"></div>
 
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6 py-20">
             <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md">
@@ -226,7 +215,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setPestanaActiva('eventos')}
-                className="bg-neutral-900/40 backdrop-blur-md hover:bg-neutral-800/60 text-white border border-white/10 font-wrc font-bold text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20 font-wrc font-bold text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
               >
                 📅 Inscribirse a Fechas
               </button>
