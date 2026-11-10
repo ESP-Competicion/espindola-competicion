@@ -4,9 +4,10 @@ import PerfilModal from './PerfilModal';
 
 // Array de fotos de fondo estilo WRC para el carrusel dinámico
 const fotosRally = [
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=1920&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=1920&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1541348263662-e0626628dcfc?q=80&w=1920&auto=format&fit=crop'
+  'https://files.catbox.moe/t5ffu8.png',
+  'https://files.catbox.moe/pfh5gw.png',
+  'https://files.catbox.moe/t5ffu8.png',
+  'https://files.catbox.moe/jtgf56.png'
 ];
 
 export default function App() {
