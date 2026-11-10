@@ -24,7 +24,21 @@ export default function App() {
 
   const [fondoActual, setFondoActual] = useState(0);
 
-  // ESTADOS DE EVENTOS
+  // CONFIGURACIÓN SOCIAL Y HISTORIA
+  const [config, setConfig] = useState({
+    instagram: 'https://instagram.com',
+    discord: 'https://discord.gg',
+    tiktok: 'https://tiktok.com',
+    historia_texto: 'Espíndola Competición nació de la pasión por el rally de alta competencia y la simulación deportiva. Con dedicación en cada fecha, combinamos telemetría, puesta a punto y constancia para estar siempre peleando la punta del campeonato.',
+    historia_imagen: 'https://files.catbox.moe/t5ffu8.png'
+  });
+  const [editandoConfig, setEditandoConfig] = useState(false);
+
+  // GALERÍA DE FOTOS
+  const [fotosGaleria, setFotosGaleria] = useState([]);
+  const [subiendoFotoDirecta, setSubiendoFotoDirecta] = useState(false);
+
+  // EVENTOS
   const [eventos, setEventos] = useState([]);
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
@@ -35,7 +49,7 @@ export default function App() {
     pais_origen: 'Argentina 🇦🇷'
   });
 
-  // ESTADO MODAL INSCRIPCION
+  // MODAL INSCRIPCIÓN
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [modoModalInscripcion, setModoModalInscripcion] = useState('formulario');
 
@@ -61,6 +75,8 @@ export default function App() {
     }
 
     obtenerDatosSesion();
+    cargarConfiguracion();
+    cargarGaleria();
     cargarEventos();
     cargarSalónDeLaFama();
 
@@ -80,21 +96,23 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function cargarEventos() {
-    const { data } = await supabase
-      .from('eventos')
-      .select('*')
-      .order('created_at', { ascending: false });
+  async function cargarConfiguracion() {
+    const { data } = await supabase.from('configuracion_equipo').select('*').eq('id', 1).single();
+    if (data) setConfig(data);
+  }
 
+  async function cargarGaleria() {
+    const { data } = await supabase.from('galeria').select('*').order('created_at', { ascending: false });
+    if (data) setFotosGaleria(data);
+  }
+
+  async function cargarEventos() {
+    const { data } = await supabase.from('eventos').select('*').order('created_at', { ascending: false });
     if (data) setEventos(data);
   }
 
   async function cargarSalónDeLaFama() {
-    const { data } = await supabase
-      .from('salon_fama')
-      .select('*')
-      .order('campeonatos', { ascending: false });
-
+    const { data } = await supabase.from('salon_fama').select('*').order('campeonatos', { ascending: false });
     if (data) {
       const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
       setHallFama(listaConPuestos);
@@ -121,13 +139,70 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
+  const handleGuardarConfig = async (e) => {
+    e.preventDefault();
+    const { error } = await supabase
+      .from('configuracion_equipo')
+      .upsert({ id: 1, ...config, updated_at: new Date() });
+
+    if (error) {
+      alert('Error al guardar configuración: ' + error.message);
+    } else {
+      alert('¡Configuración guardada exitosamente!');
+      setEditandoConfig(false);
+    }
+  };
+
+  // SUBIDA DIRECTA A LA GALERÍA CON UN CLIC
+  const handleSubidaDirectaGaleria = async (e) => {
+    try {
+      setSubiendoFotoDirecta(true);
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `galeria_${Date.now()}.${fileExt}`;
+
+      // Subir al bucket 'imagenes'
+      const { error: uploadError } = await supabase.storage
+        .from('imagenes')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Obtener URL pública
+      const { data } = supabase.storage
+        .from('imagenes')
+        .getPublicUrl(fileName);
+
+      // Guardar automáticamente en la tabla galeria
+      const { error: dbError } = await supabase.from('galeria').insert([{
+        titulo: file.name.substring(0, file.name.lastIndexOf('.')) || 'Foto Oficial',
+        evento_nombre: 'Espíndola Competición',
+        imagen_url: data.publicUrl
+      }]);
+
+      if (dbError) throw dbError;
+
+      cargarGaleria();
+    } catch (error) {
+      alert('Error al subir la foto: ' + error.message);
+    } finally {
+      setSubiendoFotoDirecta(false);
+    }
+  };
+
+  const handleEliminarFotoGaleria = async (id) => {
+    if (!confirm('¿Seguro que deseas borrar esta imagen de la galería?')) return;
+    const { error } = await supabase.from('galeria').delete().eq('id', id);
+    if (!error) cargarGaleria();
+  };
+
   const handleCrearEvento = async (e) => {
     e.preventDefault();
     if (!nuevoEvento.titulo || !nuevoEvento.fecha) return;
 
-    const { error } = await supabase
-      .from('eventos')
-      .insert([nuevoEvento]);
+    const { error } = await supabase.from('eventos').insert([nuevoEvento]);
 
     if (error) {
       alert('Error al crear evento: ' + error.message);
@@ -249,6 +324,22 @@ export default function App() {
               Inicio
             </button>
             <button
+              onClick={() => setPestanaActiva('historia')}
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+                pestanaActiva === 'historia' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              Nuestra Historia
+            </button>
+            <button
+              onClick={() => setPestanaActiva('galeria')}
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+                pestanaActiva === 'galeria' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              Galería
+            </button>
+            <button
               onClick={() => setPestanaActiva('livetiming')}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
@@ -324,39 +415,235 @@ export default function App() {
       {/* CONTENIDO PRINCIPAL */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         
+        {/* 1. INICIO */}
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[75vh] flex items-center justify-center">
             <div className="max-w-4xl mx-auto text-center space-y-6 py-12">
               <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
-                Temporada Oficial 2026 • Simracing Rally Hub {esAdmin && '• Panel Admin Activo'}
+                Temporada Oficial 2026 • Espíndola Competición {esAdmin && '• Modo Admin'}
               </span>
 
               <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
                 PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.7)]">GLORIA</span>
               </h1>
 
-              <p className="max-w-2xl mx-auto text-neutral-100 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
-                Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y gestión centralizada.
-              </p>
-
+              {/* BOTONES SOCIALES */}
               <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <button
-                  onClick={() => setPestanaActiva('livetiming')}
-                  className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
+                <a
+                  href={config.instagram || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-neutral-900/60 backdrop-blur-md hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 font-wrc text-sm px-6 py-3 rounded-full transition shadow-lg flex items-center gap-2.5 tracking-wider uppercase group"
                 >
-                  🏁 Ver Live Timing
-                </button>
-                <button
-                  onClick={() => setPestanaActiva('eventos')}
-                  className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                  <svg className="w-5 h-5 fill-current group-hover:scale-110 transition" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                  Instagram
+                </a>
+
+                <a
+                  href={config.discord || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-neutral-900/60 backdrop-blur-md hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 font-wrc text-sm px-6 py-3 rounded-full transition shadow-lg flex items-center gap-2.5 tracking-wider uppercase group"
                 >
-                  📅 Gestionar Eventos
-                </button>
+                  <svg className="w-5 h-5 fill-current group-hover:scale-110 transition" viewBox="0 0 24 24">
+                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                  </svg>
+                  Discord
+                </a>
+
+                <a
+                  href={config.tiktok || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-neutral-900/60 backdrop-blur-md hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 font-wrc text-sm px-6 py-3 rounded-full transition shadow-lg flex items-center gap-2.5 tracking-wider uppercase group"
+                >
+                  <svg className="w-5 h-5 fill-current group-hover:scale-110 transition" viewBox="0 0 24 24">
+                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.5.18-1.92 1.12-3.72 2.5-5.02 1.65-1.53 3.92-2.3 6.16-2.05.02.66.02 1.32 0 1.98-.5-.1-1.02-.15-1.53-.13-1.31.05-2.55.67-3.37 1.69-.87 1.05-1.24 2.45-1.03 3.82.16 1.05.8 2.01 1.71 2.53 1.01.59 2.27.7 3.39.29 1.05-.39 1.88-1.25 2.22-2.32.18-.58.26-1.18.26-1.78.02-3.99-.01-7.98.02-11.97z"/>
+                  </svg>
+                  TikTok
+                </a>
               </div>
+
+              {esAdmin && (
+                <div className="pt-8 max-w-xl mx-auto">
+                  {!editandoConfig ? (
+                    <button
+                      onClick={() => setEditandoConfig(true)}
+                      className="text-xs font-wrc bg-neutral-900/80 hover:bg-neutral-800 text-amber-400 border border-amber-500/40 px-5 py-2.5 rounded-xl transition shadow-md uppercase tracking-wider"
+                    >
+                      ⚙️ Editar Redes Sociales del Inicio
+                    </button>
+                  ) : (
+                    <form onSubmit={handleGuardarConfig} className="bg-neutral-900/90 border border-amber-500/50 p-6 rounded-2xl text-left space-y-4 shadow-2xl backdrop-blur-md">
+                      <h3 className="font-wrc text-lg text-amber-400 uppercase">Editar Enlaces de Redes Sociales</h3>
+                      <div>
+                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL Instagram</label>
+                        <input
+                          type="url"
+                          value={config.instagram}
+                          onChange={(e) => setConfig({ ...config, instagram: e.target.value })}
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL Discord</label>
+                        <input
+                          type="url"
+                          value={config.discord}
+                          onChange={(e) => setConfig({ ...config, discord: e.target.value })}
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL TikTok</label>
+                        <input
+                          type="url"
+                          value={config.tiktok}
+                          onChange={(e) => setConfig({ ...config, tiktok: e.target.value })}
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditandoConfig(false)}
+                          className="text-xs font-wrc bg-neutral-800 text-neutral-300 px-4 py-2 rounded-xl"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="text-xs font-wrc bg-amber-500 text-black font-bold px-5 py-2 rounded-xl"
+                        >
+                          Guardar Cambios
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
         )}
 
+        {/* 2. NUESTRA HISTORIA */}
+        {pestanaActiva === 'historia' && (
+          <div className="space-y-8 max-w-4xl mx-auto">
+            <div>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Nuestra Historia - Espíndola Competición</h2>
+              <p className="text-neutral-300 text-sm font-sans">El origen, nuestros valores y la trayectoria del equipo.</p>
+            </div>
+
+            <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-4">
+                <h3 className="font-wrc text-2xl text-white">Pasión Por El Motor y La Competición</h3>
+                <p className="text-neutral-200 text-base leading-relaxed font-sans whitespace-pre-line">
+                  {config.historia_texto}
+                </p>
+              </div>
+              <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl">
+                <img 
+                  src={config.historia_imagen || 'https://files.catbox.moe/t5ffu8.png'} 
+                  alt="Historia del equipo" 
+                  className="w-full h-72 object-cover hover:scale-105 transition duration-500"
+                />
+              </div>
+            </div>
+
+            {esAdmin && (
+              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="font-wrc text-xl text-amber-400">⚙️ Editar Reseña de Historia e Imagen</h3>
+                <form onSubmit={handleGuardarConfig} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Texto de la Historia</label>
+                    <textarea
+                      rows={5}
+                      value={config.historia_texto}
+                      onChange={(e) => setConfig({ ...config, historia_texto: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Imagen Representativa (Desde PC)</label>
+                    <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20"
+                  >
+                    💾 Guardar Historia
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 3. GALERÍA DE FOTOS (CON SUBIDA DIRECTA SIN TEXTO) */}
+        {pestanaActiva === 'galeria' && (
+          <div className="space-y-8">
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Galería de Eventos</h2>
+                <p className="text-neutral-300 text-sm font-sans">Cobertura fotográfica oficial de nuestros tramos, fechas y momentos de podio.</p>
+              </div>
+
+              {/* BOTÓN RÁPIDO PARA ADMIN DE SUBIR FOTO */}
+              {esAdmin && (
+                <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                  <span>{subiendoFotoDirecta ? '⏳ Subiendo foto...' : '📸 + Subir Foto de la PC'}</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleSubidaDirectaGaleria} 
+                    disabled={subiendoFotoDirecta} 
+                    className="hidden" 
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* GRILLA DE FOTOS */}
+            {fotosGaleria.length === 0 ? (
+              <div className="text-center py-16 bg-neutral-900/40 border border-neutral-800 rounded-3xl">
+                <p className="text-neutral-400 font-sans">Aún no se han subido fotografías a la galería.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {fotosGaleria.map((foto) => (
+                  <div key={foto.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden group shadow-lg relative">
+                    <div className="w-full h-60 overflow-hidden relative">
+                      <img 
+                        src={foto.imagen_url} 
+                        alt={foto.titulo} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
+                    </div>
+                    <div className="p-4 absolute bottom-0 left-0 right-0">
+                      <h4 className="font-wrc text-lg text-white font-bold truncate drop-shadow-md">{foto.titulo}</h4>
+                    </div>
+                    {esAdmin && (
+                      <button
+                        onClick={() => handleEliminarFotoGaleria(foto.id)}
+                        className="absolute top-3 right-3 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-xl text-xs backdrop-blur-md transition shadow-md"
+                        title="Eliminar foto"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* 4. LIVE TIMING */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
@@ -391,6 +678,7 @@ export default function App() {
           </div>
         )}
 
+        {/* 5. EVENTOS */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -486,312 +774,4 @@ export default function App() {
                   <div className="flex flex-wrap justify-between items-center pt-4 border-t border-neutral-800 gap-2">
                     <button 
                       onClick={() => { setEventoSeleccionado(ev); setModoModalInscripcion('lista'); }}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-amber-400 border border-amber-500/30 font-wrc text-xs uppercase px-4 py-2 rounded-xl transition flex items-center gap-1.5"
-                    >
-                      📋 Lista de Inscriptos
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      {esAdmin && (
-                        <button 
-                          onClick={() => handleEliminarEvento(ev.id)}
-                          className="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white font-wrc text-xs uppercase px-3 py-2 rounded-xl transition border border-red-500/30"
-                        >
-                          🗑️
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => {
-                          if (!usuario) {
-                            setMostrarAuthModal(true);
-                          } else {
-                            setEventoSeleccionado(ev); 
-                            setModoModalInscripcion('formulario');
-                          }
-                        }}
-                        className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider font-bold"
-                      >
-                        Inscribirse
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {pestanaActiva === 'fama' && (
-          <div className="space-y-12">
-            <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
-              <p className="text-neutral-200 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
-            </div>
-
-            {esAdmin && (
-              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
-                <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
-                  {editandoId !== null ? '✏️ Modo Edición Activo' : 'Panel de Control Exclusivo'}
-                </div>
-                <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider flex items-center gap-2">
-                  <span>🏆</span> {editandoId !== null ? 'Actualizar Campeón' : 'Registrar Nuevo Campeón'}
-                </h3>
-                <form onSubmit={handleGuardarPilotoFama} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <input 
-                    type="text" 
-                    placeholder="Nombre del Piloto" 
-                    value={nuevoPilotoFama.nombre}
-                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, nombre: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                    required
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Categoría" 
-                    value={nuevoPilotoFama.categoria}
-                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, categoria: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Campeonatos" 
-                    value={nuevoPilotoFama.campeonatos}
-                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, campeonatos: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                    required
-                  />
-                  
-                  {/* Selector de foto desde la PC */}
-                  <div className="md:col-span-4">
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto del Piloto (Desde la PC)</label>
-                    <SubirImagen currentUrl={nuevoPilotoFama.foto} onUpload={(url) => setNuevoPilotoFama({...nuevoPilotoFama, foto: url})} />
-                  </div>
-
-                  <div className="md:col-span-4 flex items-center justify-end gap-3">
-                    {editandoId !== null && (
-                      <button 
-                        type="button"
-                        onClick={() => { setEditandoId(null); setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' }); }}
-                        className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-wrc text-sm px-5 py-3 rounded-xl transition"
-                      >
-                        Cancelar Edición
-                      </button>
-                    )}
-                    <button 
-                      type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
-                    >
-                      {editandoId !== null ? '💾 Guardar Cambios' : '➕ Añadir'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
-              {top3[1] && (
-                <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
-                    🥈 2º PUESTO
-                  </div>
-                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-2 border-neutral-400 overflow-hidden mb-4 shadow-xl mt-2">
-                    <img src={top3[1].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[1].nombre} className="w-full h-full object-cover" />
-                  </div>
-                  <h3 className="font-wrc text-2xl text-white font-bold">{top3[1].nombre}</h3>
-                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[1].categoria}</p>
-                  <div className="mt-4 bg-neutral-950/60 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
-                    <span className="text-neutral-300 text-xs uppercase font-sans">Títulos: </span>
-                    <strong className="text-white font-wrc text-lg">{top3[1].campeonatos} 🏆</strong>
-                  </div>
-                  {esAdmin && (
-                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[1])} className="text-amber-400 hover:text-amber-300 underline font-bold">
-                        ✏️ Editar
-                      </button>
-                      <button onClick={() => handleEliminarPilotoFama(top3[1].id)} className="text-red-400 hover:text-red-300 underline">
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {top3[0] && (
-                <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/40 to-neutral-950/60 backdrop-blur-md border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
-                    🥇 1º PUESTO
-                  </div>
-                  <div className="w-28 h-28 mx-auto rounded-full bg-neutral-800 border-4 border-amber-400 overflow-hidden mb-4 shadow-2xl mt-3">
-                    <img src={top3[0].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[0].nombre} className="w-full h-full object-cover" />
-                  </div>
-                  <h3 className="font-wrc text-3xl text-amber-400 font-black">{top3[0].nombre}</h3>
-                  <p className="text-neutral-200 text-xs font-sans mt-1">{top3[0].categoria}</p>
-                  <div className="mt-4 bg-amber-500/10 border border-amber-500/40 py-2.5 px-6 rounded-2xl inline-block shadow-inner">
-                    <span className="text-amber-300 text-xs uppercase font-sans">Títulos Absolutos: </span>
-                    <strong className="text-amber-400 font-wrc text-xl">{top3[0].campeonatos} 🏆</strong>
-                  </div>
-                  {esAdmin && (
-                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[0])} className="text-amber-400 hover:text-amber-300 underline font-bold">
-                        ✏️ Editar
-                      </button>
-                      <button onClick={() => handleEliminarPilotoFama(top3[0].id)} className="text-red-400 hover:text-red-300 underline">
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {top3[2] && (
-                <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
-                    🥉 3º PUESTO
-                  </div>
-                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-2 border-amber-700 overflow-hidden mb-4 shadow-xl mt-2">
-                    <img src={top3[2].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[2].nombre} className="w-full h-full object-cover" />
-                  </div>
-                  <h3 className="font-wrc text-2xl text-white font-bold">{top3[2].nombre}</h3>
-                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[2].categoria}</p>
-                  <div className="mt-4 bg-neutral-950/60 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
-                    <span className="text-neutral-300 text-xs uppercase font-sans">Títulos: </span>
-                    <strong className="text-amber-500 font-wrc text-lg">{top3[2].campeonatos} 🏆</strong>
-                  </div>
-                  {esAdmin && (
-                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[2])} className="text-amber-400 hover:text-amber-300 underline font-bold">
-                        ✏️ Editar
-                      </button>
-                      <button onClick={() => handleEliminarPilotoFama(top3[2].id)} className="text-red-400 hover:text-red-300 underline">
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {restoPilotos.length > 0 && (
-              <div className="space-y-4 pt-10">
-                <h3 className="font-wrc text-2xl text-amber-400 tracking-wide border-b border-neutral-800 pb-3">
-                  Resto del Salón de la Fama (Pilotos Destacados)
-                </h3>
-                
-                <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-                  <div className="divide-y divide-neutral-800">
-                    {restoPilotos.map((piloto) => (
-                      <div key={piloto.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition">
-                        <div className="flex items-center gap-4">
-                          <span className="font-wrc text-xl font-bold text-amber-500 w-8 text-center">
-                            #{piloto.puesto}
-                          </span>
-                          <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex-shrink-0">
-                            <img src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'} alt={piloto.nombre} className="w-full h-full object-cover" />
-                          </div>
-                          <div>
-                            <h4 className="font-wrc text-lg text-white font-bold">{piloto.nombre}</h4>
-                            <p className="text-neutral-300 text-xs font-sans">{piloto.categoria}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                          <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3.5 py-1.5 rounded-full text-xs font-wrc font-bold">
-                            {piloto.campeonatos} 🏆 Título{piloto.campeonatos > 1 ? 's' : ''}
-                          </span>
-                          {esAdmin && (
-                            <div className="flex items-center gap-2 font-sans text-xs">
-                              <button 
-                                onClick={() => handleEditarPilotoFama(piloto)}
-                                className="text-amber-400 hover:text-amber-300 underline font-bold px-2 py-1"
-                              >
-                                ✏️ Editar
-                              </button>
-                              <button 
-                                onClick={() => handleEliminarPilotoFama(piloto.id)}
-                                className="text-red-400 hover:text-red-300 underline px-2 py-1"
-                              >
-                                🗑️ Eliminar
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {pestanaActiva === 'perfil' && (
-          <div className="max-w-2xl mx-auto bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl">
-            <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500 to-amber-300 p-1 mb-4 shadow-xl">
-                <div className="w-full h-full bg-neutral-950 rounded-full flex items-center justify-center overflow-hidden text-2xl font-wrc font-black text-amber-400">
-                  {perfil?.avatar_url ? (
-                    <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
-                  )}
-                </div>
-              </div>
-              <h2 className="font-wrc text-3xl text-white">{perfil?.nombre_piloto || 'Piloto sin configurar'}</h2>
-              <p className="text-amber-400 text-sm font-mono mt-1">{usuario?.email || 'No ha iniciado sesión'}</p>
-              <span className="mt-3 bg-white/5 text-neutral-200 px-4 py-1 rounded-full text-xs font-semibold border border-white/10 font-sans">
-                Nacionalidad: {perfil?.nacionalidad || 'No especificada'}
-              </span>
-            </div>
-
-            <div className="py-6 space-y-4">
-              <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-4 flex justify-between items-center font-sans">
-                <span className="text-neutral-300 text-sm">Steam ID 64:</span>
-                <span className="font-mono text-amber-400 text-sm">{perfil?.steam_id || 'No vinculado'}</span>
-              </div>
-              <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-4 flex justify-between items-center font-sans">
-                <span className="text-neutral-300 text-sm">Estado de Licencia:</span>
-                <span className="text-emerald-400 text-sm font-bold">Activa 🟢</span>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button 
-                onClick={() => setMostrarPerfilModal(true)}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-wrc text-lg py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
-              >
-                ✏️ Editar Datos y Foto de Perfil
-              </button>
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {mostrarAuthModal && (
-        <AuthModal onClose={() => setMostrarAuthModal(false)} />
-      )}
-
-      {mostrarCambiarPasswordModal && (
-        <CambiarPasswordModal onClose={() => setMostrarCambiarPasswordModal(false)} />
-      )}
-
-      {mostrarPerfilModal && (
-        <PerfilModal 
-          usuario={usuario} 
-          onClose={() => setMostrarPerfilModal(false)} 
-          onPerfilGuardado={() => verificarAdminYPerfil(usuario)}
-        />
-      )}
-
-      {eventoSeleccionado && (
-        <InscripcionModal
-          evento={eventoSeleccionado}
-          modo={modoModalInscripcion}
-          perfil={perfil}
-          usuario={usuario}
-          onClose={() => setEventoSeleccionado(null)}
-        />
-      )}
-    </div>
-  );
-}
+                      className="bg-neutral-800 hover:bg-neutral-700 text-amber-400 border border-amber-500/30 font-wrc text-xs uppercase px-4 py-2 rounded-xl
