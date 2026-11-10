@@ -2,11 +2,11 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   
   try {
-    // Cambiamos http por https
-    const response = await fetch('https://br.assettohosting.com:10314/api/v1/live', {
+    // Intentamos consultar la raíz del servidor o un endpoint alternativo común
+    const response = await fetch('https://br.assettohosting.com:10314/', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json'
+        'Accept': 'application/json, text/html'
       }
     });
 
@@ -14,7 +14,15 @@ export default async function handler(req, res) {
       throw new Error(`El servidor respondió con status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = { text: await response.text() };
+    }
+
     return res.status(200).json(data);
 
   } catch (error) {
