@@ -8,7 +8,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // El servidor de Vercel (backend) consulta por HTTP al puerto del servidor sin restricciones de navegador
     const response = await fetch('http://br.assettohosting.com:10314/api/v1/live', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
