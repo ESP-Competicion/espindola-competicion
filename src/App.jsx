@@ -9,19 +9,6 @@ export default function App() {
   const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
   const [pestanaActiva, setPestanaActiva] = useState('livetiming');
 
-  // Estados para la Telemetría Propia y Privada
-  const [sesionActiva, setSesionActiva] = useState({
-    tramo: 'Rally de Misiones - Pigüé (Stage 3)',
-    estado: 'Práctica Libre Activa',
-    clima: 'Tierra / Seco (24°C)'
-  });
-
-  const [tiemposPilotos, setTiemposPilotos] = useState([
-    { pos: 1, piloto: 'Leo Espíndola', vehiculo: 'VW Saveiro G4', mejorVuelta: '01:24.275', gap: 'Líder', vueltas: 3, velMax: '198.58 Km/h', estado: 'En Pista' },
-    { pos: 2, piloto: 'Lucas Negri', vehiculo: 'Renault Clio Rally5', mejorVuelta: '03:42.125', gap: '+2:17.850', vueltas: 4, velMax: '185.20 Km/h', estado: 'En Boxes' },
-    { pos: 3, piloto: 'Pedro Laninha', vehiculo: 'Peugeot 208 Rally4', mejorVuelta: '03:43.890', gap: '+2:19.615', vueltas: 4, velMax: '182.10 Km/h', estado: 'En Pista' }
-  ]);
-
   // Estados para Eventos y Admin
   const [eventos, setEventos] = useState([
     { id: 1, titulo: 'Rally de Misiones - Fecha 1', fecha: '2026-04-12', circuito: 'Tramo Tierra Colorada', inscriptos: 12 },
@@ -105,7 +92,7 @@ export default function App() {
                 : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
             }`}
           >
-            🏁 Live Timing Propio
+            🏁 Live Timing
           </button>
           
           <button
@@ -145,105 +132,39 @@ export default function App() {
         {/* CONTENIDO DE LAS PESTAÑAS */}
         <main className="mt-8">
           
-          {/* 1. LIVETIMING PROPIO Y PRIVADO (Sin rastros de AssettoHosting) */}
+          {/* 1. LIVETIMING (AssettoHosting Directo a /live-timing) */}
           {pestanaActiva === 'livetiming' && (
             <div className="space-y-6">
               <div className="bg-neutral-900/60 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 
-                {/* Cabecera del panel */}
+                {/* Cabecera */}
                 <div className="flex flex-wrap justify-between items-center mb-6 border-b border-neutral-800 pb-4 gap-4">
                   <div>
-                    <h2 className="text-2xl font-black text-amber-400 uppercase tracking-wide">Telemetría y Tiempos en Vivo</h2>
-                    <p className="text-neutral-400 text-sm">Circuito: <span className="text-sky-400 font-mono">{sesionActiva.tramo}</span></p>
+                    <h2 className="text-2xl font-black text-amber-400 uppercase tracking-wide">Live Timing & Telemetría - Espíndola Competición</h2>
+                    <p className="text-neutral-400 text-sm">Servidor Activo: <span className="text-sky-400 font-mono">Pigüé, Argentina - Servidor WRC</span></p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/30">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> {sesionActiva.estado}
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Servidor Online
                     </span>
-                    <button 
-                      onClick={() => alert('Sincronizando tiempos con la central del equipo...')}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold px-3 py-2 rounded-xl border border-neutral-700 transition"
+                    <a 
+                      href="https://br.assettohosting.com:10314/live-timing" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs font-bold px-3.5 py-2 rounded-xl border border-neutral-700 transition flex items-center gap-1.5"
                     >
-                      🔄 Actualizar Datos
-                    </button>
+                      <span>↗</span> Pantalla Completa
+                    </a>
                   </div>
                 </div>
 
-                {/* Grid: Tabla de Tiempos a la izquierda + Mapa del tramo a la derecha */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  
-                  {/* Tabla de Tiempos Exclusiva (2 columnas) */}
-                  <div className="lg:col-span-2 overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-950/70 shadow-inner">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-neutral-800 text-xs font-bold text-neutral-400 uppercase bg-neutral-900/50">
-                          <th className="py-3 px-4">Pos</th>
-                          <th className="py-3 px-4">Piloto</th>
-                          <th className="py-3 px-4">Vehículo</th>
-                          <th className="py-3 px-4">Mejor Vuelta</th>
-                          <th className="py-3 px-4">Gap</th>
-                          <th className="py-3 px-4 text-center">Vel. Máx</th>
-                          <th className="py-3 px-4 text-center">Estado</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-900 text-sm font-medium">
-                        {tiemposPilotos.map((item) => (
-                          <tr key={item.pos} className="hover:bg-neutral-900/40 transition">
-                            <td className="py-3 px-4 font-black text-amber-400">{item.pos}</td>
-                            <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-sky-400"></span> {item.piloto}
-                            </td>
-                            <td className="py-3 px-4 text-neutral-300">{item.vehiculo}</td>
-                            <td className="py-3 px-4 font-mono text-sky-400">{item.mejorVuelta}</td>
-                            <td className="py-3 px-4 font-mono text-neutral-400">{item.gap}</td>
-                            <td className="py-3 px-4 text-center font-mono text-amber-500">{item.velMax}</td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`text-xs px-2.5 py-1 rounded-lg border ${
-                                item.estado === 'En Pista' 
-                                  ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' 
-                                  : 'bg-neutral-800 text-neutral-400 border-neutral-700'
-                              }`}>
-                                {item.estado}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Panel Lateral: Mapa del Tramo Propio y Privado */}
-                  <div className="bg-neutral-950/80 border border-neutral-800 rounded-2xl p-5 flex flex-col justify-between shadow-inner">
-                    <div>
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider">Radar de Tramo</h3>
-                        <span className="text-xs font-mono text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded border border-sky-500/20">GPS Activo</span>
-                      </div>
-                      <p className="text-xs text-neutral-400 mb-4">Monitoreo interno exclusivo para la escudería.</p>
-                      
-                      {/* Simulación gráfica estilizada del circuito */}
-                      <div className="w-full h-48 bg-neutral-900 rounded-xl border border-neutral-800 relative flex items-center justify-center overflow-hidden shadow-inner">
-                        <div className="absolute inset-0 bg-[radial-gradient(#0ea5e9_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
-                        
-                        <svg className="w-full h-full p-4 absolute inset-0 text-amber-500/70" viewBox="0 0 100 100" fill="none">
-                          <path d="M15 75 Q 35 15, 65 45 T 85 25" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
-                        </svg>
-
-                        {/* Indicador de posición flotante */}
-                        <div className="absolute bottom-6 left-6 bg-neutral-950/90 px-3 py-1.5 rounded-lg border border-sky-500/40 text-xs font-mono text-sky-400 flex items-center gap-2 shadow-lg">
-                          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span> 
-                          <span>Leo Espíndola (Saveiro G4)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-neutral-900 text-xs text-neutral-400 flex justify-between items-center">
-                      <span>Condiciones: <strong className="text-white">{sesionActiva.clima}</strong></span>
-                      <span className="font-mono text-amber-400">Seguridad: Privada</span>
-                    </div>
-                  </div>
-
+                <div className="w-full h-[650px] bg-neutral-950 rounded-2xl border border-neutral-800 relative overflow-hidden shadow-inner">
+                  <iframe 
+                    src="https://br.assettohosting.com:10314/live-timing" 
+                    title="Espíndola Competición Live Timing"
+                    className="w-full h-full border-0 rounded-2xl"
+                  />
                 </div>
               </div>
             </div>
@@ -346,7 +267,7 @@ export default function App() {
                   <p className="text-neutral-400 text-xs mt-3">Categoría Rally2 - Peugeot 208</p>
                 </div>
 
-                <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+                <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-bold text-xs px-4 py-1 rounded-bl-xl">TOP 2 MUNDIAL</div>
                   <div className="text-4xl mb-3">🌍</div>
                   <h3 className="text-lg font-bold text-white">Greece Gravel Challenge</h3>
