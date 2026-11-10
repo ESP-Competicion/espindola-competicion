@@ -23,7 +23,7 @@ export default function App() {
   ]);
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', circuito: '' });
 
-  // Estado inicial para el Salón de la Fama (Top 3 en podio + 9 pilotos en lista = 12 en total)
+  // Salón de la Fama con soporte para edición y reordenamiento automático
   const [hallFama, setHallFama] = useState([
     { id: 1, puesto: 1, nombre: 'Lucas Negri', categoria: 'Rally4 - Renault Clio', campeonatos: 5, foto: 'https://files.catbox.moe/f3xmld.png' },
     { id: 2, puesto: 2, nombre: 'Pedro Laninha', categoria: 'Rally2 - Peugeot 208', campeonatos: 3, foto: 'https://files.catbox.moe/t3phov.png' },
@@ -40,6 +40,7 @@ export default function App() {
   ]);
 
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
+  const [editandoId, setEditandoId] = useState(null);
 
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
@@ -112,28 +113,56 @@ export default function App() {
     setEventos(eventos.filter(ev => ev.id !== id));
   };
 
-  // Agregar piloto al Salón de la Fama y ordenar por campeonatos
-  const handleAgregarPilotoFama = (e) => {
+  // Guardar o actualizar piloto en el Salón de la Fama con reordenamiento automático
+  const handleGuardarPilotoFama = (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
 
-    const listaActualizada = [
-      ...hallFama,
-      {
+    let listaActualizada = [...hallFama];
+
+    if (editandoId !== null) {
+      // Actualizar piloto existente
+      listaActualizada = listaActualizada.map(p => {
+        if (p.id === editandoId) {
+          return {
+            ...p,
+            nombre: nuevoPilotoFama.nombre,
+            categoria: nuevoPilotoFama.categoria || 'Categoría General',
+            campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 0,
+            foto: nuevoPilotoFama.foto || p.foto
+          };
+        }
+        return p;
+      });
+      setEditandoId(null);
+    } else {
+      // Crear nuevo piloto
+      listaActualizada.push({
         id: Date.now(),
         nombre: nuevoPilotoFama.nombre,
         categoria: nuevoPilotoFama.categoria || 'Categoría General',
         campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 1,
         foto: nuevoPilotoFama.foto || 'https://files.catbox.moe/f3xmld.png'
-      }
-    ];
+      });
+    }
 
-    // Ordenar de mayor a menor por cantidad de campeonatos y reasignar puestos
+    // Ordenar automáticamente de mayor a menor por cantidad de campeonatos y reasignar puestos
     listaActualizada.sort((a, b) => b.campeonatos - a.campeonatos);
     const listaConPuestos = listaActualizada.map((p, idx) => ({ ...p, puesto: idx + 1 }));
 
     setHallFama(listaConPuestos);
     setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' });
+  };
+
+  const handleEditarPilotoFama = (piloto) => {
+    setEditandoId(piloto.id);
+    setNuevoPilotoFama({
+      nombre: piloto.nombre,
+      categoria: piloto.categoria,
+      campeonatos: piloto.campeonatos,
+      foto: piloto.foto
+    });
+    window.scrollTo({ top: 300, behavior: 'smooth' });
   };
 
   const handleEliminarPilotoFama = (id) => {
@@ -142,7 +171,6 @@ export default function App() {
     setHallFama(listaConPuestos);
   };
 
-  // Separar Top 3 para el podio y el resto para la lista
   const top3 = hallFama.slice(0, 3);
   const restoPilotos = hallFama.slice(3);
 
@@ -155,12 +183,13 @@ export default function App() {
           <div
             key={index}
             className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-              index === fondoActual ? 'opacity-65 scale-105' : 'opacity-0 scale-100'
+              index === fondoActual ? 'opacity-75 scale-105' : 'opacity-0 scale-100'
             }`}
             style={{ backgroundImage: `url(${foto})` }}
           />
         ))}
-        <div className="absolute inset-0 bg-[#030303]/40 backdrop-blur-[0.5px]"></div>
+        {/* Capa oscura translúcida para que se vea el fondo de las fotos */}
+        <div className="absolute inset-0 bg-[#030303]/35 backdrop-blur-[0.3px]"></div>
       </div>
 
       <style>{`
@@ -177,7 +206,7 @@ export default function App() {
       {/* ENCABEZADO TRANSLÚCIDO */}
       <header 
         className="sticky top-0 z-50 backdrop-blur-md border-b border-white/10 px-6 py-3 shadow-xl"
-        style={{ backgroundColor: 'rgba(5, 5, 5, 0.7)' }}
+        style={{ backgroundColor: 'rgba(5, 5, 5, 0.65)' }}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
@@ -302,7 +331,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setPestanaActiva('eventos')}
-                  className="bg-neutral-950/70 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                  className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
                 >
                   📅 Gestionar Eventos
                 </button>
@@ -313,13 +342,13 @@ export default function App() {
 
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
-            <div className="bg-neutral-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
               
               <div className="flex flex-wrap justify-between items-center mb-6 border-b border-neutral-800 pb-4 gap-4">
                 <div>
                   <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">Live Timing & Telemetría - Servidor Oficial</h2>
-                  <p className="text-neutral-400 text-sm font-sans">Monitoreo en tiempo real de tramos y clasificaciones.</p>
+                  <p className="text-neutral-300 text-sm font-sans">Monitoreo en tiempo real de tramos y clasificaciones.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/30">
@@ -352,21 +381,21 @@ export default function App() {
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
                 <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Próximos Eventos y Rallies</h2>
-                <p className="text-neutral-400 text-sm font-sans">Inscribite a las fechas oficiales o administra el calendario.</p>
+                <p className="text-neutral-200 text-sm font-sans">Inscribite a las fechas oficiales o administra el calendario.</p>
               </div>
               {esAdmin ? (
                 <span className="font-wrc bg-amber-500 text-black text-xs tracking-wider font-extrabold px-4 py-2 rounded-xl shadow-lg">
                   ⚙️ Modo Administrador Activo
                 </span>
               ) : (
-                <span className="text-xs text-neutral-400 font-mono">
+                <span className="text-xs text-neutral-300 font-mono">
                   Inicia sesión como {`leosimracingok@gmail.com`} para crear eventos.
                 </span>
               )}
             </div>
 
             {esAdmin && (
-              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
+              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
                   Panel de Control Exclusivo
                 </div>
@@ -409,15 +438,15 @@ export default function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {eventos.map((ev) => (
-                <div key={ev.id} className="bg-neutral-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
+                <div key={ev.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
                   <div className="absolute top-4 right-4 text-amber-400 font-mono text-xs bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                     {ev.fecha}
                   </div>
                   <h3 className="font-wrc text-3xl text-white mb-2 group-hover:text-amber-400 transition">{ev.titulo}</h3>
-                  <p className="text-neutral-400 text-sm mb-4 font-sans">📍 Tramo: <span className="text-white font-medium">{ev.circuito}</span></p>
+                  <p className="text-neutral-300 text-sm mb-4 font-sans">📍 Tramo: <span className="text-white font-medium">{ev.circuito}</span></p>
                   
                   <div className="flex justify-between items-center pt-4 border-t border-neutral-800 gap-4">
-                    <span className="text-xs text-neutral-400 font-medium font-sans">Inscriptos: <strong className="text-amber-400">{ev.inscriptos}</strong></span>
+                    <span className="text-xs text-neutral-300 font-medium font-sans">Inscriptos: <strong className="text-amber-400">{ev.inscriptos}</strong></span>
                     
                     <div className="flex items-center gap-2">
                       {esAdmin && (
@@ -443,24 +472,24 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. SALÓN DE LA FAMA (PODIO + LISTA + ADMIN) */}
+        {/* 3. SALÓN DE LA FAMA (PODIO + LISTA + ADMIN CON EDICIÓN) */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12">
             <div>
               <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
-              <p className="text-neutral-300 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
+              <p className="text-neutral-200 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
             </div>
 
-            {/* PANEL DE ADMIN PARA AGREGAR PILOTOS AL SALÓN DE LA FAMA */}
+            {/* PANEL DE ADMIN PARA AGREGAR / EDITAR PILOTOS */}
             {esAdmin && (
-              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
+              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
-                  Panel de Control Exclusivo (Salón de la Fama)
+                  {editandoId !== null ? '✏️ Modo Edición Activo' : 'Panel de Control Exclusivo (Salón de la Fama)'}
                 </div>
                 <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider flex items-center gap-2">
-                  <span>🏆</span> Registrar / Actualizar Campeón
+                  <span>🏆</span> {editandoId !== null ? 'Actualizar Campeón del Piloto' : 'Registrar Nuevo Campeón'}
                 </h3>
-                <form onSubmit={handleAgregarPilotoFama} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <form onSubmit={handleGuardarPilotoFama} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <input 
                     type="text" 
                     placeholder="Nombre del Piloto" 
@@ -491,24 +520,33 @@ export default function App() {
                     onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, foto: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
                   />
-                  <div className="md:col-span-4 flex justify-end">
+                  <div className="md:col-span-4 flex items-center justify-end gap-3">
+                    {editandoId !== null && (
+                      <button 
+                        type="button"
+                        onClick={() => { setEditandoId(null); setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' }); }}
+                        className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-wrc text-sm px-5 py-3 rounded-xl transition"
+                      >
+                        Cancelar Edición
+                      </button>
+                    )}
                     <button 
                       type="submit"
                       className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
                     >
-                      ➕ Añadir al Salón de la Fama
+                      {editandoId !== null ? '💾 Guardar Cambios' : '➕ Añadir al Salón de la Fama'}
                     </button>
                   </div>
                 </form>
               </div>
             )}
 
-            {/* DISEÑO DE ESCALONES DE PODIO PARA EL TOP 3 */}
+            {/* DISEÑO DE ESCALONES DE PODIO PARA EL TOP 3 (Menos borroso y más transparente) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
               
               {/* 2º PUESTO (Izquierda) */}
               {top3[1] && (
-                <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
+                <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
                     🥈 2º PUESTO
                   </div>
@@ -516,51 +554,55 @@ export default function App() {
                     <img src={top3[1].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[1].nombre} className="w-full h-full object-cover" />
                   </div>
                   <h3 className="font-wrc text-2xl text-white font-bold">{top3[1].nombre}</h3>
-                  <p className="text-neutral-400 text-xs font-sans mt-1">{top3[1].categoria}</p>
-                  <div className="mt-4 bg-neutral-950/80 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
-                    <span className="text-neutral-400 text-xs uppercase font-sans">Títulos: </span>
-                    <strong className="text-neutral-300 font-wrc text-lg">{top3[1].campeonatos} 🏆</strong>
+                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[1].categoria}</p>
+                  <div className="mt-4 bg-neutral-950/60 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
+                    <span className="text-neutral-300 text-xs uppercase font-sans">Títulos: </span>
+                    <strong className="text-white font-wrc text-lg">{top3[1].campeonatos} 🏆</strong>
                   </div>
                   {esAdmin && (
-                    <button 
-                      onClick={() => handleEliminarPilotoFama(top3[1].id)}
-                      className="mt-4 text-xs text-red-400 hover:text-red-300 block mx-auto underline font-sans"
-                    >
-                      Eliminar del Podio
-                    </button>
+                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
+                      <button onClick={() => handleEditarPilotoFama(top3[1])} className="text-amber-400 hover:text-amber-300 underline">
+                        ✏️ Editar
+                      </button>
+                      <button onClick={() => handleEliminarPilotoFama(top3[1].id)} className="text-red-400 hover:text-red-300 underline">
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* 1º PUESTO (Centro - Más alto) */}
+              {/* 1º PUESTO (Centro - Más alto y actualizado a 1º Puesto) */}
               {top3[0] && (
-                <div className="bg-gradient-to-b from-amber-500/20 via-neutral-900/80 to-neutral-950 backdrop-blur-2xl border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
+                <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/40 to-neutral-950/60 backdrop-blur-md border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
-                    👑 1º CAMPEÓN MUNDIAL
+                    🥇 1º PUESTO
                   </div>
                   <div className="w-28 h-28 mx-auto rounded-full bg-neutral-800 border-4 border-amber-400 overflow-hidden mb-4 shadow-2xl mt-3">
                     <img src={top3[0].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[0].nombre} className="w-full h-full object-cover" />
                   </div>
                   <h3 className="font-wrc text-3xl text-amber-400 font-black">{top3[0].nombre}</h3>
-                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[0].categoria}</p>
+                  <p className="text-neutral-200 text-xs font-sans mt-1">{top3[0].categoria}</p>
                   <div className="mt-4 bg-amber-500/10 border border-amber-500/40 py-2.5 px-6 rounded-2xl inline-block shadow-inner">
                     <span className="text-amber-300 text-xs uppercase font-sans">Títulos Absolutos: </span>
-                    <strong className="text-amber-400 font-wrc text-xl">{top3[0].campeonatos} 🏆🏆🏆</strong>
+                    <strong className="text-amber-400 font-wrc text-xl">{top3[0].campeonatos} 🏆</strong>
                   </div>
                   {esAdmin && (
-                    <button 
-                      onClick={() => handleEliminarPilotoFama(top3[0].id)}
-                      className="mt-4 text-xs text-red-400 hover:text-red-300 block mx-auto underline font-sans"
-                    >
-                      Eliminar del Podio
-                    </button>
+                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
+                      <button onClick={() => handleEditarPilotoFama(top3[0])} className="text-amber-400 hover:text-amber-300 underline font-bold">
+                        ✏️ Editar
+                      </button>
+                      <button onClick={() => handleEliminarPilotoFama(top3[0].id)} className="text-red-400 hover:text-red-300 underline">
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
 
               {/* 3º PUESTO (Derecha) */}
               {top3[2] && (
-                <div className="bg-neutral-900/70 backdrop-blur-xl border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
+                <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
                     🥉 3º PUESTO
                   </div>
@@ -568,18 +610,20 @@ export default function App() {
                     <img src={top3[2].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[2].nombre} className="w-full h-full object-cover" />
                   </div>
                   <h3 className="font-wrc text-2xl text-white font-bold">{top3[2].nombre}</h3>
-                  <p className="text-neutral-400 text-xs font-sans mt-1">{top3[2].categoria}</p>
-                  <div className="mt-4 bg-neutral-950/80 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
-                    <span className="text-neutral-400 text-xs uppercase font-sans">Títulos: </span>
-                    <strong className="text-amber-600 font-wrc text-lg">{top3[2].campeonatos} 🏆</strong>
+                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[2].categoria}</p>
+                  <div className="mt-4 bg-neutral-950/60 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
+                    <span className="text-neutral-300 text-xs uppercase font-sans">Títulos: </span>
+                    <strong className="text-amber-500 font-wrc text-lg">{top3[2].campeonatos} 🏆</strong>
                   </div>
                   {esAdmin && (
-                    <button 
-                      onClick={() => handleEliminarPilotoFama(top3[2].id)}
-                      className="mt-4 text-xs text-red-400 hover:text-red-300 block mx-auto underline font-sans"
-                    >
-                      Eliminar del Podio
-                    </button>
+                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
+                      <button onClick={() => handleEditarPilotoFama(top3[2])} className="text-amber-400 hover:text-amber-300 underline">
+                        ✏️ Editar
+                      </button>
+                      <button onClick={() => handleEliminarPilotoFama(top3[2].id)} className="text-red-400 hover:text-red-300 underline">
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -593,7 +637,7 @@ export default function App() {
                   Resto del Salón de la Fama (Pilotos Destacados)
                 </h3>
                 
-                <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
                   <div className="divide-y divide-neutral-800">
                     {restoPilotos.map((piloto) => (
                       <div key={piloto.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition">
@@ -606,7 +650,7 @@ export default function App() {
                           </div>
                           <div>
                             <h4 className="font-wrc text-lg text-white font-bold">{piloto.nombre}</h4>
-                            <p className="text-neutral-400 text-xs font-sans">{piloto.categoria}</p>
+                            <p className="text-neutral-300 text-xs font-sans">{piloto.categoria}</p>
                           </div>
                         </div>
 
@@ -615,12 +659,20 @@ export default function App() {
                             {piloto.campeonatos} 🏆 Título{piloto.campeonatos > 1 ? 's' : ''}
                           </span>
                           {esAdmin && (
-                            <button 
-                              onClick={() => handleEliminarPilotoFama(piloto.id)}
-                              className="text-red-400 hover:text-red-300 text-xs font-mono bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded-lg transition"
-                            >
-                              Eliminar
-                            </button>
+                            <div className="flex items-center gap-2 font-sans text-xs">
+                              <button 
+                                onClick={() => handleEditarPilotoFama(piloto)}
+                                className="text-amber-400 hover:text-amber-300 underline font-bold px-2 py-1"
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button 
+                                onClick={() => handleEliminarPilotoFama(piloto.id)}
+                                className="text-red-400 hover:text-red-300 underline px-2 py-1"
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -634,7 +686,7 @@ export default function App() {
         )}
 
         {pestanaActiva === 'perfil' && (
-          <div className="max-w-2xl mx-auto bg-neutral-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+          <div className="max-w-2xl mx-auto bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
               <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500 to-amber-300 p-1 mb-4 shadow-xl">
                 <div className="w-full h-full bg-neutral-950 rounded-full flex items-center justify-center overflow-hidden text-2xl font-wrc font-black text-amber-400">
@@ -647,18 +699,18 @@ export default function App() {
               </div>
               <h2 className="font-wrc text-3xl text-white">{perfil?.nombre_piloto || 'Piloto sin configurar'}</h2>
               <p className="text-amber-400 text-sm font-mono mt-1">{usuario?.email || 'No ha iniciado sesión'}</p>
-              <span className="mt-3 bg-white/5 text-neutral-300 px-4 py-1 rounded-full text-xs font-semibold border border-white/10 font-sans">
+              <span className="mt-3 bg-white/5 text-neutral-200 px-4 py-1 rounded-full text-xs font-semibold border border-white/10 font-sans">
                 Nacionalidad: {perfil?.nacionalidad || 'No especificada'}
               </span>
             </div>
 
             <div className="py-6 space-y-4">
               <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-4 flex justify-between items-center font-sans">
-                <span className="text-neutral-400 text-sm">Steam ID 64:</span>
+                <span className="text-neutral-300 text-sm">Steam ID 64:</span>
                 <span className="font-mono text-amber-400 text-sm">{perfil?.steam_id || 'No vinculado'}</span>
               </div>
               <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-4 flex justify-between items-center font-sans">
-                <span className="text-neutral-400 text-sm">Estado de Licencia:</span>
+                <span className="text-neutral-300 text-sm">Estado de Licencia:</span>
                 <span className="text-emerald-400 text-sm font-bold">Activa 🟢</span>
               </div>
             </div>
