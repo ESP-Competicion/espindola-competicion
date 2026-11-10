@@ -1,288 +1,189 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient';
+import logo from './assets/logo.png';
+import background from './assets/background.jpg';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
-  const [userRole, setUserRole] = useState('driver'); // 'guest' | 'driver' | 'admin'
-  const [selectedChamp, setSelectedChamp] = useState(null);
-  const [successMsg, setSuccessMsg] = useState("");
+  const [usuario, setUsuario] = useState(null);
+  const [perfil, setPerfil] = useState(null);
+  const [tab, setTab] = useState('tiempos');
+  const [autoSeleccionado, setAutoSeleccionado] = useState('Peugeot 208 Rally4');
+  
+  // Modales
+  const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
+  const [esRegistro, setEsRegistro] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [nombrePiloto, setNombrePiloto] = useState('');
+  
+  // Datos
+  const [inscripciones, setInscripciones] = useState([]);
 
-  const championships = [
-    {
-      id: 1,
-      title: "Monomarca Saveiro",
-      surface: "Asfalto",
-      status: "Inscripciones Abiertas",
-      category: "Volkswagen Saveiro",
-      dates: "Inicia 12 de Noviembre",
-      registered: 14,
-      desc: "Primera Fecha del Campeonato de la Monomarca Saveiro."
-    },
-    {
-      id: 2,
-      title: "Desafio de los Valientes",
-      surface: "Tierra",
-      status: "Próximamente",
-      category: "Próximamente",
-      dates: "Próximamente",
-      registered: 0,
-      desc: "Un Campeonato donde no solo importa ser rapido, sino también ser valiente. ¡Prepárate para los desafíos más extremos!"
+  // Detectar sesión al cargar
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUsuario(session?.user ?? null);
+      if (session?.user) cargarPerfil(session.user.id);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUsuario(session?.user ?? null);
+      if (session?.user) cargarPerfil(session.user.id);
+      else setPerfil(null);
+    });
+
+    cargarInscripciones();
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const cargarPerfil = async (userId) => {
+    const { data } = await supabase.from('perfiles').select('*').eq('id', userId).single();
+    if (data) setPerfil(data);
+  };
+
+  const cargarInscripciones = async () => {
+    const { data } = await supabase.from('inscripciones').select('*');
+    if (data) setInscripciones(data);
+  };
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    if (esRegistro) {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) return alert("Error al registrar: " + error.message);
+      if (data.user) {
+        await supabase.from('perfiles').insert([{ id: data.user.id, nombre_piloto: nombrePiloto }]);
+        alert("¡Cuenta creada! Ya podés iniciar sesión.");
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return alert("Error de inicio de sesión: " + error.message);
     }
-  ];
+    setMostrarAuthModal(false);
+    setEmail('');
+    setPassword('');
+  };
 
-  const drivers = [
-    { name: "Lucas Negri", role: "Piloto Líder / Fundador", car: "Renault Clio Rally5", wins: 4, points: 142 },
-    { name: "Pedro Laninha", role: "Co-Driver / Piloto Oficial", car: "Peugeot 208 Rally4", wins: 2, points: 115 }
-  ];
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const handleInscripcion = async (campeonato) => {
+    if (!usuario) {
+      setEsRegistro(false);
+      setMostrarAuthModal(true);
+      return;
+    }
+
+    const { error } = await supabase.from('inscripciones').insert([
+      {
+        user_id: usuario.id,
+        nombre_piloto: perfil?.nombre_piloto || usuario.email,
+        auto: autoSeleccionado,
+        campeonato: campeonato
+      }
+    ]);
+
+    if (error) {
+      alert("Error al inscribirse: " + error.message);
+    } else {
+      alert(`¡Inscripción confirmada para ${campeonato}!`);
+      cargarInscripciones();
+    }
+  };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#05070a',
-      // Fondo más visible (menos opacidad oscura para que la foto destaque más)
-      backgroundImage: `linear-gradient(180deg, rgba(5,7,10,0.55) 0%, rgba(9,13,22,0.68) 50%, rgba(5,7,10,0.80) 100%), url('https://files.catbox.moe/lkx4zp.png')`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundAttachment: 'fixed',
-      color: '#f3f4f6',
-      fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-    }}>
-      
-      {/* BARRA SUPERIOR DE ROL Y BANDERA ARGENTINA */}
-      <div style={{
-        backgroundColor: 'rgba(3, 5, 8, 0.95)',
-        borderBottom: '1px solid rgba(116, 172, 223, 0.3)',
-        padding: '6px 24px',
-        fontSize: '12px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backdropFilter: 'blur(8px)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(116, 172, 223, 0.15)', border: '1px solid rgba(116, 172, 223, 0.3)' }}>
-            <span style={{ fontSize: '10px', color: '#74ACDF', fontWeight: '900', letterSpacing: '1px' }}>ARGENTINA</span>
-            <span style={{ color: '#F6B40E', fontSize: '12px' }}>☀️</span>
-          </div>
-          <span style={{ color: '#9ca3af', fontWeight: '600' }}>MODO DE VISTA:</span>
-          <button onClick={() => setUserRole('guest')} style={{ background: userRole === 'guest' ? 'linear-gradient(135deg, #74ACDF, #3b82f6)' : 'rgba(255,255,255,0.08)', color: userRole === 'guest' ? '#fff' : '#9ca3af', border: 'none', padding: '3px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}>Visitante</button>
-          <button onClick={() => setUserRole('driver')} style={{ background: userRole === 'driver' ? 'linear-gradient(135deg, #F6B40E, #d97706)' : 'rgba(255,255,255,0.08)', color: userRole === 'driver' ? '#000' : '#9ca3af', border: 'none', padding: '3px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}>Piloto (Lucas)</button>
-          <button onClick={() => setUserRole('admin')} style={{ background: userRole === 'admin' ? 'linear-gradient(135deg, #74ACDF, #F6B40E)' : 'rgba(255,255,255,0.08)', color: userRole === 'admin' ? '#000' : '#9ca3af', border: 'none', padding: '3px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}>Admin</button>
-        </div>
-        <div style={{ color: '#9ca3af', fontFamily: 'monospace', fontSize: '11px' }}>
-          EQUIPO OFICIAL: <strong style={{ color: '#74ACDF', textTransform: 'uppercase' }}>{userRole}</strong>
-        </div>
-      </div>
+    <div className="min-h-screen bg-neutral-950 text-white font-sans relative overflow-x-hidden">
+      {/* Fondo */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-15 pointer-events-none"
+        style={{ backgroundImage: `url(${background})` }}
+      />
 
-      {/* HEADER PRINCIPAL */}
-      <header style={{
-        backgroundColor: 'rgba(13, 17, 23, 0.90)',
-        borderBottom: '2px solid rgba(246, 180, 14, 0.5)',
-        padding: '12px 32px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.8)'
-      }}>
-        
-        {/* AQUÍ ESTÁ TU LOGO OFICIAL CORRECTO EN EL HEADER */}
-        <div onClick={() => setActiveTab('home')} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', height: '46px' }}>
-          <img 
-            src="https://ibb.co/pj1vDDkX" 
-            alt="Espíndola Competición" 
-            style={{ height: '44px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }} 
-            onError={(e) => {
-              // Fallback por si la plataforma de imágenes requiere enlace directo de archivo
-              e.target.onerror = null;
-              e.target.src = "https://files.catbox.moe/lkx4zp.png"; 
-            }}
-          />
+      {/* Header */}
+      <header className="relative z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div className="flex items-center gap-4">
+          <img src={logo} alt="Espíndola Competición" className="h-12 w-auto" />
+          <h1 className="text-xl font-black tracking-wider uppercase text-amber-500">
+            Espíndola Competición
+          </h1>
         </div>
 
-        {/* NAV PÍLLULA WRC BROADCAST */}
-        <nav style={{
-          display: 'flex',
-          background: 'rgba(22, 27, 34, 0.85)',
-          border: '1px solid rgba(116, 172, 223, 0.3)',
-          borderRadius: '30px',
-          padding: '4px',
-          boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6)'
-        }}>
-          <button onClick={() => setActiveTab('home')} style={{
-            backgroundColor: activeTab === 'home' ? '#74ACDF' : 'transparent',
-            color: activeTab === 'home' ? '#000' : '#d1d5db',
-            border: 'none',
-            padding: '8px 22px',
-            borderRadius: '20px',
-            fontWeight: '900',
-            fontSize: '12px',
-            cursor: 'pointer',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            boxShadow: activeTab === 'home' ? '0 0 15px rgba(116, 172, 223, 0.6)' : 'none',
-            transition: 'all 0.3s'
-          }}>
+        {/* Menú de Navegación */}
+        <nav className="flex gap-2">
+          <button 
+            onClick={() => setTab('tiempos')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === 'tiempos' ? 'bg-amber-500 text-black' : 'hover:bg-neutral-800'}`}
+          >
             Tiempos en Vivo
           </button>
-          <button onClick={() => setActiveTab('championships')} style={{
-            backgroundColor: activeTab === 'championships' ? '#F6B40E' : 'transparent',
-            color: activeTab === 'championships' ? '#000' : '#d1d5db',
-            border: 'none',
-            padding: '8px 22px',
-            borderRadius: '20px',
-            fontWeight: '900',
-            fontSize: '12px',
-            cursor: 'pointer',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            boxShadow: activeTab === 'championships' ? '0 0 15px rgba(246, 180, 14, 0.6)' : 'none',
-            transition: 'all 0.3s'
-          }}>
+          <button 
+            onClick={() => setTab('campeonatos')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === 'campeonatos' ? 'bg-amber-500 text-black' : 'hover:bg-neutral-800'}`}
+          >
             Campeonatos
-          </button>
-          <button onClick={() => setActiveTab('drivers')} style={{
-            backgroundColor: activeTab === 'drivers' ? '#74ACDF' : 'transparent',
-            color: activeTab === 'drivers' ? '#000' : '#d1d5db',
-            border: 'none',
-            padding: '8px 22px',
-            borderRadius: '20px',
-            fontWeight: '900',
-            fontSize: '12px',
-            cursor: 'pointer',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            boxShadow: activeTab === 'drivers' ? '0 0 15px rgba(116, 172, 223, 0.6)' : 'none',
-            transition: 'all 0.3s'
-          }}>
-            Pilotos & Historial
           </button>
         </nav>
 
-        {/* PERFIL */}
-        <div style={{
-          backgroundColor: 'rgba(22, 27, 34, 0.9)',
-          border: '1px solid rgba(246, 180, 14, 0.4)',
-          padding: '8px 18px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-        }}>
-          <span style={{ color: '#F6B40E' }}>🏎️</span>
-          <span style={{ color: '#fff' }}>{userRole === 'guest' ? 'Visitante' : userRole === 'driver' ? 'Lucas Negri' : 'Marcos (Admin)'}</span>
+        {/* Zona de Usuario */}
+        <div>
+          {usuario ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-neutral-300">
+                🏎️ {perfil?.nombre_piloto || usuario.email}
+              </span>
+              <button 
+                onClick={handleLogout}
+                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs text-red-400 rounded-md border border-neutral-700 transition"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => { setEsRegistro(false); setMostrarAuthModal(true); }}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-lg transition"
+            >
+              Iniciar Sesión / Registrarse
+            </button>
+          )}
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main style={{ maxWidth: '1240px', margin: '36px auto', padding: '0 24px' }}>
-        
-        {activeTab === 'home' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(13, 17, 23, 0.90) 0%, rgba(22, 27, 34, 0.80) 100%)',
-              borderLeft: '6px solid #74ACDF',
-              borderTop: '1px solid rgba(116, 172, 223, 0.3)',
-              borderRight: '1px solid rgba(116, 172, 223, 0.2)',
-              borderBottom: '1px solid rgba(246, 180, 14, 0.3)',
-              borderRadius: '20px',
-              padding: '28px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ backgroundColor: '#ff3b30', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '4px 10px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '1px', boxShadow: '0 0 10px rgba(255,59,48,0.5)' }}>
-                    🔴 TIEMPO EN VIVO
-                  </span>
-                  <span style={{ color: '#74ACDF', fontSize: '11px', fontFamily: 'monospace', fontWeight: 'bold' }}>ASSETTO RACING SERVER</span>
-                </div>
-                <h2 style={{ fontSize: '32px', fontStyle: 'italic', fontWeight: '900', margin: '12px 0 0 0', color: '#ffffff' }}>
-                  
-                </h2>
-              </div>
-              <div style={{
-                backgroundColor: 'rgba(5, 7, 10, 0.8)',
-                border: '1px solid rgba(246, 180, 14, 0.5)',
-                padding: '12px 24px',
-                borderRadius: '14px',
-                color: '#F6B40E',
-                fontSize: '13px',
-                fontFamily: 'monospace',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <span style={{ width: '12px', height: '12px', backgroundColor: '#34d399', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 10px #34d399' }}></span>
-                Servidor Oficial Conectado
-              </div>
+      {/* Contenido Principal */}
+      <main className="relative z-10 max-w-6xl mx-auto p-6">
+        {tab === 'tiempos' && (
+          <div className="bg-neutral-900/90 border border-neutral-800 rounded-xl p-6 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-amber-500 uppercase tracking-wide">Clasificación en Tiempo Real</h2>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Servidor Oficial Online
+              </span>
             </div>
 
-            <div style={{
-              backgroundColor: 'rgba(13, 17, 23, 0.90)',
-              border: '1px solid rgba(116, 172, 223, 0.3)',
-              borderRadius: '20px',
-              overflow: 'hidden',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <div style={{
-                backgroundColor: 'rgba(5, 7, 10, 0.95)',
-                padding: '18px 28px',
-                borderBottom: '1px solid rgba(116, 172, 223, 0.2)',
-                fontWeight: '900',
-                fontSize: '14px',
-                textTransform: 'uppercase',
-                letterSpacing: '2px',
-                color: '#74ACDF',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span>🏁 CLASIFICACIÓN EN TIEMPO REAL</span>
-                <span style={{ fontSize: '11px', color: '#F6B40E', fontFamily: 'monospace' }}>TRAMO: STAGE 02 - GRAVA</span>
-              </div>
-              
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'monospace' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: '#9ca3af', fontSize: '11px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <th style={{ padding: '16px 24px' }}>POS</th>
-                    <th style={{ padding: '16px 24px' }}>PILOTO OFICIAL</th>
-                    <th style={{ padding: '16px 24px' }}>VEHÍCULO</th>
-                    <th style={{ padding: '16px 24px' }}>TIEMPO SECTOR</th>
-                    <th style={{ padding: '16px 24px' }}>ESTADO</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-neutral-800/50 text-neutral-400 uppercase text-xs border-b border-neutral-700">
+                  <tr>
+                    <th className="p-3">Pos</th>
+                    <th className="p-3">Piloto</th>
+                    <th className="p-3">Vehículo</th>
+                    <th className="p-3">Tiempo</th>
                   </tr>
                 </thead>
-                <tbody style={{ fontSize: '14px' }}>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: 'rgba(116, 172, 223, 0.08)' }}>
-                    <td style={{ padding: '18px 24px', fontWeight: '900', color: '#F6B40E', fontSize: '16px' }}>1</td>
-                    <td style={{ padding: '18px 24px', fontWeight: 'bold', color: '#ffffff' }}>
-                      Lucas Negri <span style={{ fontSize: '10px', backgroundColor: '#74ACDF', color: '#000', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>ARG</span>
-                    </td>
-                    <td style={{ padding: '18px 24px', color: '#d1d5db' }}>Renault Clio Rally5</td>
-                    <td style={{ padding: '18px 24px', color: '#F6B40E', fontWeight: '900', fontSize: '16px' }}>03:42.105</td>
-                    <td style={{ padding: '18px 24px' }}>
-                      <span style={{ backgroundColor: 'rgba(52, 211, 153, 0.2)', border: '1px solid #34d399', color: '#34d399', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>EN PISTA</span>
-                    </td>
+                <tbody className="divide-y divide-neutral-800">
+                  <tr className="hover:bg-neutral-800/30">
+                    <td className="p-3 font-bold text-amber-500">1</td>
+                    <td className="p-3 font-semibold">Lucas Negri</td>
+                    <td className="p-3 text-neutral-400">Renault Clio Rally5</td>
+                    <td className="p-3 font-mono text-emerald-400">03:42.103</td>
                   </tr>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '18px 24px', fontWeight: '900', color: '#9ca3af', fontSize: '16px' }}>2</td>
-                    <td style={{ padding: '18px 24px', fontWeight: 'bold', color: '#ffffff' }}>
-                      Pedro Laninha <span style={{ fontSize: '10px', backgroundColor: '#74ACDF', color: '#000', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>ARG</span>
-                    </td>
-                    <td style={{ padding: '18px 24px', color: '#d1d5db' }}>Peugeot 208 Rally4</td>
-                    <td style={{ padding: '18px 24px', color: '#74ACDF', fontWeight: '900', fontSize: '16px' }}>03:44.890</td>
-                    <td style={{ padding: '18px 24px' }}>
-                      <span style={{ backgroundColor: 'rgba(52, 211, 153, 0.2)', border: '1px solid #34d399', color: '#34d399', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>EN PISTA</span>
-                    </td>
+                  <tr className="hover:bg-neutral-800/30">
+                    <td className="p-3 font-bold text-amber-500">2</td>
+                    <td className="p-3 font-semibold">Pedro Laninha</td>
+                    <td className="p-3 text-neutral-400">Peugeot 208 Rally4</td>
+                    <td className="p-3 font-mono text-emerald-400">03:44.890</td>
                   </tr>
                 </tbody>
               </table>
@@ -290,188 +191,122 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'championships' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <div>
-              <h2 style={{ fontSize: '32px', fontStyle: 'italic', fontWeight: '900', margin: 0, color: '#fff' }}>CAMPEONATOS ACTIVOS</h2>
-              <p style={{ color: '#74ACDF', fontSize: '14px', fontFamily: 'monospace', margin: '4px 0 0 0' }}>Torneos oficiales organizados por Espíndola Competición</p>
+        {tab === 'campeonatos' && (
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-neutral-900/90 border border-neutral-800 rounded-xl p-6 flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase text-amber-500 tracking-wider">Fecha Activa</span>
+                <h3 className="text-xl font-black mt-1 mb-2">MIT CUP Virtual 2026</h3>
+                <p className="text-neutral-400 text-sm mb-4">Etapa 4: Caminos de Misiones (Gravel / Tierra).</p>
+                
+                <label className="block text-xs font-semibold text-neutral-400 mb-2">Seleccioná tu auto:</label>
+                <select 
+                  value={autoSeleccionado}
+                  onChange={(e) => setAutoSeleccionado(e.target.value)}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2.5 text-sm text-white mb-4 focus:outline-none focus:border-amber-500"
+                >
+                  <option value="Peugeot 208 Rally4">Peugeot 208 Rally4</option>
+                  <option value="Renault Clio Rally5">Renault Clio Rally5</option>
+                </select>
+              </div>
+
+              <button 
+                onClick={() => handleInscripcion('MIT CUP Virtual 2026')}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm uppercase rounded-lg transition"
+              >
+                Inscribirme a la Fecha
+              </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
-              {championships.map((champ) => (
-                <div key={champ.id} style={{
-                  backgroundColor: 'rgba(13, 17, 23, 0.90)',
-                  border: '1px solid rgba(246, 180, 14, 0.4)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justify: 'space-between',
-                  boxShadow: '0 15px 35px rgba(0,0,0,0.7)',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ backgroundColor: 'rgba(116, 172, 223, 0.2)', color: '#74ACDF', border: '1px solid #74ACDF', padding: '4px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace' }}>{champ.surface}</span>
-                      <span style={{ fontSize: '12px', color: '#F6B40E', fontFamily: 'monospace', fontWeight: 'bold' }}>📅 {champ.dates}</span>
-                    </div>
-                    <h3 style={{ fontSize: '24px', fontWeight: '900', fontStyle: 'italic', margin: 0, color: '#fff' }}>{champ.title}</h3>
-                    <p style={{ fontSize: '14px', color: '#d1d5db', margin: 0, lineHeight: '1.5' }}>{champ.desc}</p>
-                    <div style={{ fontSize: '12px', color: '#9ca3af', fontFamily: 'monospace', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-                      Categoría: <strong style={{ color: '#fff' }}>{champ.category}</strong> | Inscriptos: <strong style={{ color: '#F6B40E' }}>{champ.registered} Pilotos</strong>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '18px' }}>
-                    <span style={{ color: '#34d399', fontSize: '12px', fontWeight: 'bold' }}>✓ {champ.status}</span>
-                    <button onClick={() => setSelectedChamp(champ)} style={{
-                      background: 'linear-gradient(135deg, #F6B40E, #d97706)',
-                      color: '#000',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '12px',
-                      fontWeight: '900',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px',
-                      boxShadow: '0 4px 15px rgba(246, 180, 14, 0.4)'
-                    }}>
-                      Inscribirme ➔
-                    </button>
-                  </div>
-                </div>
-              ))}
+            {/* Inscriptos Confirmados */}
+            <div className="bg-neutral-900/90 border border-neutral-800 rounded-xl p-6">
+              <h3 className="text-lg font-bold text-amber-500 mb-4">Pilotos Inscriptos ({inscripciones.length})</h3>
+              {inscripciones.length === 0 ? (
+                <p className="text-sm text-neutral-500">Aún no hay inscriptos confirmados para esta fecha.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {inscripciones.map((item) => (
+                    <li key={item.id} className="bg-neutral-800/50 p-3 rounded-lg border border-neutral-700/50 flex justify-between items-center text-sm">
+                      <span className="font-semibold">{item.nombre_piloto}</span>
+                      <span className="text-xs text-neutral-400 bg-neutral-700 px-2 py-1 rounded">{item.auto}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         )}
-
-        {activeTab === 'drivers' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <div>
-              <h2 style={{ fontSize: '32px', fontStyle: 'italic', fontWeight: '900', margin: 0, color: '#fff' }}>PLANTEL OFICIAL DE PILOTOS</h2>
-              <p style={{ color: '#74ACDF', fontSize: '14px', fontFamily: 'monospace', margin: '4px 0 0 0' }}>Competidores de Espíndola Competición Misiones, Argentina</p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
-              {drivers.map((d, i) => (
-                <div key={i} style={{
-                  backgroundColor: 'rgba(13, 17, 23, 0.90)',
-                  border: '1px solid rgba(116, 172, 223, 0.4)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '18px',
-                  boxShadow: '0 15px 35px rgba(0,0,0,0.7)',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '18px' }}>
-                    <div style={{
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '50%',
-                      backgroundColor: '#05070a',
-                      border: '2px solid #74ACDF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: '900',
-                      fontSize: '20px',
-                      color: '#F6B40E',
-                      boxShadow: '0 0 15px rgba(116, 172, 223, 0.4)'
-                    }}>
-                      {d.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '22px', fontWeight: '900', fontStyle: 'italic', margin: 0, color: '#fff' }}>{d.name}</h3>
-                      <p style={{ fontSize: '12px', color: '#74ACDF', margin: '2px 0 0 0', fontFamily: 'monospace', fontWeight: 'bold' }}>{d.role}</p>
-                      <p style={{ fontSize: '12px', color: '#9ca3af', margin: '2px 0 0 0' }}>Vehículo: {d.car}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', textAlign: 'center', backgroundColor: 'rgba(5, 7, 10, 0.8)', padding: '16px', borderRadius: '12px', fontFamily: 'monospace' }}>
-                    <div>
-                      <div style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>{d.wins}</div>
-                      <div style={{ fontSize: '10px', color: '#74ACDF', textTransform: 'uppercase', fontWeight: 'bold' }}>Victorias</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '22px', fontWeight: '900', color: '#F6B40E' }}>{d.points}</div>
-                      <div style={{ fontSize: '10px', color: '#F6B40E', textTransform: 'uppercase', fontWeight: 'bold' }}>Puntos Totales</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
       </main>
 
-      {/* MODAL DE INSCRIPCIÓN WRC */}
-      {selectedChamp && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px' }}>
-          <div style={{
-            backgroundColor: '#0d1117',
-            border: '2px solid #74ACDF',
-            borderRadius: '20px',
-            maxWidth: '460px',
-            width: '100%',
-            padding: '32px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-            position: 'relative',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.9)'
-          }}>
-            <button onClick={() => setSelectedChamp(null)} style={{ position: 'absolute', top: '18px', right: '18px', background: 'transparent', border: 'none', color: '#9ca3af', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+      {/* Modal Login / Registro */}
+      {mostrarAuthModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 max-w-md w-full relative">
+            <button 
+              onClick={() => setMostrarAuthModal(false)}
+              className="absolute top-4 right-4 text-neutral-500 hover:text-white"
+            >
+              ✕
+            </button>
+            <h3 className="text-xl font-bold mb-4 text-amber-500">
+              {esRegistro ? 'Registro de Piloto' : 'Iniciar Sesión'}
+            </h3>
             
-            <div>
-              <span style={{ fontSize: '11px', color: '#F6B40E', fontFamily: 'monospace', textTransform: 'uppercase', fontWeight: 'bold' }}>Inscripción Oficial WRC</span>
-              <h3 style={{ fontSize: '22px', fontStyle: 'italic', fontWeight: '900', margin: '4px 0 0 0', color: '#fff' }}>{selectedChamp.title}</h3>
-            </div>
-
-            {successMsg ? (
-              <div style={{ backgroundColor: 'rgba(52, 211, 153, 0.2)', border: '1px solid #34d399', color: '#34d399', padding: '16px', borderRadius: '12px', textAlign: 'center', fontFamily: 'monospace', fontSize: '14px', fontWeight: 'bold' }}>
-                {successMsg}
+            <form onSubmit={handleAuth} className="space-y-4">
+              {esRegistro && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-400 mb-1">Nombre / Seudónimo de Piloto</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={nombrePiloto}
+                    onChange={(e) => setNombrePiloto(e.target.value)}
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500" 
+                    placeholder="Ej. Lucas Negri"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-neutral-400 mb-1">Email</label>
+                <input 
+                  type="email" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500" 
+                  placeholder="piloto@espindola.com"
+                />
               </div>
-            ) : (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                setSuccessMsg(`¡Inscripción exitosa a "${selectedChamp.title}"!`);
-                setTimeout(() => { setSuccessMsg(""); setSelectedChamp(null); }, 2500);
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontFamily: 'monospace', color: '#74ACDF', marginBottom: '6px', fontWeight: 'bold' }}>Nombre del Piloto / Dupla</label>
-                  <input type="text" defaultValue={userRole === 'driver' ? "Lucas Negri" : ""} required style={{ width: '100%', backgroundColor: '#05070a', border: '1px solid rgba(116, 172, 223, 0.4)', borderRadius: '12px', padding: '12px 16px', color: '#fff', outline: 'none', fontFamily: 'monospace', fontSize: '14px' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontFamily: 'monospace', color: '#74ACDF', marginBottom: '6px', fontWeight: 'bold' }}>Vehículo de Competición</label>
-                  <select style={{ width: '100%', backgroundColor: '#05070a', border: '1px solid rgba(116, 172, 223, 0.4)', borderRadius: '12px', padding: '12px 16px', color: '#fff', outline: 'none', fontFamily: 'monospace', fontSize: '14px' }}>
-                    <option>Renault Clio Rally5</option>
-                    <option>Peugeot 208 Rally4</option>
-                    <option>Volkswagen Gol Power G4</option>
-                  </select>
-                </div>
-                <button type="submit" style={{
-                  background: 'linear-gradient(135deg, #74ACDF, #3b82f6)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  fontWeight: '900',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  letterSpacing: '1px',
-                  marginTop: '10px',
-                  boxShadow: '0 4px 15px rgba(116, 172, 223, 0.4)'
-                }}>
-                  Confirmar Registro
-                </button>
-              </form>
-            )}
+              <div>
+                <label className="block text-xs font-semibold text-neutral-400 mb-1">Contraseña</label>
+                <input 
+                  type="password" 
+                  required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500" 
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm uppercase rounded-lg transition"
+              >
+                {esRegistro ? 'Crear Cuenta' : 'Ingresar'}
+              </button>
+            </form>
+
+            <div className="mt-4 text-center">
+              <button 
+                onClick={() => setEsRegistro(!esRegistro)}
+                className="text-xs text-neutral-400 hover:text-amber-500 underline"
+              >
+                {esRegistro ? '¿Ya tenés cuenta? Iniciá sesión' : '¿No tenés cuenta? Registrate como piloto'}
+              </button>
+            </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
