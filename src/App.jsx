@@ -24,21 +24,7 @@ export default function App() {
 
   const [fondoActual, setFondoActual] = useState(0);
 
-  // CONFIGURACIÓN SOCIAL Y HISTORIA
-  const [config, setConfig] = useState({
-    instagram: 'https://instagram.com',
-    discord: 'https://discord.gg',
-    tiktok: 'https://tiktok.com',
-    historia_texto: 'Espíndola Competición nació de la pasión por el rally de alta competencia y la simulación deportiva. Con dedicación en cada fecha, combinamos telemetría, puesta a punto y constancia para estar siempre peleando la punta del campeonato.',
-    historia_imagen: 'https://files.catbox.moe/t5ffu8.png'
-  });
-  const [editandoConfig, setEditandoConfig] = useState(false);
-
-  // GALERÍA DE FOTOS
-  const [fotosGaleria, setFotosGaleria] = useState([]);
-  const [nuevaFotoGaleria, setNuevaFotoGaleria] = useState({ titulo: '', evento_nombre: '', imagen_url: '' });
-
-  // EVENTOS
+  // ESTADOS DE EVENTOS
   const [eventos, setEventos] = useState([]);
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
@@ -49,7 +35,7 @@ export default function App() {
     pais_origen: 'Argentina 🇦🇷'
   });
 
-  // MODAL INSCRIPCIÓN
+  // ESTADO MODAL INSCRIPCION
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [modoModalInscripcion, setModoModalInscripcion] = useState('formulario');
 
@@ -75,8 +61,6 @@ export default function App() {
     }
 
     obtenerDatosSesion();
-    cargarConfiguracion();
-    cargarGaleria();
     cargarEventos();
     cargarSalónDeLaFama();
 
@@ -96,23 +80,21 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function cargarConfiguracion() {
-    const { data } = await supabase.from('configuracion_equipo').select('*').eq('id', 1).single();
-    if (data) setConfig(data);
-  }
-
-  async function cargarGaleria() {
-    const { data } = await supabase.from('galeria').select('*').order('created_at', { ascending: false });
-    if (data) setFotosGaleria(data);
-  }
-
   async function cargarEventos() {
-    const { data } = await supabase.from('eventos').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from('eventos')
+      .select('*')
+      .order('created_at', { ascending: false });
+
     if (data) setEventos(data);
   }
 
   async function cargarSalónDeLaFama() {
-    const { data } = await supabase.from('salon_fama').select('*').order('campeonatos', { ascending: false });
+    const { data } = await supabase
+      .from('salon_fama')
+      .select('*')
+      .order('campeonatos', { ascending: false });
+
     if (data) {
       const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
       setHallFama(listaConPuestos);
@@ -139,51 +121,13 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
-  // GUARDAR REDES / HISTORIA (ADMIN)
-  const handleGuardarConfig = async (e) => {
-    e.preventDefault();
-    const { error } = await supabase
-      .from('configuracion_equipo')
-      .upsert({ id: 1, ...config, updated_at: new Date() });
-
-    if (error) {
-      alert('Error al guardar configuración: ' + error.message);
-    } else {
-      alert('¡Configuración de redes e historia guardada exitosamente!');
-      setEditandoConfig(false);
-    }
-  };
-
-  // GALERÍA: AÑADIR / ELIMINAR (ADMIN)
-  const handleSubirFotoGaleria = async (e) => {
-    e.preventDefault();
-    if (!nuevaFotoGaleria.imagen_url) {
-      alert('Por favor selecciona o sube una imagen primero.');
-      return;
-    }
-
-    const { error } = await supabase.from('galeria').insert([nuevaFotoGaleria]);
-
-    if (error) {
-      alert('Error al subir foto: ' + error.message);
-    } else {
-      setNuevaFotoGaleria({ titulo: '', evento_nombre: '', imagen_url: '' });
-      cargarGaleria();
-    }
-  };
-
-  const handleEliminarFotoGaleria = async (id) => {
-    if (!confirm('¿Seguro que deseas borrar esta imagen de la galería?')) return;
-    const { error } = await supabase.from('galeria').delete().eq('id', id);
-    if (!error) cargarGaleria();
-  };
-
-  // EVENTOS
   const handleCrearEvento = async (e) => {
     e.preventDefault();
     if (!nuevoEvento.titulo || !nuevoEvento.fecha) return;
 
-    const { error } = await supabase.from('eventos').insert([nuevoEvento]);
+    const { error } = await supabase
+      .from('eventos')
+      .insert([nuevoEvento]);
 
     if (error) {
       alert('Error al crear evento: ' + error.message);
@@ -206,7 +150,6 @@ export default function App() {
     if (!error) cargarEventos();
   };
 
-  // SALÓN DE LA FAMA
   const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
@@ -306,22 +249,6 @@ export default function App() {
               Inicio
             </button>
             <button
-              onClick={() => setPestanaActiva('historia')}
-              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
-                pestanaActiva === 'historia' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              Nuestra Historia
-            </button>
-            <button
-              onClick={() => setPestanaActiva('galeria')}
-              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
-                pestanaActiva === 'galeria' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              Galería
-            </button>
-            <button
               onClick={() => setPestanaActiva('livetiming')}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
@@ -397,258 +324,39 @@ export default function App() {
       {/* CONTENIDO PRINCIPAL */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         
-        {/* 1. INICIO CON BOTONES SOCIALES EDITABLES */}
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[75vh] flex items-center justify-center">
             <div className="max-w-4xl mx-auto text-center space-y-6 py-12">
               <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
-                Temporada Oficial 2026 • Espíndola Competición {esAdmin && '• Modo Admin'}
+                Temporada Oficial 2026 • Simracing Rally Hub {esAdmin && '• Panel Admin Activo'}
               </span>
 
               <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
                 PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.7)]">GLORIA</span>
               </h1>
 
-              {/* BOTONES SOCIALES MODERNOS */}
-              <div className="flex flex-wrap items-center justify-center gap-5 pt-6">
-                <a
-                  href={config.instagram || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:scale-105 text-white font-wrc text-lg px-7 py-3.5 rounded-2xl flex items-center gap-3 transition shadow-lg shadow-pink-500/20"
-                >
-                  <span className="text-xl">📸</span> Instagram
-                </a>
-                
-                <a
-                  href={config.discord || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-[#5865F2] hover:bg-[#4752C4] hover:scale-105 text-white font-wrc text-lg px-7 py-3.5 rounded-2xl flex items-center gap-3 transition shadow-lg shadow-indigo-500/30"
-                >
-                  <span className="text-xl">💬</span> Discord
-                </a>
+              <p className="max-w-2xl mx-auto text-neutral-100 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
+                Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y gestión centralizada.
+              </p>
 
-                <a
-                  href={config.tiktok || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-neutral-900 border border-neutral-700 hover:border-cyan-400 hover:scale-105 text-white font-wrc text-lg px-7 py-3.5 rounded-2xl flex items-center gap-3 transition shadow-lg shadow-cyan-500/10"
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+                <button
+                  onClick={() => setPestanaActiva('livetiming')}
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
                 >
-                  <span className="text-xl">🎵</span> TikTok
-                </a>
+                  🏁 Ver Live Timing
+                </button>
+                <button
+                  onClick={() => setPestanaActiva('eventos')}
+                  className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                >
+                  📅 Gestionar Eventos
+                </button>
               </div>
-
-              {/* PANEL DE ADMIN EN EL INICIO PARA EDITAR ENLACES SOCIALES */}
-              {esAdmin && (
-                <div className="pt-8 max-w-xl mx-auto">
-                  {!editandoConfig ? (
-                    <button
-                      onClick={() => setEditandoConfig(true)}
-                      className="text-xs font-wrc bg-neutral-900/80 hover:bg-neutral-800 text-amber-400 border border-amber-500/40 px-5 py-2.5 rounded-xl transition shadow-md uppercase tracking-wider"
-                    >
-                      ⚙️ Editar Redes Sociales del Inicio
-                    </button>
-                  ) : (
-                    <form onSubmit={handleGuardarConfig} className="bg-neutral-900/90 border border-amber-500/50 p-6 rounded-2xl text-left space-y-4 shadow-2xl backdrop-blur-md">
-                      <h3 className="font-wrc text-lg text-amber-400 uppercase">Editar Enlaces de Redes Sociales</h3>
-                      <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL Instagram</label>
-                        <input
-                          type="url"
-                          value={config.instagram}
-                          onChange={(e) => setConfig({ ...config, instagram: e.target.value })}
-                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL Discord</label>
-                        <input
-                          type="url"
-                          value={config.discord}
-                          onChange={(e) => setConfig({ ...config, discord: e.target.value })}
-                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL TikTok</label>
-                        <input
-                          type="url"
-                          value={config.tiktok}
-                          onChange={(e) => setConfig({ ...config, tiktok: e.target.value })}
-                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-3 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditandoConfig(false)}
-                          className="text-xs font-wrc bg-neutral-800 text-neutral-300 px-4 py-2 rounded-xl"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="submit"
-                          className="text-xs font-wrc bg-amber-500 text-black font-bold px-5 py-2 rounded-xl"
-                        >
-                          Guardar Cambios
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-
             </div>
           </div>
         )}
 
-        {/* 2. APARTADO HISTORIA DEL EQUIPO */}
-        {pestanaActiva === 'historia' && (
-          <div className="space-y-8 max-w-4xl mx-auto">
-            <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Nuestra Historia - Espíndola Competición</h2>
-              <p className="text-neutral-300 text-sm font-sans">El origen, nuestros valores y la trayectoria del equipo.</p>
-            </div>
-
-            <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-4">
-                <h3 className="font-wrc text-2xl text-white">Pasión Por El Motor y La Competición</h3>
-                <p className="text-neutral-200 text-base leading-relaxed font-sans whitespace-pre-line">
-                  {config.historia_texto}
-                </p>
-              </div>
-              <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl">
-                <img 
-                  src={config.historia_imagen || 'https://files.catbox.moe/t5ffu8.png'} 
-                  alt="Historia del equipo" 
-                  className="w-full h-72 object-cover hover:scale-105 transition duration-500"
-                />
-              </div>
-            </div>
-
-            {/* EDICIÓN DE HISTORIA PARA ADMIN */}
-            {esAdmin && (
-              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">⚙️ Editar Reseña de Historia e Imagen</h3>
-                <form onSubmit={handleGuardarConfig} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Texto de la Historia</label>
-                    <textarea
-                      rows={5}
-                      value={config.historia_texto}
-                      onChange={(e) => setConfig({ ...config, historia_texto: e.target.value })}
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Imagen Representativa (Desde PC)</label>
-                    <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
-                  </div>
-                  <button
-                    type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20"
-                  >
-                    💾 Guardar Historia
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 3. APARTADO GALERÍA DE FOTOS DE EVENTOS */}
-        {pestanaActiva === 'galeria' && (
-          <div className="space-y-8">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-              <div>
-                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Galería de Eventos</h2>
-                <p className="text-neutral-300 text-sm font-sans">Cobertura fotográfica oficial de nuestros tramos, fechas y momentos de podio.</p>
-              </div>
-            </div>
-
-            {/* PANEL ADMIN PARA SUBIR FOTOS DE EVENTOS */}
-            {esAdmin && (
-              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400 flex items-center gap-2">
-                  <span>📸</span> Subir Nueva Foto a la Galería
-                </h3>
-                <form onSubmit={handleSubirFotoGaleria} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Título de la Foto (ej: Tramo Final Misiones)"
-                    value={nuevaFotoGaleria.titulo}
-                    onChange={(e) => setNuevaFotoGaleria({ ...nuevaFotoGaleria, titulo: e.target.value })}
-                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nombre del Evento (ej: Fecha 1 - Rally Misiones)"
-                    value={nuevaFotoGaleria.evento_nombre}
-                    onChange={(e) => setNuevaFotoGaleria({ ...nuevaFotoGaleria, evento_nombre: e.target.value })}
-                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                  />
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Seleccionar Foto desde la PC</label>
-                    <SubirImagen 
-                      currentUrl={nuevaFotoGaleria.imagen_url} 
-                      onUpload={(url) => setNuevaFotoGaleria({ ...nuevaFotoGaleria, imagen_url: url })} 
-                    />
-                  </div>
-                  <div className="md:col-span-2 flex justify-end">
-                    <button
-                      type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20"
-                    >
-                      🚀 Publicar Foto
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* GRILLA DE FOTOS */}
-            {fotosGaleria.length === 0 ? (
-              <div className="text-center py-16 bg-neutral-900/40 border border-neutral-800 rounded-3xl">
-                <p className="text-neutral-400 font-sans">Aún no se han subido fotografías a la galería.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {fotosGaleria.map((foto) => (
-                  <div key={foto.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden group shadow-lg relative">
-                    <div className="w-full h-60 overflow-hidden relative">
-                      <img 
-                        src={foto.imagen_url} 
-                        alt={foto.titulo} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
-                    </div>
-                    <div className="p-4 absolute bottom-0 left-0 right-0">
-                      <h4 className="font-wrc text-xl text-white font-bold drop-shadow-md">{foto.titulo}</h4>
-                      {foto.evento_nombre && (
-                        <p className="text-amber-400 text-xs font-sans mt-0.5">{foto.evento_nombre}</p>
-                      )}
-                    </div>
-                    {esAdmin && (
-                      <button
-                        onClick={() => handleEliminarFotoGaleria(foto.id)}
-                        className="absolute top-3 right-3 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-xl text-xs backdrop-blur-md transition shadow-md"
-                        title="Eliminar foto"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* 4. LIVE TIMING */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
@@ -683,7 +391,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. EVENTOS */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -814,7 +521,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12">
             <div>
@@ -855,6 +561,7 @@ export default function App() {
                     required
                   />
                   
+                  {/* Selector de foto desde la PC */}
                   <div className="md:col-span-4">
                     <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto del Piloto (Desde la PC)</label>
                     <SubirImagen currentUrl={nuevoPilotoFama.foto} onUpload={(url) => setNuevoPilotoFama({...nuevoPilotoFama, foto: url})} />
@@ -1017,7 +724,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. PERFIL DE USUARIO */}
         {pestanaActiva === 'perfil' && (
           <div className="max-w-2xl mx-auto bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
