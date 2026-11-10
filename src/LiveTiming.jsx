@@ -8,34 +8,30 @@ export default function LiveTiming() {
   useEffect(() => {
     const fetchLiveTiming = async () => {
       try {
-        // Consultamos directamente el endpoint oficial por HTTP según la documentación de la S-Tracker API
-        const res = await fetch('http://br.assettohosting.com:10314/api/v1/live');
-        if (!res.ok) throw new Error(`El servidor respondió con status: ${res.status}`);
+        const res = await fetch('/api/live');
+        if (!res.ok) throw new Error(`Error en la API interna: ${res.status}`);
         
-        const json =.await res.json();
-        // La API de S-Tracker devuelve los datos dentro de la propiedad .data o directamente
+        const json = await res.json();
         setLiveData(json.data || json);
         setError(null);
       } catch (err) {
         console.error(err);
-        setError('No se pudo conectar con la S-Tracker API del servidor.');
+        setError('No se pudo conectar con el servidor de Assetto.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchLiveTiming();
-    const interval = setInterval(fetchLiveTiming, 3000); // Actualiza cada 3 segundos
+    const interval = setInterval(fetchLiveTiming, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Extraemos las propiedades mapeadas según la estructura oficial de la S-Tracker API
   const trackName = liveData?.track || liveData?.track_name || "Circuito Activo";
   const drivers = liveData?.drivers || liveData?.cars || liveData?.clients || [];
 
   return (
     <div className="max-w-6xl mx-auto p-4 text-white">
-      {/* Cabecera Estilizada */}
       <div className="bg-zinc-900/90 border border-amber-500/40 p-5 rounded-xl mb-6 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <span className="text-amber-400 font-bold tracking-widest text-xs uppercase">ESPÍNDOLA COMPETICIÓN</span>
@@ -57,7 +53,6 @@ export default function LiveTiming() {
         </div>
       )}
 
-      {/* Tabla Personalizada */}
       <div className="overflow-x-auto bg-zinc-950/95 border border-zinc-800/80 rounded-xl shadow-2xl backdrop-blur-md">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -87,7 +82,7 @@ export default function LiveTiming() {
             ) : (
               <tr>
                 <td colSpan="7" className="text-center py-12 text-zinc-500 italic">
-                  {loading ? "Sincronizando datos con la S-Tracker API..." : "No hay pilotos en el servidor en este momento."}
+                  {loading ? "Sincronizando datos con el servidor..." : "No hay pilotos en el servidor en este momento."}
                 </td>
               </tr>
             )}
