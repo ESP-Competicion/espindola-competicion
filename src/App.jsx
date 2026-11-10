@@ -23,22 +23,8 @@ export default function App() {
   ]);
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', circuito: '' });
 
-  // Salón de la Fama con soporte para edición y reordenamiento automático
-  const [hallFama, setHallFama] = useState([
-    { id: 1, puesto: 1, nombre: 'Lucas Negri', categoria: 'Rally4 - Renault Clio', campeonatos: 5, foto: 'https://files.catbox.moe/f3xmld.png' },
-    { id: 2, puesto: 2, nombre: 'Pedro Laninha', categoria: 'Rally2 - Peugeot 208', campeonatos: 3, foto: 'https://files.catbox.moe/t3phov.png' },
-    { id: 3, puesto: 3, nombre: 'Marcos Espíndola', categoria: 'WRC - Ford Fiesta', campeonatos: 2, foto: 'https://files.catbox.moe/f3xmld.png' },
-    { id: 4, puesto: 4, nombre: 'Matías Giménez', categoria: 'Rally3 - Renault Clio', campeonatos: 1, foto: '' },
-    { id: 5, puesto: 5, nombre: 'Lucas Benítez', categoria: 'Rally4 - Opel Corsa', campeonatos: 1, foto: '' },
-    { id: 6, puesto: 6, nombre: 'Gastón Duarte', categoria: 'Rally2 - Skoda Fabia', campeonatos: 1, foto: '' },
-    { id: 7, puesto: 7, nombre: 'Rodrigo Vera', categoria: 'WRC - Toyota Yaris', campeonatos: 1, foto: '' },
-    { id: 8, puesto: 8, nombre: 'Ezequiel Silva', categoria: 'Rally4 - Ford Fiesta', campeonatos: 1, foto: '' },
-    { id: 9, puesto: 9, nombre: 'Nahuel Acosta', categoria: 'Rally3 - Ford Fiesta', campeonatos: 1, foto: '' },
-    { id: 10, puesto: 10, nombre: 'Facundo Ramos', categoria: 'Rally2 - Hyundai i20', campeonatos: 1, foto: '' },
-    { id: 11, puesto: 11, nombre: 'Brian Soria', categoria: 'WRC - Citroen C3', campeonatos: 1, foto: '' },
-    { id: 12, puesto: 12, nombre: 'Alan Maidana', categoria: 'Rally4 - Peugeot 208', campeonatos: 1, foto: '' }
-  ]);
-
+  // Salón de la Fama sincronizado con Supabase
+  const [hallFama, setHallFama] = useState([]);
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
   const [editandoId, setEditandoId] = useState(null);
 
@@ -59,6 +45,7 @@ export default function App() {
     }
 
     obtenerDatosSesion();
+    cargarSalónDeLaFama();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUsuario(session?.user || null);
@@ -72,6 +59,18 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function cargarSalónDeLaFama() {
+    const { data, error } = await supabase
+      .from('salon_fama')
+      .select('*')
+      .order('campeonatos', { ascending: false });
+
+    if (data && !error) {
+      const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
+      setHallFama(listaConPuestos);
+    }
+  }
 
   async function verificarAdminYPerfil(user) {
     if (user.email === 'leosimracingok@gmail.com') {
@@ -113,45 +112,44 @@ export default function App() {
     setEventos(eventos.filter(ev => ev.id !== id));
   };
 
-  // Guardar o actualizar piloto en el Salón de la Fama con reordenamiento automático
-  const handleGuardarPilotoFama = (e) => {
+  // Guardar o actualizar en la base de datos de Supabase
+  const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
 
-    let listaActualizada = [...hallFama];
+    const datosPiloto = {
+      nombre: nuevoPilotoFama.nombre,
+      categoria: nuevoPilotoFama.categoria || 'Categoría General',
+      campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 0,
+      foto: nuevoPilotoFama.foto || 'https://files.catbox.moe/f3xmld.png'
+    };
 
     if (editandoId !== null) {
-      // Actualizar piloto existente
-      listaActualizada = listaActualizada.map(p => {
-        if (p.id === editandoId) {
-          return {
-            ...p,
-            nombre: nuevoPilotoFama.nombre,
-            categoria: nuevoPilotoFama.categoria || 'Categoría General',
-            campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 0,
-            foto: nuevoPilotoFama.foto || p.foto
-          };
-        }
-        return p;
-      });
+      // Actualizar registro existente
+      const { error } = await supabase
+        .from('salon_fama')
+        .update(datosPiloto)
+        .eq('id', editandoId);
+
+      if (error) {
+        alert('Error al actualizar: ' + error.message);
+        return;
+      }
       setEditandoId(null);
     } else {
-      // Crear nuevo piloto
-      listaActualizada.push({
-        id: Date.now(),
-        nombre: nuevoPilotoFama.nombre,
-        categoria: nuevoPilotoFama.categoria || 'Categoría General',
-        campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 1,
-        foto: nuevoPilotoFama.foto || 'https://files.catbox.moe/f3xmld.png'
-      });
+      // Insertar nuevo registro
+      const { error } = await supabase
+        .from('salon_fama')
+        .insert([datosPiloto]);
+
+      if (error) {
+        alert('Error al guardar: ' + error.message);
+        return;
+      }
     }
 
-    // Ordenar automáticamente de mayor a menor por cantidad de campeonatos y reasignar puestos
-    listaActualizada.sort((a, b) => b.campeonatos - a.campeonatos);
-    const listaConPuestos = listaActualizada.map((p, idx) => ({ ...p, puesto: idx + 1 }));
-
-    setHallFama(listaConPuestos);
     setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' });
+    cargarSalónDeLaFama(); // Recargar desde Supabase ordenado
   };
 
   const handleEditarPilotoFama = (piloto) => {
@@ -165,10 +163,19 @@ export default function App() {
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
 
-  const handleEliminarPilotoFama = (id) => {
-    const listaFiltrada = hallFama.filter(p => p.id !== id);
-    const listaConPuestos = listaFiltrada.map((p, idx) => ({ ...p, puesto: idx + 1 }));
-    setHallFama(listaConPuestos);
+  const handleEliminarPilotoFama = async (id) => {
+    if (!confirm('¿Estás seguro de eliminar a este piloto del Salón de la Fama?')) return;
+
+    const { error } = await supabase
+      .from('salon_fama')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+    } else {
+      cargarSalónDeLaFama();
+    }
   };
 
   const top3 = hallFama.slice(0, 3);
@@ -188,7 +195,6 @@ export default function App() {
             style={{ backgroundImage: `url(${foto})` }}
           />
         ))}
-        {/* Capa oscura translúcida para que se vea el fondo de las fotos */}
         <div className="absolute inset-0 bg-[#030303]/35 backdrop-blur-[0.3px]"></div>
       </div>
 
@@ -472,7 +478,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. SALÓN DE LA FAMA (PODIO + LISTA + ADMIN CON EDICIÓN) */}
+        {/* 3. SALÓN DE LA FAMA (PODIO + LISTA + SUPABASE) */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12">
             <div>
@@ -541,7 +547,7 @@ export default function App() {
               </div>
             )}
 
-            {/* DISEÑO DE ESCALONES DE PODIO PARA EL TOP 3 (Menos borroso y más transparente) */}
+            {/* DISEÑO DE ESCALONES DE PODIO PARA EL TOP 3 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
               
               {/* 2º PUESTO (Izquierda) */}
@@ -561,7 +567,7 @@ export default function App() {
                   </div>
                   {esAdmin && (
                     <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[1])} className="text-amber-400 hover:text-amber-300 underline">
+                      <button onClick={() => handleEditarPilotoFama(top3[1])} className="text-amber-400 hover:text-amber-300 underline font-bold">
                         ✏️ Editar
                       </button>
                       <button onClick={() => handleEliminarPilotoFama(top3[1].id)} className="text-red-400 hover:text-red-300 underline">
@@ -572,7 +578,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 1º PUESTO (Centro - Más alto y actualizado a 1º Puesto) */}
+              {/* 1º PUESTO (Centro - Más alto) */}
               {top3[0] && (
                 <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/40 to-neutral-950/60 backdrop-blur-md border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
@@ -617,7 +623,7 @@ export default function App() {
                   </div>
                   {esAdmin && (
                     <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[2])} className="text-amber-400 hover:text-amber-300 underline">
+                      <button onClick={() => handleEditarPilotoFama(top3[2])} className="text-amber-400 hover:text-amber-300 underline font-bold">
                         ✏️ Editar
                       </button>
                       <button onClick={() => handleEliminarPilotoFama(top3[2].id)} className="text-red-400 hover:text-red-300 underline">
