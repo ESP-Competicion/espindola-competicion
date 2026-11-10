@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import PerfilModal from './PerfilModal';
+import InscripcionModal from './InscripcionModal';
 
 const fotosRally = [
   'https://files.catbox.moe/t5ffu8.png',
@@ -17,13 +18,23 @@ export default function App() {
   const [esAdmin, setEsAdmin] = useState(false);
 
   const [fondoActual, setFondoActual] = useState(0);
-  const [eventos, setEventos] = useState([
-    { id: 1, titulo: 'Rally de Misiones - Fecha 1', fecha: '2026-04-12', circuito: 'Tramo Tierra Colorada', inscriptos: 12 },
-    { id: 2, titulo: 'Desafío Asfalto Neuquén', fecha: '2026-04-28', circuito: 'Autovía Norte', inscriptos: 8 }
-  ]);
-  const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', circuito: '' });
 
-  // Salón de la Fama sincronizado con Supabase
+  // ESTADOS DE EVENTOS CON SUPABASE
+  const [eventos, setEventos] = useState([]);
+  const [nuevoEvento, setNuevoEvento] = useState({
+    titulo: '',
+    fecha: '',
+    horario: '',
+    categorias: '',
+    modelos_autos: '',
+    pais_origen: 'Argentina 🇦🇷'
+  });
+
+  // ESTADO MODAL INSCRIPCION
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+  const [modoModalInscripcion, setModoModalInscripcion] = useState('formulario');
+
+  // SALÓN DE LA FAMA
   const [hallFama, setHallFama] = useState([]);
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
   const [editandoId, setEditandoId] = useState(null);
@@ -45,6 +56,7 @@ export default function App() {
     }
 
     obtenerDatosSesion();
+    cargarEventos();
     cargarSalónDeLaFama();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -60,13 +72,22 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  async function cargarEventos() {
+    const { data } = await supabase
+      .from('eventos')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (data) setEventos(data);
+  }
+
   async function cargarSalónDeLaFama() {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('salon_fama')
       .select('*')
       .order('campeonatos', { ascending: false });
 
-    if (data && !error) {
+    if (data) {
       const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
       setHallFama(listaConPuestos);
     }
@@ -77,42 +98,50 @@ export default function App() {
       setEsAdmin(true);
     }
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('perfiles')
       .select('nombre_piloto, steam_id, nacionalidad, avatar_url')
       .eq('id', user.id)
       .single();
 
-    if (data) {
-      setPerfil(data);
-    }
+    if (data) setPerfil(data);
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
-  const handleCrearEvento = (e) => {
+  // Crear evento completo en Supabase
+  const handleCrearEvento = async (e) => {
     e.preventDefault();
-    if (!nuevoEvento.titulo || !nuevoEvento.fecha || !nuevoEvento.circuito) return;
-    
-    const eventoCreado = {
-      id: Date.now(),
-      titulo: nuevoEvento.titulo,
-      fecha: nuevoEvento.fecha,
-      circuito: nuevoEvento.circuito,
-      inscriptos: 0
-    };
+    if (!nuevoEvento.titulo || !nuevoEvento.fecha) return;
 
-    setEventos([eventoCreado, ...eventos]);
-    setNuevoEvento({ titulo: '', fecha: '', circuito: '' });
+    const { error } = await supabase
+      .from('eventos')
+      .insert([nuevoEvento]);
+
+    if (error) {
+      alert('Error al crear evento: ' + error.message);
+    } else {
+      setNuevoEvento({
+        titulo: '',
+        fecha: '',
+        horario: '',
+        categorias: '',
+        modelos_autos: '',
+        pais_origen: 'Argentina 🇦🇷'
+      });
+      cargarEventos();
+    }
   };
 
-  const handleEliminarEvento = (id) => {
-    setEventos(eventos.filter(ev => ev.id !== id));
+  const handleEliminarEvento = async (id) => {
+    if (!confirm('¿Seguro de eliminar este evento?')) return;
+    const { error } = await supabase.from('eventos').delete().eq('id', id);
+    if (!error) cargarEventos();
   };
 
-  // Guardar o actualizar en la base de datos de Supabase
+  // Salón de la fama
   const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
@@ -125,31 +154,14 @@ export default function App() {
     };
 
     if (editandoId !== null) {
-      // Actualizar registro existente
-      const { error } = await supabase
-        .from('salon_fama')
-        .update(datosPiloto)
-        .eq('id', editandoId);
-
-      if (error) {
-        alert('Error al actualizar: ' + error.message);
-        return;
-      }
+      await supabase.from('salon_fama').update(datosPiloto).eq('id', editandoId);
       setEditandoId(null);
     } else {
-      // Insertar nuevo registro
-      const { error } = await supabase
-        .from('salon_fama')
-        .insert([datosPiloto]);
-
-      if (error) {
-        alert('Error al guardar: ' + error.message);
-        return;
-      }
+      await supabase.from('salon_fama').insert([datosPiloto]);
     }
 
     setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' });
-    cargarSalónDeLaFama(); // Recargar desde Supabase ordenado
+    cargarSalónDeLaFama();
   };
 
   const handleEditarPilotoFama = (piloto) => {
@@ -164,18 +176,9 @@ export default function App() {
   };
 
   const handleEliminarPilotoFama = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar a este piloto del Salón de la Fama?')) return;
-
-    const { error } = await supabase
-      .from('salon_fama')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert('Error al eliminar: ' + error.message);
-    } else {
-      cargarSalónDeLaFama();
-    }
+    if (!confirm('¿Eliminar del Salón de la Fama?')) return;
+    await supabase.from('salon_fama').delete().eq('id', id);
+    cargarSalónDeLaFama();
   };
 
   const top3 = hallFama.slice(0, 3);
@@ -184,7 +187,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* FONDO GLOBAL CON FOTOS DE RALLY CLARAS Y VISIBLES */}
+      {/* FONDO GLOBAL */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
           <div
@@ -349,8 +352,6 @@ export default function App() {
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-              
               <div className="flex flex-wrap justify-between items-center mb-6 border-b border-neutral-800 pb-4 gap-4">
                 <div>
                   <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">Live Timing & Telemetría - Servidor Oficial</h2>
@@ -382,24 +383,22 @@ export default function App() {
           </div>
         )}
 
+        {/* 2. EVENTOS CON FORMULARIO COMPLETO Y LISTA DE INSCRIPTOS */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
                 <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Próximos Eventos y Rallies</h2>
-                <p className="text-neutral-200 text-sm font-sans">Inscribite a las fechas oficiales o administra el calendario.</p>
+                <p className="text-neutral-200 text-sm font-sans">Inscribite a las fechas oficiales o consulta los inscriptos.</p>
               </div>
-              {esAdmin ? (
+              {esAdmin && (
                 <span className="font-wrc bg-amber-500 text-black text-xs tracking-wider font-extrabold px-4 py-2 rounded-xl shadow-lg">
                   ⚙️ Modo Administrador Activo
-                </span>
-              ) : (
-                <span className="text-xs text-neutral-300 font-mono">
-                  Inicia sesión como {`leosimracingok@gmail.com`} para crear eventos.
                 </span>
               )}
             </div>
 
+            {/* FORMULARIO DE CREACIÓN COMPLETO DE ADMIN */}
             {esAdmin && (
               <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
@@ -408,7 +407,7 @@ export default function App() {
                 <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider flex items-center gap-2">
                   <span>➕</span> Crear Nueva Fecha de Campeonato
                 </h3>
-                <form onSubmit={handleCrearEvento} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <form onSubmit={handleCrearEvento} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input 
                     type="text" 
                     placeholder="Título del Rally (ej: Rally de Misiones)" 
@@ -426,46 +425,78 @@ export default function App() {
                   />
                   <input 
                     type="text" 
-                    placeholder="Circuito / Tramo (ej: Tierra Colorada)" 
-                    value={nuevoEvento.circuito}
-                    onChange={(e) => setNuevoEvento({...nuevoEvento, circuito: e.target.value})}
+                    placeholder="Horario (ej: 21:00 hs ART)" 
+                    value={nuevoEvento.horario}
+                    onChange={(e) => setNuevoEvento({...nuevoEvento, horario: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                    required
                   />
-                  <button 
-                    type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm rounded-xl py-3 transition shadow-lg shadow-amber-500/20 tracking-wider flex items-center justify-center gap-2"
-                  >
-                    <span>🚀 Publicar Evento</span>
-                  </button>
+                  <input 
+                    type="text" 
+                    placeholder="Categorías (separadas por coma, ej: Rally4, Rally2)" 
+                    value={nuevoEvento.categorias}
+                    onChange={(e) => setNuevoEvento({...nuevoEvento, categorias: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Modelos de Autos (separados por coma, ej: Clio, Fiesta)" 
+                    value={nuevoEvento.modelos_autos}
+                    onChange={(e) => setNuevoEvento({...nuevoEvento, modelos_autos: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="País de Origen de la Carrera (ej: Argentina)" 
+                    value={nuevoEvento.pais_origen}
+                    onChange={(e) => setNuevoEvento({...nuevoEvento, pais_origen: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                  />
+                  <div className="md:col-span-3 flex justify-end">
+                    <button 
+                      type="submit"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider flex items-center gap-2"
+                    >
+                      <span>🚀 Publicar Carrera</span>
+                    </button>
+                  </div>
                 </form>
               </div>
             )}
 
+            {/* TARJETAS DE EVENTOS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {eventos.map((ev) => (
                 <div key={ev.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
                   <div className="absolute top-4 right-4 text-amber-400 font-mono text-xs bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                    {ev.fecha}
+                    {ev.fecha} {ev.horario && `• ${ev.horario}`}
                   </div>
                   <h3 className="font-wrc text-3xl text-white mb-2 group-hover:text-amber-400 transition">{ev.titulo}</h3>
-                  <p className="text-neutral-300 text-sm mb-4 font-sans">📍 Tramo: <span className="text-white font-medium">{ev.circuito}</span></p>
                   
-                  <div className="flex justify-between items-center pt-4 border-t border-neutral-800 gap-4">
-                    <span className="text-xs text-neutral-300 font-medium font-sans">Inscriptos: <strong className="text-amber-400">{ev.inscriptos}</strong></span>
-                    
+                  <div className="space-y-1 text-neutral-300 text-xs font-sans mb-4">
+                    {ev.categorias && <p>🏎️ Categorías: <span className="text-white font-medium">{ev.categorias}</span></p>}
+                    {ev.modelos_autos && <p>🚗 Autos: <span className="text-white font-medium">{ev.modelos_autos}</span></p>}
+                    {ev.pais_origen && <p>📍 Sede: <span className="text-white font-medium">{ev.pais_origen}</span></p>}
+                  </div>
+
+                  <div className="flex flex-wrap justify-between items-center pt-4 border-t border-neutral-800 gap-2">
+                    <button 
+                      onClick={() => { setEventoSeleccionado(ev); setModoModalInscripcion('lista'); }}
+                      className="bg-neutral-800 hover:bg-neutral-700 text-amber-400 border border-amber-500/30 font-wrc text-xs uppercase px-4 py-2 rounded-xl transition flex items-center gap-1.5"
+                    >
+                      📋 Lista de Inscriptos
+                    </button>
+
                     <div className="flex items-center gap-2">
                       {esAdmin && (
                         <button 
                           onClick={() => handleEliminarEvento(ev.id)}
                           className="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white font-wrc text-xs uppercase px-3 py-2 rounded-xl transition border border-red-500/30"
-                          title="Eliminar evento"
                         >
-                          🗑️ Eliminar
+                          🗑️
                         </button>
                       )}
                       <button 
-                        onClick={() => alert(`¡Te has inscripto exitosamente a ${ev.titulo}!`)}
+                        onClick={() => { setEventoSeleccionado(ev); setModoModalInscripcion('formulario'); }}
                         className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider font-bold"
                       >
                         Inscribirse
@@ -478,7 +509,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. SALÓN DE LA FAMA (PODIO + LISTA + SUPABASE) */}
+        {/* 3. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12">
             <div>
@@ -486,14 +517,13 @@ export default function App() {
               <p className="text-neutral-200 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
             </div>
 
-            {/* PANEL DE ADMIN PARA AGREGAR / EDITAR PILOTOS */}
             {esAdmin && (
               <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
-                  {editandoId !== null ? '✏️ Modo Edición Activo' : 'Panel de Control Exclusivo (Salón de la Fama)'}
+                  {editandoId !== null ? '✏️ Modo Edición Activo' : 'Panel de Control Exclusivo'}
                 </div>
                 <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider flex items-center gap-2">
-                  <span>🏆</span> {editandoId !== null ? 'Actualizar Campeón del Piloto' : 'Registrar Nuevo Campeón'}
+                  <span>🏆</span> {editandoId !== null ? 'Actualizar Campeón' : 'Registrar Nuevo Campeón'}
                 </h3>
                 <form onSubmit={handleGuardarPilotoFama} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <input 
@@ -506,14 +536,14 @@ export default function App() {
                   />
                   <input 
                     type="text" 
-                    placeholder="Categoría (ej: Rally4 - Clio)" 
+                    placeholder="Categoría" 
                     value={nuevoPilotoFama.categoria}
                     onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, categoria: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
                   />
                   <input 
                     type="number" 
-                    placeholder="Cantidad de Campeonatos" 
+                    placeholder="Campeonatos" 
                     value={nuevoPilotoFama.campeonatos}
                     onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, campeonatos: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
@@ -521,7 +551,7 @@ export default function App() {
                   />
                   <input 
                     type="url" 
-                    placeholder="URL de la Foto (Avatar)" 
+                    placeholder="URL Foto" 
                     value={nuevoPilotoFama.foto}
                     onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, foto: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
@@ -540,17 +570,17 @@ export default function App() {
                       type="submit"
                       className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
                     >
-                      {editandoId !== null ? '💾 Guardar Cambios' : '➕ Añadir al Salón de la Fama'}
+                      {editandoId !== null ? '💾 Guardar Cambios' : '➕ Añadir'}
                     </button>
                   </div>
                 </form>
               </div>
             )}
 
-            {/* DISEÑO DE ESCALONES DE PODIO PARA EL TOP 3 */}
+            {/* PODIO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
               
-              {/* 2º PUESTO (Izquierda) */}
+              {/* 2º PUESTO */}
               {top3[1] && (
                 <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
@@ -578,7 +608,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 1º PUESTO (Centro - Más alto) */}
+              {/* 1º PUESTO */}
               {top3[0] && (
                 <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/40 to-neutral-950/60 backdrop-blur-md border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
@@ -606,7 +636,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 3º PUESTO (Derecha) */}
+              {/* 3º PUESTO */}
               {top3[2] && (
                 <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
@@ -636,7 +666,7 @@ export default function App() {
 
             </div>
 
-            {/* LISTADO DE LOS DEMÁS PILOTOS (4º en adelante) */}
+            {/* RESTO DE LA LISTA */}
             {restoPilotos.length > 0 && (
               <div className="space-y-4 pt-10">
                 <h3 className="font-wrc text-2xl text-amber-400 tracking-wide border-b border-neutral-800 pb-3">
@@ -691,6 +721,7 @@ export default function App() {
           </div>
         )}
 
+        {/* 4. PERFIL */}
         {pestanaActiva === 'perfil' && (
           <div className="max-w-2xl mx-auto bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
@@ -739,6 +770,16 @@ export default function App() {
           usuario={usuario} 
           onClose={() => setMostrarPerfilModal(false)} 
           onPerfilGuardado={() => verificarAdminYPerfil(usuario)}
+        />
+      )}
+
+      {eventoSeleccionado && (
+        <InscripcionModal
+          evento={eventoSeleccionado}
+          modo={modoModalInscripcion}
+          perfil={perfil}
+          usuario={usuario}
+          onClose={() => setEventoSeleccionado(null)}
         />
       )}
     </div>
