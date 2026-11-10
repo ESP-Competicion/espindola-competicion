@@ -43,7 +43,7 @@ export default function App() {
   // FORMULARIOS ADMIN GALERIA
   const [nuevoAlbumNombre, setNuevoAlbumNombre] = useState('');
   const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
-  const [subiendoFotoAlbum, setSubiendoFotoAlbum] = useState(false);
+  const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
 
   // EVENTOS
   const [eventos, setEventos] = useState([]);
@@ -197,37 +197,42 @@ export default function App() {
     if (!error) cargarAlbumes();
   };
 
-  const handleSubirFotoAlAlbum = async (e) => {
+  // SUBIDA MÚLTIPLE DE FOTOS AL ÁLBUM (VARIAS A LA VEZ)
+  const handleSubirFotosMultiples = async (e) => {
     try {
-      setSubiendoFotoAlbum(true);
-      const file = e.target.files[0];
-      if (!file) return;
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `album_${albumSeleccionado.id}_${Date.now()}.${fileExt}`;
+      setSubiendoFotosMasivo(true);
 
-      const { error: uploadError } = await supabase.storage
-        .from('imagenes')
-        .upload(fileName, file);
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `album_${albumSeleccionado.id}_${Date.now()}_${Math.random().toString(36.substring(2, 7))}.${fileExt}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('imagenes')
+          .upload(fileName, file);
 
-      const { data } = supabase.storage
-        .from('imagenes')
-        .getPublicUrl(fileName);
+        if (uploadError) throw uploadError;
 
-      const { error: dbError } = await supabase.from('fotos_galeria').insert([{
-        album_id: albumSeleccionado.id,
-        imagen_url: data.publicUrl
-      }]);
+        const { data } = supabase.storage
+          .from('imagenes')
+          .getPublicUrl(fileName);
 
-      if (dbError) throw dbError;
+        const { error: dbError } = await supabase.from('fotos_galeria').insert([{
+          album_id: albumSeleccionado.id,
+          imagen_url: data.publicUrl
+        }]);
+
+        if (dbError) throw dbError;
+      }
 
       cargarFotosDeAlbum(albumSeleccionado.id);
+      alert(`¡Se subieron ${files.length} fotos exitosamente al álbum!`);
     } catch (error) {
-      alert('Error al subir la foto: ' + error.message);
+      alert('Error al subir las fotos: ' + error.message);
     } finally {
-      setSubiendoFotoAlbum(false);
+      setSubiendoFotosMasivo(false);
     }
   };
 
@@ -729,12 +734,13 @@ export default function App() {
 
                   {esAdmin && (
                     <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
-                      <span>{subiendoFotoAlbum ? '⏳ Subiendo foto...' : '📸 + Subir Foto al Álbum'}</span>
+                      <span>{subiendoFotosMasivo ? '⏳ Subiendo fotos...' : '📸 + Subir Varias Fotos'}</span>
                       <input 
                         type="file" 
                         accept="image/*" 
-                        onChange={handleSubirFotoAlAlbum} 
-                        disabled={subiendoFotoAlbum} 
+                        multiple 
+                        onChange={handleSubirFotosMultiples} 
+                        disabled={subiendoFotosMasivo} 
                         className="hidden" 
                       />
                     </label>
@@ -761,7 +767,7 @@ export default function App() {
                           />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                             <span className="bg-black/70 text-amber-400 font-wrc text-xs px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
-                              🔍 Clic para ampliar / descargar
+                              🔍 Clic para ver en alta resolución
                             </span>
                           </div>
                         </div>
@@ -951,7 +957,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. SALÓN DE LA FAMA (OPTIMIZADO Y MÁS COMPACTO) */}
+        {/* 6. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-10">
             <div className="flex flex-wrap justify-between items-end gap-6 border-b border-white/10 pb-6">
@@ -1035,10 +1041,7 @@ export default function App() {
               </div>
             )}
 
-            {/* PODIO COMPACTO Y EQUILIBRADO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center pt-2 max-w-4xl mx-auto">
-              
-              {/* 2º PUESTO */}
               {top3[1] && (
                 <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-2xl p-5 text-center shadow-xl relative order-2 md:order-1">
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-bold text-xs px-3 py-0.5 rounded-full shadow-md border border-white">
@@ -1062,7 +1065,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* 1º PUESTO (CENTRAL DESTACADO PERO COMPACTO) */}
               {top3[0] && (
                 <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/50 to-neutral-950/70 backdrop-blur-md border-2 border-amber-500 rounded-2xl p-6 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-3">
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-xs px-4 py-1 rounded-full shadow-lg border-2 border-white tracking-widest">
@@ -1086,7 +1088,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* 3º PUESTO */}
               {top3[2] && (
                 <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-2xl p-5 text-center shadow-xl relative order-3">
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-bold text-xs px-3 py-0.5 rounded-full shadow-md border border-white">
@@ -1111,7 +1112,6 @@ export default function App() {
               )}
             </div>
 
-            {/* RESTO DE PILOTOS (DISEÑO MÁS COMPACTO Y VISTOSO) */}
             {restoPilotos.length > 0 && (
               <div className="space-y-4 pt-6 max-w-4xl mx-auto">
                 <h3 className="font-wrc text-xl text-amber-400 tracking-wide border-b border-neutral-800 pb-2">
@@ -1209,34 +1209,37 @@ export default function App() {
 
       </main>
 
-      {/* MODAL LIGHTBOX PARA AMPLIAR Y DESCARGAR FOTO */}
+      {/* MODAL LIGHTBOX EN ALTA RESOLUCIÓN PARA VER Y DESCARGAR */}
       {fotoAmpliada && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-center p-4 md:p-8"
           onClick={() => setFotoAmpliada(null)}
         >
-          <div className="relative max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-amber-500/40 shadow-2xl bg-neutral-950" onClick={(e) => e.stopPropagation()}>
-            <img src={fotoAmpliada} alt="Foto Ampliada" className="max-w-full max-h-[75vh] object-contain block mx-auto" />
+          <div className="relative max-w-7xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            {/* IMAGEN EN TAMAÑO REAL Y ALTA CALIDAD */}
+            <img 
+              src={fotoAmpliada} 
+              alt="Foto Alta Resolución" 
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl border border-amber-500/30 bg-neutral-950" 
+            />
             
-            <div className="p-4 bg-neutral-900 flex flex-wrap justify-between items-center gap-4 border-t border-neutral-800">
-              <span className="text-xs text-neutral-400 font-sans">Vista ampliada de fotografía oficial</span>
-              <div className="flex items-center gap-3">
-                <a 
-                  href={fotoAmpliada} 
-                  download={`espindola_competicion_${Date.now()}.png`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-6 py-2.5 rounded-xl transition font-bold shadow-md flex items-center gap-2"
-                >
-                  <span>⬇️ Descargar Imagen</span>
-                </a>
-                <button 
-                  onClick={() => setFotoAmpliada(null)}
-                  className="bg-neutral-800 hover:bg-neutral-700 text-white font-wrc text-sm px-5 py-2.5 rounded-xl transition"
-                >
-                  Cerrar
-                </button>
-              </div>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 bg-neutral-900/90 border border-white/10 px-6 py-3 rounded-2xl shadow-xl backdrop-blur-md">
+              <span className="text-xs text-neutral-300 font-sans hidden sm:inline">Visualización en resolución original</span>
+              <a 
+                href={fotoAmpliada} 
+                download={`espindola_competicion_${Date.now()}.png`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-6 py-2.5 rounded-xl transition font-bold shadow-md flex items-center gap-2"
+              >
+                <span>⬇️ Descargar Imagen Original</span>
+              </a>
+              <button 
+                onClick={() => setFotoAmpliada(null)}
+                className="bg-neutral-800 hover:bg-neutral-700 text-white font-wrc text-sm px-5 py-2.5 rounded-xl transition"
+              >
+                Cerrar ✕
+              </button>
             </div>
           </div>
         </div>
