@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import logo from './assets/logo.png';
-import background from './assets/background.jpg';
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
@@ -95,16 +93,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans relative overflow-x-hidden">
-      {/* Fondo */}
-      <div 
-        className="fixed inset-0 bg-cover bg-center opacity-15 pointer-events-none"
-        style={{ backgroundImage: `url(${background})` }}
-      />
-
       {/* Header */}
       <header className="relative z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-md px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-        <div className="flex items-center gap-4">
-          <img src={logo} alt="Espíndola Competición" className="h-12 w-auto" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-black font-black text-xl">
+            E
+          </div>
           <h1 className="text-xl font-black tracking-wider uppercase text-amber-500">
             Espíndola Competición
           </h1>
