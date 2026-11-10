@@ -1,107 +1,84 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function LiveTiming() {
-  const [datosLive, setDatosLive] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Apuntamos a nuestra propia Serverless Function de Vercel
-  const URL_LIVE = '/api/live';
-
-  const obtenerDatos = async () => {
-    try {
-      const res = await fetch(URL_LIVE);
-      if (!res.ok) throw new Error('Error al conectar con la API');
-      const data = await res.json();
-      setDatosLive(data);
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      setError('No se pudo obtener el estado en vivo del servidor.');
-    } finally {
-      setCargando(false);
-    }
-  };
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    obtenerDatos();
-    const intervalo = setInterval(obtenerDatos, 5000);
-    return () => clearInterval(intervalo);
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/live');
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        console.error("Error cargando live timing:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 3000); // Actualiza cada 3 segundos
+    return () => clearInterval(interval);
   }, []);
 
-  if (cargando) {
-    return (
-      <div className="flex items-center justify-center p-12 text-amber-400 font-wrc text-xl animate-pulse">
-        Cargando telemetría en vivo...
-      </div>
-    );
+  if (loading && !data) {
+    return <div className="text-center text-white py-10">Conectando con el servidor...</div>;
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-950/40 border border-red-500/40 p-6 rounded-2xl text-center text-red-300 font-sans">
-        {error}
-      </div>
-    );
-  }
-
-  const pilotos = datosLive?.session?.drivers || datosLive?.drivers || datosLive?.cars || [];
-  const nombrePista = datosLive?.track || datosLive?.server_info?.track || 'Desconocida';
-  const nombreSesion = datosLive?.session_type || datosLive?.session?.type || 'Sesión en curso';
+  // Estructura de mapeo basada en los datos reales del server
+  const trackName = data?.track || data?.servername || "Circuito Activo";
+  const drivers = data?.drivers || data?.cars || [];
 
   return (
-    <div className="space-y-6">
-      <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/30 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 shadow-2xl">
+    <div className="max-w-6xl mx-auto p-4 text-white">
+      {/* Cabecera del Circuito */}
+      <div className="bg-zinc-900/80 border border-amber-500/30 p-4 rounded-xl mb-6 flex justify-between items-center">
         <div>
-          <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-full font-wrc">
-            ● SERVIDOR EN VIVO
-          </span>
-          <h2 className="font-wrc text-3xl text-white mt-2">Circuito: <span className="text-amber-400">{nombrePista}</span></h2>
-          <p className="text-xs text-neutral-400 font-sans">Sesión: {nombreSesion}</p>
+          <span className="text-amber-400 font-bold tracking-wider text-sm">CIRCUITO EN VIVO:</span>
+          <h2 className="text-xl font-extrabold uppercase">{trackName}</h2>
         </div>
-        <div className="text-right">
-          <span className="font-wrc text-4xl text-amber-400 font-black">{pilotos.length}</span>
-          <p className="text-xs text-neutral-400 uppercase font-wrc">Pilotos en pista</p>
+        <div className="bg-emerald-500/20 border border-emerald-500 px-3 py-1 rounded-full text-emerald-400 text-xs font-bold animate-pulse">
+          SERVIDOR EN VIVO ({drivers.length} PILOTOS)
         </div>
       </div>
 
-      <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-neutral-950/80 border-b border-white/10 font-wrc text-amber-400 text-sm tracking-wider uppercase">
-                <th className="py-4 px-6">Pos</th>
-                <th className="py-4 px-6">Piloto</th>
-                <th className="py-4 px-6">Auto</th>
-                <th className="py-4 px-6 text-right">Mejor Vuelta</th>
-                <th className="py-4 px-6 text-right">Última Vuelta</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 font-sans text-sm">
-              {pilotos.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-neutral-400 font-wrc">
-                    No hay pilotos en el servidor en este momento.
-                  </td>
+      {/* Tabla de Pilotos */}
+      <div className="overflow-x-auto bg-zinc-950/90 border border-zinc-800 rounded-xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-zinc-800 text-xs text-zinc-400 uppercase bg-zinc-900/50">
+              <th className="p-3">#</th>
+              <th className="p-3">Driver</th>
+              <th className="p-3">Car</th>
+              <th className="p-3">Current Lap</th>
+              <th className="p-3">Best Lap</th>
+              <th className="p-3">Gap</th>
+              <th className="p-3">Laps</th>
+            </tr>
+          </thead>
+          <tbody>
+            {drivers.length > 0 ? (
+              drivers.map((driver, index) => (
+                <tr key={index} className="border-b border-zinc-900 hover:bg-zinc-900/40 text-sm">
+                  <td className="p-3 font-bold text-amber-400">{driver.position || index + 1}</td>
+                  <td className="p-3 font-semibold">{driver.name || driver.driverName}</td>
+                  <td className="p-3 text-zinc-300">{driver.car || driver.carModel}</td>
+                  <td className="p-3 font-mono">{driver.currentLap || "-"}</td>
+                  <td className="p-3 font-mono text-emerald-400">{driver.bestLap || "-"}</td>
+                  <td className="p-3 font-mono text-zinc-400">{driver.gap || "-"}</td>
+                  <td className="p-3">{driver.laps || 0}</td>
                 </tr>
-              ) : (
-                pilotos.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-amber-500/10 transition duration-200">
-                    <td className="py-4 px-6 font-wrc font-bold text-amber-400">#{idx + 1}</td>
-                    <td className="py-4 px-6 font-bold text-white">{p.name || p.driver_name || 'Piloto'}</td>
-                    <td className="py-4 px-6 text-neutral-300">{p.car || p.model || 'N/A'}</td>
-                    <td className="py-4 px-6 text-right font-mono text-amber-300 font-bold">
-                      {p.best_lap || p.bestLap || '--:--.---'}
-                    </td>
-                    <td className="py-4 px-6 text-right font-mono text-neutral-300">
-                      {p.last_lap || p.lastLap || '--:--.---'}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="7" className="text-center py-8 text-zinc-500">
+                  No hay pilotos en pista en este momento (o sincronizando datos...).
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
