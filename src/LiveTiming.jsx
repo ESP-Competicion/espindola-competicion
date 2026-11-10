@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-const API_BASE = 'https://br.assettohosting.com:10314/api/v1';
-
 export default function LiveTiming() {
   const [liveData, setLiveData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -10,17 +8,16 @@ export default function LiveTiming() {
   useEffect(() => {
     const fetchLiveTiming = async () => {
       try {
-        // Consultamos el endpoint /live que provee la S-Tracker API
-        const res = await fetch(`${API_BASE}/live`);
-        if (!res.ok) throw new Error(`Error en la API: ${res.status}`);
+        // Consultamos a nuestro propio endpoint en Vercel (evita el bloqueo de Mixed Content)
+        const res = await fetch('/api/live');
+        if (!res.ok) throw new Error(`Error en la API interna: ${res.status}`);
         
         const json = await res.json();
-        // El formato de la API envuelve la respuesta en { success: true, data: ... }
         setLiveData(json.data || json);
         setError(null);
       } catch (err) {
         console.error(err);
-        setError('No se pudo conectar con la S-Tracker API del servidor.');
+        setError('No se pudo conectar con el servidor de Assetto.');
       } finally {
         setLoading(false);
       }
@@ -31,7 +28,6 @@ export default function LiveTiming() {
     return () => clearInterval(interval);
   }, []);
 
-  // Extraemos los datos según la estructura típica de S-Tracker /live
   const trackName = liveData?.track || liveData?.track_name || "Circuito Activo";
   const drivers = liveData?.drivers || liveData?.cars || liveData?.clients || [];
 
@@ -89,7 +85,7 @@ export default function LiveTiming() {
             ) : (
               <tr>
                 <td colSpan="7" className="text-center py-12 text-zinc-500 italic">
-                  {loading ? "Sincronizando datos con la S-Tracker API..." : "No hay pilotos en el servidor en este momento."}
+                  {loading ? "Sincronizando datos con el servidor..." : "No hay pilotos en el servidor en este momento."}
                 </td>
               </tr>
             )}
