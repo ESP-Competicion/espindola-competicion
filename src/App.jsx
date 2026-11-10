@@ -4,6 +4,7 @@ import PerfilModal from './PerfilModal';
 import InscripcionModal from './InscripcionModal';
 import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
+import SubirImagen from './SubirImagen';
 
 const fotosRally = [
   'https://files.catbox.moe/t5ffu8.png',
@@ -559,13 +560,13 @@ export default function App() {
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
                     required
                   />
-                  <input 
-                    type="url" 
-                    placeholder="URL Foto" 
-                    value={nuevoPilotoFama.foto}
-                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, foto: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
-                  />
+                  
+                  {/* Selector de foto desde la PC */}
+                  <div className="md:col-span-4">
+                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto del Piloto (Desde la PC)</label>
+                    <SubirImagen currentUrl={nuevoPilotoFama.foto} onUpload={(url) => setNuevoPilotoFama({...nuevoPilotoFama, foto: url})} />
+                  </div>
+
                   <div className="md:col-span-4 flex items-center justify-end gap-3">
                     {editandoId !== null && (
                       <button 
