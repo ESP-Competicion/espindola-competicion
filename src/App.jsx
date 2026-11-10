@@ -951,26 +951,26 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. SALÓN DE LA FAMA (CON CONTADOR AUTOMÁTICO DE CAMPEONATOS) */}
+        {/* 6. SALÓN DE LA FAMA (OPTIMIZADO Y MÁS COMPACTO) */}
         {pestanaActiva === 'fama' && (
-          <div className="space-y-12">
+          <div className="space-y-10">
             <div className="flex flex-wrap justify-between items-end gap-6 border-b border-white/10 pb-6">
               <div>
-                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
-                <p className="text-neutral-200 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
+                <h2 className="font-wrc text-3xl md:text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
+                <p className="text-neutral-300 text-xs md:text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
               </div>
 
               {/* TARJETA CONTADOR DE CAMPEONATOS TOTALES */}
-              <div className="bg-gradient-to-r from-neutral-900/80 via-neutral-900/60 to-neutral-950/80 backdrop-blur-md border border-amber-500/40 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl shadow-inner">
+              <div className="bg-gradient-to-r from-neutral-900/80 via-neutral-900/60 to-neutral-950/80 backdrop-blur-md border border-amber-500/40 rounded-2xl px-5 py-3 flex items-center gap-4 shadow-2xl">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-2xl shadow-inner">
                   🏆
                 </div>
                 <div>
-                  <span className="block text-xs font-wrc text-neutral-400 tracking-widest uppercase">
+                  <span className="block text-[10px] font-wrc text-neutral-400 tracking-widest uppercase">
                     Campeonatos en Total
                   </span>
-                  <span className="font-wrc text-4xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
-                    {totalCampeonatosEquipo} <span className="text-xl text-white font-normal">Títulos</span>
+                  <span className="font-wrc text-3xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
+                    {totalCampeonatosEquipo} <span className="text-base text-white font-normal">Títulos</span>
                   </span>
                 </div>
               </div>
@@ -1035,127 +1035,121 @@ export default function App() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
+            {/* PODIO COMPACTO Y EQUILIBRADO */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center pt-2 max-w-4xl mx-auto">
+              
+              {/* 2º PUESTO */}
               {top3[1] && (
-                <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
+                <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-2xl p-5 text-center shadow-xl relative order-2 md:order-1">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-bold text-xs px-3 py-0.5 rounded-full shadow-md border border-white">
                     🥈 2º PUESTO
                   </div>
-                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-2 border-neutral-400 overflow-hidden mb-4 shadow-xl mt-2">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-neutral-800 border-2 border-neutral-400 overflow-hidden mb-3 shadow-lg mt-1">
                     <img src={top3[1].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[1].nombre} className="w-full h-full object-cover" />
                   </div>
-                  <h3 className="font-wrc text-2xl text-white font-bold">{top3[1].nombre}</h3>
-                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[1].categoria}</p>
-                  <div className="mt-4 bg-neutral-950/60 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
-                    <span className="text-neutral-300 text-xs uppercase font-sans">Títulos: </span>
-                    <strong className="text-white font-wrc text-lg">{top3[1].campeonatos} 🏆</strong>
+                  <h3 className="font-wrc text-xl text-white font-bold">{top3[1].nombre}</h3>
+                  <p className="text-neutral-300 text-[11px] font-sans mt-0.5">{top3[1].categoria}</p>
+                  <div className="mt-3 bg-neutral-950/60 border border-neutral-800 py-1.5 px-3 rounded-xl inline-block">
+                    <span className="text-neutral-400 text-[10px] uppercase font-sans">Títulos: </span>
+                    <strong className="text-white font-wrc text-base">{top3[1].campeonatos} 🏆</strong>
                   </div>
                   {esAdmin && (
-                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[1])} className="text-amber-400 hover:text-amber-300 underline font-bold">
-                        ✏️ Editar
-                      </button>
-                      <button onClick={() => handleEliminarPilotoFama(top3[1].id)} className="text-red-400 hover:text-red-300 underline">
-                        🗑️ Eliminar
-                      </button>
+                    <div className="mt-3 flex items-center justify-center gap-2 font-sans text-[11px]">
+                      <button onClick={() => handleEditarPilotoFama(top3[1])} className="text-amber-400 hover:underline font-bold">✏️ Editar</button>
+                      <button onClick={() => handleEliminarPilotoFama(top3[1].id)} className="text-red-400 hover:underline">🗑️ Eliminar</button>
                     </div>
                   )}
                 </div>
               )}
 
+              {/* 1º PUESTO (CENTRAL DESTACADO PERO COMPACTO) */}
               {top3[0] && (
-                <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/40 to-neutral-950/60 backdrop-blur-md border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
+                <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/50 to-neutral-950/70 backdrop-blur-md border-2 border-amber-500 rounded-2xl p-6 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-3">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-xs px-4 py-1 rounded-full shadow-lg border-2 border-white tracking-widest">
                     🥇 1º PUESTO
                   </div>
-                  <div className="w-28 h-28 mx-auto rounded-full bg-neutral-800 border-4 border-amber-400 overflow-hidden mb-4 shadow-2xl mt-3">
+                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-3 border-amber-400 overflow-hidden mb-3 shadow-xl mt-1">
                     <img src={top3[0].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[0].nombre} className="w-full h-full object-cover" />
                   </div>
-                  <h3 className="font-wrc text-3xl text-amber-400 font-black">{top3[0].nombre}</h3>
-                  <p className="text-neutral-200 text-xs font-sans mt-1">{top3[0].categoria}</p>
-                  <div className="mt-4 bg-amber-500/10 border border-amber-500/40 py-2.5 px-6 rounded-2xl inline-block shadow-inner">
-                    <span className="text-amber-300 text-xs uppercase font-sans">Títulos Absolutos: </span>
-                    <strong className="text-amber-400 font-wrc text-xl">{top3[0].campeonatos} 🏆</strong>
+                  <h3 className="font-wrc text-2xl text-amber-400 font-black">{top3[0].nombre}</h3>
+                  <p className="text-neutral-200 text-[11px] font-sans mt-0.5">{top3[0].categoria}</p>
+                  <div className="mt-3 bg-amber-500/10 border border-amber-500/40 py-2 px-4 rounded-xl inline-block shadow-inner">
+                    <span className="text-amber-300 text-[10px] uppercase font-sans">Títulos Absolutos: </span>
+                    <strong className="text-amber-400 font-wrc text-lg">{top3[0].campeonatos} 🏆</strong>
                   </div>
                   {esAdmin && (
-                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[0])} className="text-amber-400 hover:text-amber-300 underline font-bold">
-                        ✏️ Editar
-                      </button>
-                      <button onClick={() => handleEliminarPilotoFama(top3[0].id)} className="text-red-400 hover:text-red-300 underline">
-                        🗑️ Eliminar
-                      </button>
+                    <div className="mt-3 flex items-center justify-center gap-2 font-sans text-[11px]">
+                      <button onClick={() => handleEditarPilotoFama(top3[0])} className="text-amber-400 hover:underline font-bold">✏️ Editar</button>
+                      <button onClick={() => handleEliminarPilotoFama(top3[0].id)} className="text-red-400 hover:underline">🗑️ Eliminar</button>
                     </div>
                   )}
                 </div>
               )}
 
+              {/* 3º PUESTO */}
               {top3[2] && (
-                <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
+                <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-2xl p-5 text-center shadow-xl relative order-3">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-bold text-xs px-3 py-0.5 rounded-full shadow-md border border-white">
                     🥉 3º PUESTO
                   </div>
-                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-2 border-amber-700 overflow-hidden mb-4 shadow-xl mt-2">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-neutral-800 border-2 border-amber-700 overflow-hidden mb-3 shadow-lg mt-1">
                     <img src={top3[2].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[2].nombre} className="w-full h-full object-cover" />
                   </div>
-                  <h3 className="font-wrc text-2xl text-white font-bold">{top3[2].nombre}</h3>
-                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[2].categoria}</p>
-                  <div className="mt-4 bg-neutral-950/60 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
-                    <span className="text-neutral-300 text-xs uppercase font-sans">Títulos: </span>
-                    <strong className="text-amber-500 font-wrc text-lg">{top3[2].campeonatos} 🏆</strong>
+                  <h3 className="font-wrc text-xl text-white font-bold">{top3[2].nombre}</h3>
+                  <p className="text-neutral-300 text-[11px] font-sans mt-0.5">{top3[2].categoria}</p>
+                  <div className="mt-3 bg-neutral-950/60 border border-neutral-800 py-1.5 px-3 rounded-xl inline-block">
+                    <span className="text-neutral-400 text-[10px] uppercase font-sans">Títulos: </span>
+                    <strong className="text-amber-500 font-wrc text-base">{top3[2].campeonatos} 🏆</strong>
                   </div>
                   {esAdmin && (
-                    <div className="mt-4 flex items-center justify-center gap-3 font-sans text-xs">
-                      <button onClick={() => handleEditarPilotoFama(top3[2])} className="text-amber-400 hover:text-amber-300 underline font-bold">
-                        ✏️ Editar
-                      </button>
-                      <button onClick={() => handleEliminarPilotoFama(top3[2].id)} className="text-red-400 hover:text-red-300 underline">
-                        🗑️ Eliminar
-                      </button>
+                    <div className="mt-3 flex items-center justify-center gap-2 font-sans text-[11px]">
+                      <button onClick={() => handleEditarPilotoFama(top3[2])} className="text-amber-400 hover:underline font-bold">✏️ Editar</button>
+                      <button onClick={() => handleEliminarPilotoFama(top3[2].id)} className="text-red-400 hover:underline">🗑️ Eliminar</button>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
+            {/* RESTO DE PILOTOS (DISEÑO MÁS COMPACTO Y VISTOSO) */}
             {restoPilotos.length > 0 && (
-              <div className="space-y-4 pt-10">
-                <h3 className="font-wrc text-2xl text-amber-400 tracking-wide border-b border-neutral-800 pb-3">
-                  Resto del Salón de la Fama (Pilotos Destacados)
+              <div className="space-y-4 pt-6 max-w-4xl mx-auto">
+                <h3 className="font-wrc text-xl text-amber-400 tracking-wide border-b border-neutral-800 pb-2">
+                  Resto del Salón de la Fama
                 </h3>
                 
-                <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-xl">
                   <div className="divide-y divide-neutral-800">
                     {restoPilotos.map((piloto) => (
-                      <div key={piloto.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition">
-                        <div className="flex items-center gap-4">
-                          <span className="font-wrc text-xl font-bold text-amber-500 w-8 text-center">
+                      <div key={piloto.id} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition">
+                        <div className="flex items-center gap-3">
+                          <span className="font-wrc text-lg font-bold text-amber-500 w-6 text-center">
                             #{piloto.puesto}
                           </span>
-                          <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex-shrink-0">
                             <img src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'} alt={piloto.nombre} className="w-full h-full object-cover" />
                           </div>
                           <div>
-                            <h4 className="font-wrc text-lg text-white font-bold">{piloto.nombre}</h4>
-                            <p className="text-neutral-300 text-xs font-sans">{piloto.categoria}</p>
+                            <h4 className="font-wrc text-base text-white font-bold">{piloto.nombre}</h4>
+                            <p className="text-neutral-400 text-[11px] font-sans">{piloto.categoria}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-6">
-                          <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3.5 py-1.5 rounded-full text-xs font-wrc font-bold">
+                        <div className="flex items-center gap-4">
+                          <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3 py-1 rounded-full text-xs font-wrc font-bold">
                             {piloto.campeonatos} 🏆 Título{piloto.campeonatos > 1 ? 's' : ''}
                           </span>
                           {esAdmin && (
                             <div className="flex items-center gap-2 font-sans text-xs">
                               <button 
                                 onClick={() => handleEditarPilotoFama(piloto)}
-                                className="text-amber-400 hover:text-amber-300 underline font-bold px-2 py-1"
+                                className="text-amber-400 hover:underline font-bold px-1"
                               >
                                 ✏️ Editar
                               </button>
                               <button 
                                 onClick={() => handleEliminarPilotoFama(piloto.id)}
-                                className="text-red-400 hover:text-red-300 underline px-2 py-1"
+                                className="text-red-400 hover:underline px-1"
                               >
                                 🗑️ Eliminar
                               </button>
