@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import Navbar from './Navbar';
 import PerfilModal from './PerfilModal';
 
 // Array de fotos de fondo estilo WRC para el carrusel dinámico
 const fotosRally = [
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=1920&auto=format&fit=crop', // Rally Action
-  'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=1920&auto=format&fit=crop', // Gravel / Tierra
-  'https://images.unsplash.com/photo-1541348263662-e0626628dcfc?q=80&w=1920&auto=format&fit=crop'  // Competition Car
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=1920&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=1920&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1541348263662-e0626628dcfc?q=80&w=1920&auto=format&fit=crop'
 ];
 
 export default function App() {
@@ -22,7 +21,7 @@ export default function App() {
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
       setFondoActual((prev) => (prev + 1) % fotosRally.length);
-    }, 6000); // Cambia de foto cada 6 segundos
+    }, 6000);
     return () => clearInterval(intervaloFondo);
   }, []);
 
@@ -87,8 +86,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* ----------------- ENCABEZADO ESTILO WRC (FLOTANTE OSCURO) ----------------- */}
-      <header className="sticky top-0 z-50 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800/80 px-6 py-3">
+      {/* ----------------- ENCABEZADO UNIFICADO ESTILO WRC ----------------- */}
+      <header className="sticky top-0 z-50 bg-neutral-950/90 backdrop-blur-md border-b border-neutral-800/80 px-6 py-3.5 shadow-2xl">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
           {/* Logo y Nombre de la Escudería */}
@@ -97,13 +96,13 @@ export default function App() {
               E
             </div>
             <div>
-              <h1 className="font-wrc text-xl font-black tracking-wider text-white">ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span></h1>
+              <h1 className="font-wrc text-lg md:text-xl font-black tracking-wider text-white">ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span></h1>
               <p className="text-[10px] tracking-widest text-neutral-400 font-mono uppercase">Official WRC Hub</p>
             </div>
           </div>
 
-          {/* Menú de Navegación Central (Estilo Píldora WRC) */}
-          <nav className="flex items-center gap-1 bg-neutral-900/80 p-1.5 rounded-full border border-neutral-800 shadow-xl overflow-x-auto">
+          {/* Menú de Navegación Central (Pestañas WRC) */}
+          <nav className="flex items-center gap-1.5 bg-neutral-900/80 p-1.5 rounded-full border border-neutral-800 shadow-xl overflow-x-auto">
             <button
               onClick={() => setPestanaActiva('inicio')}
               className={`px-5 py-2 rounded-full font-wrc text-sm font-bold tracking-wider transition-all ${
@@ -138,22 +137,49 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Perfil / Sesión */}
-          <div>
-            <Navbar 
-              usuario={usuario} 
-              perfil={perfil} 
-              onOpenPerfil={() => setMostrarPerfilModal(true)} 
-              onLogout={handleLogout}
-            />
+          {/* Bloque de Usuario y Perfil integrado a la derecha */}
+          <div className="flex items-center gap-3">
+            {usuario ? (
+              <div className="flex items-center gap-3 bg-neutral-900/80 border border-neutral-800 px-4 py-1.5 rounded-2xl shadow-inner">
+                <button 
+                  onClick={() => setMostrarPerfilModal(true)}
+                  className="flex items-center gap-2 text-left group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-neutral-800 border border-amber-500/50 flex items-center justify-center overflow-hidden font-bold text-amber-400 text-xs">
+                    {perfil?.avatar_url ? (
+                      <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-neutral-200 group-hover:text-amber-400 transition">
+                    {perfil?.nombre_piloto || usuario.email.split('@')[0]}
+                  </span>
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="text-xs font-semibold text-neutral-400 hover:text-red-400 transition pl-2 border-l border-neutral-800"
+                  title="Cerrar sesión"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setMostrarPerfilModal(true)}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-bold text-xs px-4 py-2 rounded-xl transition shadow-md uppercase tracking-wider"
+              >
+                Acceder / Registrarse
+              </button>
+            )}
           </div>
+
         </div>
       </header>
 
       {/* ----------------- HERO SECTION CON CARRUSEL DE FONDOS DE RALLY ----------------- */}
       {pestanaActiva === 'inicio' && (
-        <div className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
-          {/* Imágenes de fondo dinámicas con transición */}
+        <div className="relative min-h-[82vh] flex items-center justify-center overflow-hidden">
           {fotosRally.map((foto, index) => (
             <div
               key={index}
@@ -164,11 +190,9 @@ export default function App() {
             />
           ))}
 
-          {/* Degradados oscuros cinematográficos estilo WRC */}
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/90 via-transparent to-neutral-950/90"></div>
 
-          {/* Contenido Principal del Hero */}
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6 py-20">
             <span className="inline-block bg-amber-500/20 text-amber-400 font-mono text-xs tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase">
               Temporada Oficial 2026 • Simracing Rally Hub
@@ -185,9 +209,9 @@ export default function App() {
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
               <button
                 onClick={() => setPestanaActiva('livetiming')}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30 flex items-center gap-2"
+                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
               >
-                <span>🏁 Ver Live Timing</span>
+                🏁 Ver Live Timing
               </button>
               <button
                 onClick={() => setPestanaActiva('eventos')}
