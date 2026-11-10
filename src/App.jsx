@@ -108,8 +108,7 @@ export default function App() {
             style={{ backgroundImage: `url(${foto})` }}
           />
         ))}
-        {/* Capa oscura muy suave para que las 4 fotos destaquen con brillo */}
-        <div className="absolute inset-0 bg-[#030303]/45 backdrop-blur-[0.5px]"></div>
+        <div className="absolute inset-0 bg-[#030303]/40 backdrop-blur-[0.5px]"></div>
       </div>
 
       <style>{`
@@ -130,27 +129,17 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
-          {/* Logo interactivo (vuelve al inicio) con subtítulo Admin/Piloto */}
+          {/* ÚNICAMENTE EL LOGO GRANDE EN LA ESQUINA (INTERACTIVO PARA VOLVER AL INICIO) */}
           <div 
-            className="flex items-center gap-3.5 cursor-pointer group" 
+            className="cursor-pointer group flex items-center" 
             onClick={() => setPestanaActiva('inicio')}
             title="Ir al inicio"
           >
-            <div className="w-12 h-12 rounded-2xl bg-neutral-900/90 border border-amber-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-amber-500/20 group-hover:scale-105 transition p-1.5">
-              <img 
-                src="https://files.catbox.moe/f3xmld.png" 
-                alt="Logo Espíndola Competición" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="font-wrc text-lg font-black tracking-wider text-white group-hover:text-amber-400 transition">
-                ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span>
-              </h1>
-              <p className="text-[11px] tracking-widest text-amber-500 font-mono font-bold uppercase">
-                {esAdmin ? '• [ ADMIN ]' : '• [ PILOTO ]'}
-              </p>
-            </div>
+            <img 
+              src="https://files.catbox.moe/f3xmld.png" 
+              alt="Logo Espíndola Competición" 
+              className="h-12 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
+            />
           </div>
 
           <nav className="flex items-center gap-1 p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
