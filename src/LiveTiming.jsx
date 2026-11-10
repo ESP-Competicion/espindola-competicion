@@ -1,38 +1,43 @@
 import React, { useEffect, useState } from 'react';
 
+const API_BASE = 'https://br.assettohosting.com:10314/api/v1';
+
 export default function LiveTiming() {
-  const [data, setData] = useState(null);
+  const [liveData, setLiveData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchLiveData = async () => {
+    const fetchLiveTiming = async () => {
       try {
-        const res = await fetch('/api/live');
-        if (!res.ok) throw new Error('Error al conectar con la API interna');
+        // Consultamos el endpoint /live que provee la S-Tracker API
+        const res = await fetch(`${API_BASE}/live`);
+        if (!res.ok) throw new Error(`Error en la API: ${res.status}`);
+        
         const json = await res.json();
-        setData(json);
+        // El formato de la API envuelve la respuesta en { success: true, data: ... }
+        setLiveData(json.data || json);
         setError(null);
       } catch (err) {
         console.error(err);
-        setError('No se pudo obtener el estado en vivo del servidor.');
+        setError('No se pudo conectar con la S-Tracker API del servidor.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLiveData();
-    const interval = setInterval(fetchLiveData, 3000); // Refresca cada 3 segundos
+    fetchLiveTiming();
+    const interval = setInterval(fetchLiveTiming, 3000); // Refresca cada 3 segundos
     return () => clearInterval(interval);
   }, []);
 
-  // Extraemos las variables según cómo venga estructurado el JSON del servidor
-  const trackName = data?.track || data?.trackName || "Circuito Activo";
-  const drivers = data?.drivers || data?.cars || data?.players || [];
+  // Extraemos los datos según la estructura típica de S-Tracker /live
+  const trackName = liveData?.track || liveData?.track_name || "Circuito Activo";
+  const drivers = liveData?.drivers || liveData?.cars || liveData?.clients || [];
 
   return (
     <div className="max-w-6xl mx-auto p-4 text-white">
-      {/* Cabecera personalizada al estilo de tu web */}
+      {/* Cabecera Estilizada */}
       <div className="bg-zinc-900/90 border border-amber-500/40 p-5 rounded-xl mb-6 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <span className="text-amber-400 font-bold tracking-widest text-xs uppercase">ESPÍNDOLA COMPETICIÓN</span>
@@ -48,14 +53,13 @@ export default function LiveTiming() {
         </div>
       </div>
 
-      {/* Mensaje de error o carga */}
       {error && (
         <div className="bg-red-950/40 border border-red-800/60 text-red-300 p-4 rounded-xl text-center mb-6">
           {error}
         </div>
       )}
 
-      {/* Tabla Propia Estilizada */}
+      {/* Tabla Personalizada */}
       <div className="overflow-x-auto bg-zinc-950/95 border border-zinc-800/80 rounded-xl shadow-2xl backdrop-blur-md">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -73,19 +77,19 @@ export default function LiveTiming() {
             {drivers.length > 0 ? (
               drivers.map((driver, index) => (
                 <tr key={index} className="border-b border-zinc-900/60 hover:bg-zinc-900/40 transition-colors text-sm">
-                  <td className="p-4 font-black text-amber-400">{driver.position || index + 1}</td>
-                  <td className="p-4 font-bold text-zinc-100">{driver.name || driver.driverName || "Piloto"}</td>
-                  <td className="p-4 text-zinc-300">{driver.car || driver.carModel || "-"}</td>
-                  <td className="p-4 font-mono text-zinc-300">{driver.currentLap || "-"}</td>
-                  <td className="p-4 font-mono text-emerald-400 font-semibold">{driver.bestLap || "-"}</td>
+                  <td className="p-4 font-black text-amber-400">{driver.pos || driver.position || index + 1}</td>
+                  <td className="p-4 font-bold text-zinc-100">{driver.driver || driver.name || "Piloto"}</td>
+                  <td className="p-4 text-zinc-300">{driver.car_name || driver.car || "-"}</td>
+                  <td className="p-4 font-mono text-zinc-300">{driver.current_lap || "-"}</td>
+                  <td className="p-4 font-mono text-emerald-400 font-semibold">{driver.lap_time || driver.bestLap || "-"}</td>
                   <td className="p-4 font-mono text-zinc-400">{driver.gap || "-"}</td>
-                  <td className="p-4 font-mono text-zinc-300">{driver.laps || 0}</td>
+                  <td className="p-4 font-mono text-zinc-300">{driver.laps_count || driver.laps || 0}</td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan="7" className="text-center py-12 text-zinc-500 italic">
-                  {loading ? "Sincronizando datos con el servidor..." : "No hay pilotos en el servidor en este momento."}
+                  {loading ? "Sincronizando datos con la S-Tracker API..." : "No hay pilotos en el servidor en este momento."}
                 </td>
               </tr>
             )}
