@@ -509,11 +509,11 @@ export default function App() {
                 </a>
               </div>
 
-              {/* SECCIÓN DE SPONSORS ULTRA SUTIL Y COMPACTA */}
-              <div className="pt-3 flex items-center justify-center gap-2 filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)] max-w-lg mx-auto opacity-85">
-                <div className="flex items-center gap-2.5">
-                  <img src="https://files.catbox.moe/bqghq5.png" alt="Sponsor 1" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/ft0x4k.png" alt="Sponsor 2" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+              {/* SECCIÓN DE SPONSORS CON LOS DOS PRIMEROS LOGOS LIGERO MÁS GRANDES */}
+              <div className="pt-3 flex items-center justify-center gap-2.5 filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)] max-w-lg mx-auto opacity-85">
+                <div className="flex items-center gap-3">
+                  <img src="https://files.catbox.moe/bqghq5.png" alt="Sponsor 1" className="h-4.5 md:h-5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/ft0x4k.png" alt="Sponsor 2" className="h-4.5 md:h-5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
                   <img src="https://files.catbox.moe/1dri8l.png" alt="Sponsor 3" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
                   <img src="https://files.catbox.moe/p7aax8.png" alt="Sponsor 4" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
                   <img src="https://files.catbox.moe/gc66x8.png" alt="Sponsor 5" className="h-3.5 w-auto object-contain filter drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" />
