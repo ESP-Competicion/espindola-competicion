@@ -97,7 +97,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* FONDO GLOBAL CON FOTOS DE RALLY ROTATIVAS Y ATENUADAS */}
+      {/* FONDO GLOBAL CON FOTOS DE RALLY ROTATIVAS */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
           <div
@@ -139,7 +139,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Menú de Navegación completo con Mi Perfil */}
           <nav className="flex items-center gap-1 p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
             <button
               onClick={() => setPestanaActiva('inicio')}
@@ -225,7 +224,6 @@ export default function App() {
       {/* CONTENIDO PRINCIPAL */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
         
-        {/* PESTAÑA INICIO */}
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[75vh] flex items-center justify-center">
             <div className="max-w-4xl mx-auto text-center space-y-6 py-12">
@@ -259,7 +257,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 1. LIVETIMING */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
             <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
@@ -296,7 +293,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. EVENTOS & PANEL DE ADMINISTRACIÓN */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -393,7 +389,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-6">
             <div>
@@ -429,7 +424,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. MI PERFIL */}
         {pestanaActiva === 'perfil' && (
           <div className="max-w-2xl mx-auto bg-neutral-900/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
@@ -473,7 +467,6 @@ export default function App() {
 
       </main>
 
-      {/* Modal de edición de perfil */}
       {mostrarPerfilModal && (
         <PerfilModal 
           usuario={usuario} 
