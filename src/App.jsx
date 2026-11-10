@@ -36,9 +36,9 @@ export default function App() {
 
   // ESTADOS DE GALERÍA Y ÁLBUMES (CARPETAS)
   const [albumes, setAlbumes] = useState([]);
-  const [albumSeleccionado, setAlbumSeleccionado] = useState(null); // Si es null estamos en la vista de carpetas
+  const [albumSeleccionado, setAlbumSeleccionado] = useState(null);
   const [fotosAlbumActual, setFotosAlbumActual] = useState([]);
-  const [fotoAmpliada, setFotoAmpliada] = useState(null); // Lightbox para ver la foto grande y descargar
+  const [fotoAmpliada, setFotoAmpliada] = useState(null);
 
   // FORMULARIOS ADMIN GALERIA
   const [nuevoAlbumNombre, setNuevoAlbumNombre] = useState('');
@@ -64,6 +64,9 @@ export default function App() {
   const [hallFama, setHallFama] = useState([]);
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
   const [editandoId, setEditandoId] = useState(null);
+
+  // CÁLCULO AUTOMÁTICO DE CAMPEONATOS TOTALES
+  const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
 
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
@@ -165,7 +168,6 @@ export default function App() {
     }
   };
 
-  // CREAR NUEVO ÁLBUM (CARPETA)
   const handleCrearAlbum = async (e) => {
     e.preventDefault();
     if (!nuevoAlbumNombre.trim() || !portadaAlbumUrl) {
@@ -195,7 +197,6 @@ export default function App() {
     if (!error) cargarAlbumes();
   };
 
-  // SUBIR FOTO DENTRO DE UN ÁLBUM
   const handleSubirFotoAlAlbum = async (e) => {
     try {
       setSubiendoFotoAlbum(true);
@@ -620,11 +621,9 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. GALERÍA DE EVENTOS (CON ÁLBUMES / CARPETAS Y LIGHTBOX) */}
+        {/* 3. GALERÍA DE EVENTOS */}
         {pestanaActiva === 'galeria' && (
           <div className="space-y-8">
-            
-            {/* VISTA 1: LISTA DE ÁLBUMES (CARPETAS) */}
             {!albumSeleccionado ? (
               <div className="space-y-8">
                 <div className="flex flex-wrap justify-between items-center gap-4">
@@ -634,7 +633,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* PANEL DE ADMIN PARA CREAR ÁLBUM */}
                 {esAdmin && (
                   <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
                     <h3 className="font-wrc text-xl text-amber-400">📁 Crear Nueva Carpeta de Evento</h3>
@@ -666,7 +664,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* GRILLA DE ÁLBUMES */}
                 {albumes.length === 0 ? (
                   <div className="text-center py-16 bg-neutral-900/40 border border-neutral-800 rounded-3xl">
                     <p className="text-neutral-400 font-sans">No hay carpetas de eventos creadas todavía.</p>
@@ -687,7 +684,6 @@ export default function App() {
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                           
-                          {/* ÍCONO DE CARPETA */}
                           <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 flex items-center gap-2">
                             <span>📁</span>
                             <span className="font-wrc text-xs text-amber-400">Álbum Oficial</span>
@@ -719,8 +715,6 @@ export default function App() {
                 )}
               </div>
             ) : (
-
-              /* VISTA 2: DENTRO DEL ÁLBUM (FOTOS SIN TEXTO + LIGHTBOX + DESCARGA) */
               <div className="space-y-8">
                 <div className="flex flex-wrap justify-between items-center gap-4 bg-neutral-900/60 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
                   <div>
@@ -957,12 +951,29 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. SALÓN DE LA FAMA */}
+        {/* 6. SALÓN DE LA FAMA (CON CONTADOR AUTOMÁTICO DE CAMPEONATOS) */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12">
-            <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
-              <p className="text-neutral-200 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
+            <div className="flex flex-wrap justify-between items-end gap-6 border-b border-white/10 pb-6">
+              <div>
+                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
+                <p className="text-neutral-200 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
+              </div>
+
+              {/* TARJETA CONTADOR DE CAMPEONATOS TOTALES */}
+              <div className="bg-gradient-to-r from-neutral-900/80 via-neutral-900/60 to-neutral-950/80 backdrop-blur-md border border-amber-500/40 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl shadow-inner">
+                  🏆
+                </div>
+                <div>
+                  <span className="block text-xs font-wrc text-neutral-400 tracking-widest uppercase">
+                    Campeonatos en Total
+                  </span>
+                  <span className="font-wrc text-4xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
+                    {totalCampeonatosEquipo} <span className="text-xl text-white font-normal">Títulos</span>
+                  </span>
+                </div>
+              </div>
             </div>
 
             {esAdmin && (
