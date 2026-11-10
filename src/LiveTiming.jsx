@@ -5,7 +5,8 @@ export default function LiveTiming() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  const URL_LIVE = 'http://br.assettohosting.com:10314/api/v1/live';
+  // Usamos el proxy configurado en vercel.json para evitar el bloqueo HTTPS -> HTTP
+  const URL_LIVE = '/api/assetto/live';
 
   const obtenerDatos = async () => {
     try {
@@ -24,7 +25,6 @@ export default function LiveTiming() {
 
   useEffect(() => {
     obtenerDatos();
-    // Actualiza los datos en tiempo real cada 5 segundos
     const intervalo = setInterval(obtenerDatos, 5000);
     return () => clearInterval(intervalo);
   }, []);
@@ -45,14 +45,12 @@ export default function LiveTiming() {
     );
   }
 
-  // Extraer pilotos de la respuesta (ajustar la propiedad según la estructura de la API si varía)
   const pilotos = datosLive?.session?.drivers || datosLive?.drivers || datosLive?.cars || [];
   const nombrePista = datosLive?.track || datosLive?.server_info?.track || 'Desconocida';
   const nombreSesion = datosLive?.session_type || datosLive?.session?.type || 'Sesión en curso';
 
   return (
     <div className="space-y-6">
-      {/* Encabezado del Servidor */}
       <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/30 p-6 rounded-3xl flex flex-wrap items-center justify-between gap-4 shadow-2xl">
         <div>
           <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-full font-wrc">
@@ -67,7 +65,6 @@ export default function LiveTiming() {
         </div>
       </div>
 
-      {/* Tabla Custom de Live Timing */}
       <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
