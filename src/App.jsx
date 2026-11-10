@@ -6,7 +6,7 @@ const fotosRally = [
   'https://files.catbox.moe/t5ffu8.png',
   'https://files.catbox.moe/pfh5gw.png',
   'https://files.catbox.moe/t5ffu8.png',
-  'https://files.catbox.moe/jtgf56.png',
+  'https://files.catbox.moe/jtgf56.png'
 ];
 
 export default function App() {
@@ -97,18 +97,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* FONDO GLOBAL CON FOTOS DE RALLY ROTATIVAS */}
+      {/* FONDO GLOBAL CON FOTOS DE RALLY CLARAS Y VISIBLES */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
           <div
             key={index}
             className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-              index === fondoActual ? 'opacity-20 scale-105' : 'opacity-0 scale-100'
+              index === fondoActual ? 'opacity-65 scale-105' : 'opacity-0 scale-100'
             }`}
             style={{ backgroundImage: `url(${foto})` }}
           />
         ))}
-        <div className="absolute inset-0 bg-[#050505]/85 backdrop-blur-[2px]"></div>
+        {/* Capa oscura muy suave para que las 4 fotos destaquen con brillo */}
+        <div className="absolute inset-0 bg-[#030303]/45 backdrop-blur-[0.5px]"></div>
       </div>
 
       <style>{`
@@ -122,20 +123,33 @@ export default function App() {
         }
       `}</style>
 
-      {/* ENCABEZADO TRANSLÚCIDO ESTILO WRC */}
+      {/* ENCABEZADO TRANSLÚCIDO */}
       <header 
-        className="sticky top-0 z-50 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-xl"
-        style={{ backgroundColor: 'rgba(5, 5, 5, 0.65)' }}
+        className="sticky top-0 z-50 backdrop-blur-md border-b border-white/10 px-6 py-3 shadow-xl"
+        style={{ backgroundColor: 'rgba(5, 5, 5, 0.7)' }}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setPestanaActiva('inicio')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center font-wrc font-black text-black text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition">
-              E
+          {/* Logo interactivo (vuelve al inicio) con subtítulo Admin/Piloto */}
+          <div 
+            className="flex items-center gap-3.5 cursor-pointer group" 
+            onClick={() => setPestanaActiva('inicio')}
+            title="Ir al inicio"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-neutral-900/90 border border-amber-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-amber-500/20 group-hover:scale-105 transition p-1.5">
+              <img 
+                src="https://files.catbox.moe/f3xmld.png" 
+                alt="Logo Espíndola Competición" 
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
-              <h1 className="font-wrc text-xl font-black tracking-wider text-white">ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span></h1>
-              <p className="text-[10px] tracking-widest text-neutral-400 font-mono uppercase">Official WRC Hub {esAdmin && '• [ADMIN]'}</p>
+              <h1 className="font-wrc text-lg font-black tracking-wider text-white group-hover:text-amber-400 transition">
+                ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span>
+              </h1>
+              <p className="text-[11px] tracking-widest text-amber-500 font-mono font-bold uppercase">
+                {esAdmin ? '• [ ADMIN ]' : '• [ PILOTO ]'}
+              </p>
             </div>
           </div>
 
@@ -227,15 +241,15 @@ export default function App() {
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[75vh] flex items-center justify-center">
             <div className="max-w-4xl mx-auto text-center space-y-6 py-12">
-              <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md">
+              <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
                 Temporada Oficial 2026 • Simracing Rally Hub {esAdmin && '• Panel Admin Activo'}
               </span>
 
-              <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_15px_rgba(0,0,0,0.9)]">
-                PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.6)]">GLORIA</span>
+              <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
+                PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.7)]">GLORIA</span>
               </h1>
 
-              <p className="max-w-2xl mx-auto text-neutral-200 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
+              <p className="max-w-2xl mx-auto text-neutral-100 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
                 Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y gestión centralizada.
               </p>
 
@@ -248,7 +262,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setPestanaActiva('eventos')}
-                  className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                  className="bg-neutral-950/70 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
                 >
                   📅 Gestionar Eventos
                 </button>
@@ -259,7 +273,7 @@ export default function App() {
 
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
-            <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div className="bg-neutral-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
               
               <div className="flex flex-wrap justify-between items-center mb-6 border-b border-neutral-800 pb-4 gap-4">
@@ -355,7 +369,7 @@ export default function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {eventos.map((ev) => (
-                <div key={ev.id} className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
+                <div key={ev.id} className="bg-neutral-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
                   <div className="absolute top-4 right-4 text-amber-400 font-mono text-xs bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                     {ev.fecha}
                   </div>
@@ -425,7 +439,7 @@ export default function App() {
         )}
 
         {pestanaActiva === 'perfil' && (
-          <div className="max-w-2xl mx-auto bg-neutral-900/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+          <div className="max-w-2xl mx-auto bg-neutral-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
               <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500 to-amber-300 p-1 mb-4 shadow-xl">
                 <div className="w-full h-full bg-neutral-950 rounded-full flex items-center justify-center overflow-hidden text-2xl font-wrc font-black text-amber-400">
