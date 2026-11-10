@@ -509,23 +509,23 @@ export default function App() {
                 </a>
               </div>
 
-              {/* SECCIÓN DE SPONSORS CON LOGOS INDIVIDUALES Y SOMBRADO NEGRO */}
-              <div className="pt-6 flex flex-wrap items-center justify-center gap-4 filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]">
-                <span className="font-wrc text-sm text-neutral-300 tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+              {/* SECCIÓN DE SPONSORS DISCRETOS EN UNA SOLA LÍNEA */}
+              <div className="pt-4 flex flex-wrap items-center justify-center gap-3 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)] max-w-xl mx-auto opacity-90">
+                <span className="font-wrc text-xs text-neutral-400 tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                   Sponsors:
                 </span>
-                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
-                  <img src="https://files.catbox.moe/bqghq5.png" alt="Sponsor 1" className="h-10 md:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/ft0x4k.png" alt="Sponsor 2" className="h-10 md:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/1dri8l.png" alt="Sponsor 3" className="h-10 md:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/p7aax8.png" alt="Sponsor 4" className="h-10 md:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/gc66x8.png" alt="Sponsor 5" className="h-10 md:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" />
-                  <img src="https://files.catbox.moe/89s38r.png" alt="Sponsor 6" className="h-10 md:h-12 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" />
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  <img src="https://files.catbox.moe/bqghq5.png" alt="Sponsor 1" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/ft0x4k.png" alt="Sponsor 2" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/1dri8l.png" alt="Sponsor 3" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/p7aax8.png" alt="Sponsor 4" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/gc66x8.png" alt="Sponsor 5" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
+                  <img src="https://files.catbox.moe/89s38r.png" alt="Sponsor 6" className="h-5 md:h-6 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" />
                 </div>
               </div>
 
               {esAdmin && (
-                <div className="pt-4 max-w-xl mx-auto">
+                <div className="pt-2 max-w-xl mx-auto">
                   {!editandoConfig ? (
                     <button
                       onClick={() => setEditandoConfig(true)}
