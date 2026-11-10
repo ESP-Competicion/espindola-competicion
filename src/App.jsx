@@ -81,7 +81,7 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Menú de Pestañas Interactivas (Estilo Glassmorphism con bordes dorados y celestes) */}
+      {/* Menú de Pestañas Interactivas */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-wrap items-center justify-center gap-3 p-2 bg-neutral-900/60 backdrop-blur-md border border-amber-500/30 rounded-2xl shadow-2xl">
           <button
@@ -132,12 +132,13 @@ export default function App() {
         {/* CONTENIDO DE LAS PESTAÑAS */}
         <main className="mt-8">
           
-          {/* 1. LIVETIMING (Interfaz Propia) */}
+          {/* 1. LIVETIMING (Interfaz Propia con Tabla y Mapa del Tramo) */}
           {pestanaActiva === 'livetiming' && (
             <div className="space-y-6">
               <div className="bg-neutral-900/60 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 
+                {/* Cabecera */}
                 <div className="flex flex-wrap justify-between items-center mb-6 border-b border-neutral-800 pb-4 gap-4">
                   <div>
                     <h2 className="text-2xl font-black text-amber-400 uppercase tracking-wide">Live Timing & Telemetría - Espíndola Competición</h2>
@@ -145,10 +146,10 @@ export default function App() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/30">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Conectado a API
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Servidor Online
                     </span>
                     <button 
-                      onClick={() => alert('Actualizando datos de telemetría...')} 
+                      onClick={() => alert('Sincronizando con API de servidor...')} 
                       className="bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-neutral-700 transition"
                     >
                       🔄 Actualizar
@@ -156,48 +157,86 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-950/70 shadow-inner">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-800 text-xs font-bold text-neutral-400 uppercase bg-neutral-900/50">
-                        <th className="py-3 px-4">Pos</th>
-                        <th className="py-3 px-4">Piloto</th>
-                        <th className="py-3 px-4">Vehículo</th>
-                        <th className="py-3 px-4">Mejor Vuelta</th>
-                        <th className="py-3 px-4">Gap</th>
-                        <th className="py-3 px-4 text-center">Vueltas</th>
-                        <th className="py-3 px-4 text-center">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-900 text-sm font-medium">
-                      <tr className="hover:bg-neutral-900/40 transition">
-                        <td className="py-3 px-4 font-black text-amber-400">1</td>
-                        <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                          <span className="text-xs">🇦🇷</span> Lucas Negri
-                        </td>
-                        <td className="py-3 px-4 text-neutral-300">Renault Clio Rally5</td>
-                        <td className="py-3 px-4 font-mono text-sky-400">03:42.125</td>
-                        <td className="py-3 px-4 font-mono text-neutral-400">Líder</td>
-                        <td className="py-3 px-4 text-center font-mono">4/5</td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 text-xs px-2.5 py-1 rounded-lg">En Pista</span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-neutral-900/40 transition">
-                        <td className="py-3 px-4 font-black text-neutral-300">2</td>
-                        <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                          <span className="text-xs">🇧🇷</span> Pedro Laninha
-                        </td>
-                        <td className="py-3 px-4 text-neutral-300">Peugeot 208 Rally4</td>
-                        <td className="py-3 px-4 font-mono text-sky-400">03:43.890</td>
-                        <td className="py-3 px-4 font-mono text-amber-500">+1.765</td>
-                        <td className="py-3 px-4 text-center font-mono">4/5</td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 text-xs px-2.5 py-1 rounded-lg">En Pista</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                {/* Grid principal: Tabla de Tiempos + Mapa del Tramo Actual */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  
+                  {/* Tabla de Posiciones y Pilotos en Pista (Ocupa 2 columnas) */}
+                  <div className="lg:col-span-2 overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-950/70 shadow-inner">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-neutral-800 text-xs font-bold text-neutral-400 uppercase bg-neutral-900/50">
+                          <th className="py-3 px-4">Pos</th>
+                          <th className="py-3 px-4">Piloto</th>
+                          <th className="py-3 px-4">Vehículo</th>
+                          <th className="py-3 px-4">Mejor Vuelta</th>
+                          <th className="py-3 px-4">Gap</th>
+                          <th className="py-3 px-4 text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-900 text-sm font-medium">
+                        <tr className="hover:bg-neutral-900/40 transition">
+                          <td className="py-3 px-4 font-black text-amber-400">1</td>
+                          <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
+                            <span className="text-xs">🇦🇷</span> Lucas Negri
+                          </td>
+                          <td className="py-3 px-4 text-neutral-300">Renault Clio Rally5</td>
+                          <td className="py-3 px-4 font-mono text-sky-400">03:42.125</td>
+                          <td className="py-3 px-4 font-mono text-neutral-400">Líder</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 text-xs px-2.5 py-1 rounded-lg">En Pista</span>
+                          </td>
+                        </tr>
+                        <tr className="hover:bg-neutral-900/40 transition">
+                          <td className="py-3 px-4 font-black text-neutral-300">2</td>
+                          <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
+                            <span className="text-xs">🇧🇷</span> Pedro Laninha
+                          </td>
+                          <td className="py-3 px-4 text-neutral-300">Peugeot 208 Rally4</td>
+                          <td className="py-3 px-4 font-mono text-sky-400">03:43.890</td>
+                          <td className="py-3 px-4 font-mono text-amber-500">+1.765</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 text-xs px-2.5 py-1 rounded-lg">En Pista</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Panel Lateral: Mapa del Tramo Actual / Telemetría */}
+                  <div className="bg-neutral-950/80 border border-neutral-800 rounded-2xl p-5 flex flex-col justify-between shadow-inner">
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider">Tramo en Curso</h3>
+                        <span className="text-xs font-mono text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded border border-sky-500/20">Stage 3</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 mb-4">Rally de Misiones - Tierra Colorada (Gravel)</p>
+                      
+                      {/* Simulación del Mapa del Tramo / Radar */}
+                      <div className="w-full h-48 bg-neutral-900 rounded-xl border border-neutral-800 relative flex items-center justify-center overflow-hidden shadow-inner group">
+                        <div className="absolute inset-0 bg-[radial-gradient(#0ea5e9_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
+                        
+                        {/* Línea simulada del circuito */}
+                        <svg className="w-full h-full p-4 absolute inset-0 text-amber-500/60" viewBox="0 0 100 100" fill="none">
+                          <path d="M10 80 Q 30 20, 60 50 T 90 20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                        </svg>
+
+                        {/* Indicadores de posición de autos en tiempo real */}
+                        <div className="absolute top-[35%] left-[55%] flex items-center gap-1 bg-neutral-950/90 px-2 py-1 rounded border border-sky-500 text-[10px] font-mono text-sky-400 shadow-lg">
+                          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span> Lucas N.
+                        </div>
+
+                        <div className="absolute bottom-[25%] left-[25%] flex items-center gap-1 bg-neutral-950/90 px-2 py-1 rounded border border-amber-500 text-[10px] font-mono text-amber-400">
+                          <span>🚗</span> Pedro L.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-neutral-900 text-xs text-neutral-400 flex justify-between items-center">
+                      <span>Condición Clima: <strong className="text-white">Seco / Tierra</strong></span>
+                      <span className="font-mono text-amber-400">Temp: 24°C</span>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
