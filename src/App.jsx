@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import PerfilModal from './PerfilModal';
 import InscripcionModal from './InscripcionModal';
+import AuthModal from './AuthModal';
+import CambiarPasswordModal from './CambiarPasswordModal';
 
 const fotosRally = [
   'https://files.catbox.moe/t5ffu8.png',
@@ -14,12 +16,14 @@ export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [perfil, setPerfil] = useState(null);
   const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
+  const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
+  const [mostrarCambiarPasswordModal, setMostrarCambiarPasswordModal] = useState(false);
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
   const [esAdmin, setEsAdmin] = useState(false);
 
   const [fondoActual, setFondoActual] = useState(0);
 
-  // ESTADOS DE EVENTOS CON SUPABASE
+  // ESTADOS DE EVENTOS
   const [eventos, setEventos] = useState([]);
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
@@ -59,7 +63,10 @@ export default function App() {
     cargarEventos();
     cargarSalónDeLaFama();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMostrarCambiarPasswordModal(true);
+      }
       setUsuario(session?.user || null);
       if (session?.user) {
         verificarAdminYPerfil(session.user);
@@ -96,6 +103,8 @@ export default function App() {
   async function verificarAdminYPerfil(user) {
     if (user.email === 'leosimracingok@gmail.com') {
       setEsAdmin(true);
+    } else {
+      setEsAdmin(false);
     }
 
     const { data } = await supabase
@@ -111,7 +120,6 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
-  // Crear evento completo en Supabase
   const handleCrearEvento = async (e) => {
     e.preventDefault();
     if (!nuevoEvento.titulo || !nuevoEvento.fecha) return;
@@ -141,7 +149,6 @@ export default function App() {
     if (!error) cargarEventos();
   };
 
-  // Salón de la fama
   const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
@@ -302,7 +309,7 @@ export default function App() {
               </div>
             ) : (
               <button 
-                onClick={() => setMostrarPerfilModal(true)}
+                onClick={() => setMostrarAuthModal(true)}
                 className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-5 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
               >
                 Acceder / Registrarse
@@ -383,7 +390,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. EVENTOS CON FORMULARIO COMPLETO Y LISTA DE INSCRIPTOS */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -398,7 +404,6 @@ export default function App() {
               )}
             </div>
 
-            {/* FORMULARIO DE CREACIÓN COMPLETO DE ADMIN */}
             {esAdmin && (
               <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
@@ -432,14 +437,14 @@ export default function App() {
                   />
                   <input 
                     type="text" 
-                    placeholder="Categorías (separadas por coma, ej: Rally4, Rally2)" 
+                    placeholder="Categorías (ej: Rally4, Rally2)" 
                     value={nuevoEvento.categorias}
                     onChange={(e) => setNuevoEvento({...nuevoEvento, categorias: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
                   />
                   <input 
                     type="text" 
-                    placeholder="Modelos de Autos (separados por coma, ej: Clio, Fiesta)" 
+                    placeholder="Modelos de Autos (ej: Clio, Fiesta)" 
                     value={nuevoEvento.modelos_autos}
                     onChange={(e) => setNuevoEvento({...nuevoEvento, modelos_autos: e.target.value})}
                     className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
@@ -463,7 +468,6 @@ export default function App() {
               </div>
             )}
 
-            {/* TARJETAS DE EVENTOS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {eventos.map((ev) => (
                 <div key={ev.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
@@ -496,7 +500,14 @@ export default function App() {
                         </button>
                       )}
                       <button 
-                        onClick={() => { setEventoSeleccionado(ev); setModoModalInscripcion('formulario'); }}
+                        onClick={() => {
+                          if (!usuario) {
+                            setMostrarAuthModal(true);
+                          } else {
+                            setEventoSeleccionado(ev); 
+                            setModoModalInscripcion('formulario');
+                          }
+                        }}
                         className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider font-bold"
                       >
                         Inscribirse
@@ -509,7 +520,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12">
             <div>
@@ -577,10 +587,7 @@ export default function App() {
               </div>
             )}
 
-            {/* PODIO */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
-              
-              {/* 2º PUESTO */}
               {top3[1] && (
                 <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
@@ -608,7 +615,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* 1º PUESTO */}
               {top3[0] && (
                 <div className="bg-gradient-to-b from-amber-500/15 via-neutral-900/40 to-neutral-950/60 backdrop-blur-md border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
@@ -636,7 +642,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* 3º PUESTO */}
               {top3[2] && (
                 <div className="bg-neutral-900/40 backdrop-blur-md border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
@@ -663,10 +668,8 @@ export default function App() {
                   )}
                 </div>
               )}
-
             </div>
 
-            {/* RESTO DE LA LISTA */}
             {restoPilotos.length > 0 && (
               <div className="space-y-4 pt-10">
                 <h3 className="font-wrc text-2xl text-amber-400 tracking-wide border-b border-neutral-800 pb-3">
@@ -717,11 +720,9 @@ export default function App() {
                 </div>
               </div>
             )}
-
           </div>
         )}
 
-        {/* 4. PERFIL */}
         {pestanaActiva === 'perfil' && (
           <div className="max-w-2xl mx-auto bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
@@ -764,6 +765,14 @@ export default function App() {
         )}
 
       </main>
+
+      {mostrarAuthModal && (
+        <AuthModal onClose={() => setMostrarAuthModal(false)} />
+      )}
+
+      {mostrarCambiarPasswordModal && (
+        <CambiarPasswordModal onClose={() => setMostrarCambiarPasswordModal(false)} />
+      )}
 
       {mostrarPerfilModal && (
         <PerfilModal 
