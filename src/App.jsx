@@ -197,7 +197,7 @@ export default function App() {
     if (!error) cargarAlbumes();
   };
 
-  // SUBIDA MÚLTIPLE DE FOTOS AL ÁLBUM (VARIAS A LA VEZ)
+  // SUBIDA MÚLTIPLE DE FOTOS AL ÁLBUM (CORREGIDA)
   const handleSubirFotosMultiples = async (e) => {
     try {
       const files = Array.from(e.target.files);
@@ -207,7 +207,7 @@ export default function App() {
 
       for (const file of files) {
         const fileExt = file.name.split('.').pop();
-        const fileName = `album_${albumSeleccionado.id}_${Date.now()}_${Math.random().toString(36.substring(2, 7))}.${fileExt}`;
+        const fileName = `album_${albumSeleccionado.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('imagenes')
@@ -1209,14 +1209,13 @@ export default function App() {
 
       </main>
 
-      {/* MODAL LIGHTBOX EN ALTA RESOLUCIÓN PARA VER Y DESCARGAR */}
+      {/* MODAL LIGHTBOX EN ALTA RESOLUCIÓN */}
       {fotoAmpliada && (
         <div 
           className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex flex-col items-center justify-center p-4 md:p-8"
           onClick={() => setFotoAmpliada(null)}
         >
           <div className="relative max-w-7xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            {/* IMAGEN EN TAMAÑO REAL Y ALTA CALIDAD */}
             <img 
               src={fotoAmpliada} 
               alt="Foto Alta Resolución" 
