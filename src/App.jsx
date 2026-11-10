@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import PerfilModal from './PerfilModal';
 
-// Tus 4 fotos personalizadas de rally con mayor tiempo de transición
 const fotosRally = [
   'https://files.catbox.moe/t5ffu8.png',
   'https://files.catbox.moe/pfh5gw.png',
   'https://files.catbox.moe/t5ffu8.png',
-  'https://files.catbox.moe/jtgf56.png'
+  'https://files.catbox.moe/jtgf56.png',
 ];
 
 export default function App() {
@@ -17,7 +16,6 @@ export default function App() {
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
   const [esAdmin, setEsAdmin] = useState(false);
 
-  // Carrusel configurado a 9 segundos por foto y mayor visibilidad
   const [fondoActual, setFondoActual] = useState(0);
   const [eventos, setEventos] = useState([
     { id: 1, titulo: 'Rally de Misiones - Fecha 1', fecha: '2026-04-12', circuito: 'Tramo Tierra Colorada', inscriptos: 12 },
@@ -28,7 +26,7 @@ export default function App() {
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
       setFondoActual((prev) => (prev + 1) % fotosRally.length);
-    }, 9000); // 9 segundos por imagen
+    }, 9000);
     return () => clearInterval(intervaloFondo);
   }, []);
 
@@ -99,6 +97,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
+      {/* FONDO GLOBAL CON FOTOS DE RALLY ROTATIVAS Y ATENUADAS */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        {fotosRally.map((foto, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
+              index === fondoActual ? 'opacity-20 scale-105' : 'opacity-0 scale-100'
+            }`}
+            style={{ backgroundImage: `url(${foto})` }}
+          />
+        ))}
+        <div className="absolute inset-0 bg-[#050505]/85 backdrop-blur-[2px]"></div>
+      </div>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700&display=swap');
         
@@ -113,7 +125,7 @@ export default function App() {
       {/* ENCABEZADO TRANSLÚCIDO ESTILO WRC */}
       <header 
         className="sticky top-0 z-50 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-xl"
-        style={{ backgroundColor: 'rgba(5, 5, 5, 0.35)' }}
+        style={{ backgroundColor: 'rgba(5, 5, 5, 0.65)' }}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
@@ -127,10 +139,11 @@ export default function App() {
             </div>
           </div>
 
+          {/* Menú de Navegación completo con Mi Perfil */}
           <nav className="flex items-center gap-1 p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
             <button
               onClick={() => setPestanaActiva('inicio')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'inicio' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -138,7 +151,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setPestanaActiva('livetiming')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -146,7 +159,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setPestanaActiva('eventos')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'eventos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -154,11 +167,19 @@ export default function App() {
             </button>
             <button
               onClick={() => setPestanaActiva('fama')}
-              className={`px-5 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'fama' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
               Salón de la Fama
+            </button>
+            <button
+              onClick={() => setPestanaActiva('perfil')}
+              className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
+                pestanaActiva === 'perfil' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              Mi Perfil
             </button>
           </nav>
 
@@ -201,57 +222,43 @@ export default function App() {
         </div>
       </header>
 
-      {/* HERO SECTION CON FOTOS DE RALLY MÁS CLARAS Y LENTAS */}
-      {pestanaActiva === 'inicio' && (
-        <div className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
-          {fotosRally.map((foto, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-                index === fondoActual ? 'opacity-85 scale-105' : 'opacity-0 scale-100'
-              }`}
-              style={{ backgroundImage: `url(${foto})` }}
-            />
-          ))}
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="relative z-10 max-w-7xl mx-auto px-6 py-10">
+        
+        {/* PESTAÑA INICIO */}
+        {pestanaActiva === 'inicio' && (
+          <div className="min-h-[75vh] flex items-center justify-center">
+            <div className="max-w-4xl mx-auto text-center space-y-6 py-12">
+              <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md">
+                Temporada Oficial 2026 • Simracing Rally Hub {esAdmin && '• Panel Admin Activo'}
+              </span>
 
-          {/* Capas oscuras reducidas para que las fotos resalten mucho más */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/40 via-transparent to-[#050505]/40"></div>
+              <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_15px_rgba(0,0,0,0.9)]">
+                PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.6)]">GLORIA</span>
+              </h1>
 
-          <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6 py-20">
-            <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md">
-              Temporada Oficial 2026 • Simracing Rally Hub {esAdmin && '• Panel Admin Activo'}
-            </span>
+              <p className="max-w-2xl mx-auto text-neutral-200 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
+                Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y gestión centralizada.
+              </p>
 
-            <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_15px_rgba(0,0,0,0.9)]">
-              PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.6)]">GLORIA</span>
-            </h1>
-
-            <p className="max-w-2xl mx-auto text-neutral-200 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
-              Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y gestión centralizada.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-              <button
-                onClick={() => setPestanaActiva('livetiming')}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
-              >
-                🏁 Ver Live Timing
-              </button>
-              <button
-                onClick={() => setPestanaActiva('eventos')}
-                className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
-              >
-                📅 Gestionar Eventos
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+                <button
+                  onClick={() => setPestanaActiva('livetiming')}
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-amber-500/30"
+                >
+                  🏁 Ver Live Timing
+                </button>
+                <button
+                  onClick={() => setPestanaActiva('eventos')}
+                  className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                >
+                  📅 Gestionar Eventos
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* CONTENIDO DE LAS PESTAÑAS */}
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        
         {/* 1. LIVETIMING */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
@@ -308,7 +315,6 @@ export default function App() {
               )}
             </div>
 
-            {/* PANEL DE CREACIÓN DE EVENTOS (SOLO ADMIN) */}
             {esAdmin && (
               <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
                 <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
@@ -351,10 +357,9 @@ export default function App() {
               </div>
             )}
 
-            {/* LISTA DE EVENTOS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {eventos.map((ev) => (
-                <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
+                <div key={ev.id} className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
                   <div className="absolute top-4 right-4 text-amber-400 font-mono text-xs bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                     {ev.fecha}
                   </div>
@@ -420,6 +425,48 @@ export default function App() {
                 <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Equipo Espíndola</p>
                 <p className="text-neutral-400 text-xs mt-3 font-sans">Setup por defecto - Etapa extrema</p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4. MI PERFIL */}
+        {pestanaActiva === 'perfil' && (
+          <div className="max-w-2xl mx-auto bg-neutral-900/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+            <div className="flex flex-col items-center text-center pb-6 border-b border-neutral-800">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500 to-amber-300 p-1 mb-4 shadow-xl">
+                <div className="w-full h-full bg-neutral-950 rounded-full flex items-center justify-center overflow-hidden text-2xl font-wrc font-black text-amber-400">
+                  {perfil?.avatar_url ? (
+                    <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
+                  )}
+                </div>
+              </div>
+              <h2 className="font-wrc text-3xl text-white">{perfil?.nombre_piloto || 'Piloto sin configurar'}</h2>
+              <p className="text-amber-400 text-sm font-mono mt-1">{usuario?.email || 'No ha iniciado sesión'}</p>
+              <span className="mt-3 bg-white/5 text-neutral-300 px-4 py-1 rounded-full text-xs font-semibold border border-white/10 font-sans">
+                Nacionalidad: {perfil?.nacionalidad || 'No especificada'}
+              </span>
+            </div>
+
+            <div className="py-6 space-y-4">
+              <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-4 flex justify-between items-center font-sans">
+                <span className="text-neutral-400 text-sm">Steam ID 64:</span>
+                <span className="font-mono text-amber-400 text-sm">{perfil?.steam_id || 'No vinculado'}</span>
+              </div>
+              <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-4 flex justify-between items-center font-sans">
+                <span className="text-neutral-400 text-sm">Estado de Licencia:</span>
+                <span className="text-emerald-400 text-sm font-bold">Activa 🟢</span>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button 
+                onClick={() => setMostrarPerfilModal(true)}
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-wrc text-lg py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
+              >
+                ✏️ Editar Datos y Foto de Perfil
+              </button>
             </div>
           </div>
         )}
