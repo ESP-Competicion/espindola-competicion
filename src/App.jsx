@@ -34,9 +34,16 @@ export default function App() {
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
-  // GALERÍA DE FOTOS
-  const [fotosGaleria, setFotosGaleria] = useState([]);
-  const [subiendoFotoDirecta, setSubiendoFotoDirecta] = useState(false);
+  // ESTADOS DE GALERÍA Y ÁLBUMES (CARPETAS)
+  const [albumes, setAlbumes] = useState([]);
+  const [albumSeleccionado, setAlbumSeleccionado] = useState(null); // Si es null estamos en la vista de carpetas
+  const [fotosAlbumActual, setFotosAlbumActual] = useState([]);
+  const [fotoAmpliada, setFotoAmpliada] = useState(null); // Lightbox para ver la foto grande y descargar
+
+  // FORMULARIOS ADMIN GALERIA
+  const [nuevoAlbumNombre, setNuevoAlbumNombre] = useState('');
+  const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
+  const [subiendoFotoAlbum, setSubiendoFotoAlbum] = useState(false);
 
   // EVENTOS
   const [eventos, setEventos] = useState([]);
@@ -76,7 +83,7 @@ export default function App() {
 
     obtenerDatosSesion();
     cargarConfiguracion();
-    cargarGaleria();
+    cargarAlbumes();
     cargarEventos();
     cargarSalónDeLaFama();
 
@@ -101,9 +108,14 @@ export default function App() {
     if (data) setConfig(data);
   }
 
-  async function cargarGaleria() {
-    const { data } = await supabase.from('galeria').select('*').order('created_at', { ascending: false });
-    if (data) setFotosGaleria(data);
+  async function cargarAlbumes() {
+    const { data } = await supabase.from('albumes_galeria').select('*').order('created_at', { ascending: false });
+    if (data) setAlbumes(data);
+  }
+
+  async function cargarFotosDeAlbum(albumId) {
+    const { data } = await supabase.from('fotos_galeria').select('*').eq('album_id', albumId).order('created_at', { ascending: false });
+    if (data) setFotosAlbumActual(data);
   }
 
   async function cargarEventos() {
@@ -153,49 +165,75 @@ export default function App() {
     }
   };
 
-  // SUBIDA DIRECTA A LA GALERÍA CON UN CLIC
-  const handleSubidaDirectaGaleria = async (e) => {
+  // CREAR NUEVO ÁLBUM (CARPETA)
+  const handleCrearAlbum = async (e) => {
+    e.preventDefault();
+    if (!nuevoAlbumNombre.trim() || !portadaAlbumUrl) {
+      alert('Por favor ingresa el nombre del evento y selecciona una foto de portada.');
+      return;
+    }
+
+    const { error } = await supabase.from('albumes_galeria').insert([{
+      nombre: nuevoAlbumNombre,
+      portada_url: portadaAlbumUrl
+    }]);
+
+    if (error) {
+      alert('Error al crear álbum: ' + error.message);
+    } else {
+      setNuevoAlbumNombre('');
+      setPortadaAlbumUrl('');
+      cargarAlbumes();
+    }
+  };
+
+  const handleEliminarAlbum = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm('¿Seguro que deseas eliminar este álbum y todas sus fotos?')) return;
+    await supabase.from('fotos_galeria').delete().eq('album_id', id);
+    const { error } = await supabase.from('albumes_galeria').delete().eq('id', id);
+    if (!error) cargarAlbumes();
+  };
+
+  // SUBIR FOTO DENTRO DE UN ÁLBUM
+  const handleSubirFotoAlAlbum = async (e) => {
     try {
-      setSubiendoFotoDirecta(true);
+      setSubiendoFotoAlbum(true);
       const file = e.target.files[0];
       if (!file) return;
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `galeria_${Date.now()}.${fileExt}`;
+      const fileName = `album_${albumSeleccionado.id}_${Date.now()}.${fileExt}`;
 
-      // Subir al bucket 'imagenes'
       const { error: uploadError } = await supabase.storage
         .from('imagenes')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // Obtener URL pública
       const { data } = supabase.storage
         .from('imagenes')
         .getPublicUrl(fileName);
 
-      // Guardar automáticamente en la tabla galeria
-      const { error: dbError } = await supabase.from('galeria').insert([{
-        titulo: file.name.substring(0, file.name.lastIndexOf('.')) || 'Foto Oficial',
-        evento_nombre: 'Espíndola Competición',
+      const { error: dbError } = await supabase.from('fotos_galeria').insert([{
+        album_id: albumSeleccionado.id,
         imagen_url: data.publicUrl
       }]);
 
       if (dbError) throw dbError;
 
-      cargarGaleria();
+      cargarFotosDeAlbum(albumSeleccionado.id);
     } catch (error) {
       alert('Error al subir la foto: ' + error.message);
     } finally {
-      setSubiendoFotoDirecta(false);
+      setSubiendoFotoAlbum(false);
     }
   };
 
-  const handleEliminarFotoGaleria = async (id) => {
-    if (!confirm('¿Seguro que deseas borrar esta imagen de la galería?')) return;
-    const { error } = await supabase.from('galeria').delete().eq('id', id);
-    if (!error) cargarGaleria();
+  const handleEliminarFotoAlbum = async (fotoId) => {
+    if (!confirm('¿Eliminar esta foto del álbum?')) return;
+    const { error } = await supabase.from('fotos_galeria').delete().eq('id', fotoId);
+    if (!error) cargarFotosDeAlbum(albumSeleccionado.id);
   };
 
   const handleCrearEvento = async (e) => {
@@ -304,7 +342,7 @@ export default function App() {
           
           <div 
             className="cursor-pointer group flex items-center" 
-            onClick={() => setPestanaActiva('inicio')}
+            onClick={() => { setPestanaActiva('inicio'); setAlbumSeleccionado(null); }}
             title="Ir al inicio"
           >
             <img 
@@ -316,7 +354,7 @@ export default function App() {
 
           <nav className="flex items-center gap-1 p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
             <button
-              onClick={() => setPestanaActiva('inicio')}
+              onClick={() => { setPestanaActiva('inicio'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'inicio' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -324,7 +362,7 @@ export default function App() {
               Inicio
             </button>
             <button
-              onClick={() => setPestanaActiva('historia')}
+              onClick={() => { setPestanaActiva('historia'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'historia' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -332,7 +370,7 @@ export default function App() {
               Nuestra Historia
             </button>
             <button
-              onClick={() => setPestanaActiva('galeria')}
+              onClick={() => { setPestanaActiva('galeria'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'galeria' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -340,7 +378,7 @@ export default function App() {
               Galería
             </button>
             <button
-              onClick={() => setPestanaActiva('livetiming')}
+              onClick={() => { setPestanaActiva('livetiming'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'livetiming' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -348,7 +386,7 @@ export default function App() {
               Live Timing
             </button>
             <button
-              onClick={() => setPestanaActiva('eventos')}
+              onClick={() => { setPestanaActiva('eventos'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'eventos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -356,7 +394,7 @@ export default function App() {
               Eventos {esAdmin && '⚙️'}
             </button>
             <button
-              onClick={() => setPestanaActiva('fama')}
+              onClick={() => { setPestanaActiva('fama'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'fama' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -364,7 +402,7 @@ export default function App() {
               Salón de la Fama
             </button>
             <button
-              onClick={() => setPestanaActiva('perfil')}
+              onClick={() => { setPestanaActiva('perfil'); setAlbumSeleccionado(null); }}
               className={`px-4 py-2 rounded-full font-wrc text-sm tracking-wider transition-all ${
                 pestanaActiva === 'perfil' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
@@ -582,61 +620,171 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. GALERÍA DE FOTOS (CON SUBIDA DIRECTA SIN TEXTO) */}
+        {/* 3. GALERÍA DE EVENTOS (CON ÁLBUMES / CARPETAS Y LIGHTBOX) */}
         {pestanaActiva === 'galeria' && (
           <div className="space-y-8">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-              <div>
-                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Galería de Eventos</h2>
-                <p className="text-neutral-300 text-sm font-sans">Cobertura fotográfica oficial de nuestros tramos, fechas y momentos de podio.</p>
-              </div>
+            
+            {/* VISTA 1: LISTA DE ÁLBUMES (CARPETAS) */}
+            {!albumSeleccionado ? (
+              <div className="space-y-8">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                  <div>
+                    <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Álbumes de Eventos</h2>
+                    <p className="text-neutral-300 text-sm font-sans">Selecciona una carpeta para ver las fotografías oficiales de cada competencia.</p>
+                  </div>
+                </div>
 
-              {/* BOTÓN RÁPIDO PARA ADMIN DE SUBIR FOTO */}
-              {esAdmin && (
-                <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
-                  <span>{subiendoFotoDirecta ? '⏳ Subiendo foto...' : '📸 + Subir Foto de la PC'}</span>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleSubidaDirectaGaleria} 
-                    disabled={subiendoFotoDirecta} 
-                    className="hidden" 
-                  />
-                </label>
-              )}
-            </div>
+                {/* PANEL DE ADMIN PARA CREAR ÁLBUM */}
+                {esAdmin && (
+                  <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
+                    <h3 className="font-wrc text-xl text-amber-400">📁 Crear Nueva Carpeta de Evento</h3>
+                    <form onSubmit={handleCrearAlbum} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Nombre del Evento (ej: Rally Misiones)</label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Rally de Misiones"
+                          value={nuevoAlbumNombre}
+                          onChange={(e) => setNuevoAlbumNombre(e.target.value)}
+                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto de Portada (Desde la PC)</label>
+                        <SubirImagen currentUrl={portadaAlbumUrl} onUpload={setPortadaAlbumUrl} />
+                      </div>
+                      <div className="md:col-span-2 flex justify-end">
+                        <button
+                          type="submit"
+                          className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20"
+                        >
+                          📂 Crear Carpeta
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
 
-            {/* GRILLA DE FOTOS */}
-            {fotosGaleria.length === 0 ? (
-              <div className="text-center py-16 bg-neutral-900/40 border border-neutral-800 rounded-3xl">
-                <p className="text-neutral-400 font-sans">Aún no se han subido fotografías a la galería.</p>
+                {/* GRILLA DE ÁLBUMES */}
+                {albumes.length === 0 ? (
+                  <div className="text-center py-16 bg-neutral-900/40 border border-neutral-800 rounded-3xl">
+                    <p className="text-neutral-400 font-sans">No hay carpetas de eventos creadas todavía.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {albumes.map((album) => (
+                      <div 
+                        key={album.id} 
+                        onClick={() => { setAlbumSeleccionado(album); cargarFotosDeAlbum(album.id); }}
+                        className="bg-neutral-900/40 backdrop-blur-md border border-white/10 hover:border-amber-500/50 rounded-2xl overflow-hidden group shadow-lg cursor-pointer transition transform hover:-translate-y-1 relative"
+                      >
+                        <div className="w-full h-60 overflow-hidden relative">
+                          <img 
+                            src={album.portada_url} 
+                            alt={album.nombre} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                          
+                          {/* ÍCONO DE CARPETA */}
+                          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 flex items-center gap-2">
+                            <span>📁</span>
+                            <span className="font-wrc text-xs text-amber-400">Álbum Oficial</span>
+                          </div>
+                        </div>
+
+                        <div className="p-5 absolute bottom-0 left-0 right-0 flex justify-between items-end">
+                          <div>
+                            <h4 className="font-wrc text-2xl text-white font-bold drop-shadow-md">{album.nombre}</h4>
+                            <p className="text-neutral-300 text-xs font-sans mt-0.5">Clic para ver galería completa</p>
+                          </div>
+                          <span className="bg-amber-500 text-black font-wrc text-xs px-3 py-1.5 rounded-xl font-bold shadow-md">
+                            Ver Fotos →
+                          </span>
+                        </div>
+
+                        {esAdmin && (
+                          <button
+                            onClick={(e) => handleEliminarAlbum(album.id, e)}
+                            className="absolute top-3 right-3 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-xl text-xs backdrop-blur-md transition shadow-md z-10"
+                            title="Eliminar álbum"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {fotosGaleria.map((foto) => (
-                  <div key={foto.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden group shadow-lg relative">
-                    <div className="w-full h-60 overflow-hidden relative">
-                      <img 
-                        src={foto.imagen_url} 
-                        alt={foto.titulo} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
-                    </div>
-                    <div className="p-4 absolute bottom-0 left-0 right-0">
-                      <h4 className="font-wrc text-lg text-white font-bold truncate drop-shadow-md">{foto.titulo}</h4>
-                    </div>
-                    {esAdmin && (
-                      <button
-                        onClick={() => handleEliminarFotoGaleria(foto.id)}
-                        className="absolute top-3 right-3 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-xl text-xs backdrop-blur-md transition shadow-md"
-                        title="Eliminar foto"
-                      >
-                        🗑️
-                      </button>
-                    )}
+
+              /* VISTA 2: DENTRO DEL ÁLBUM (FOTOS SIN TEXTO + LIGHTBOX + DESCARGA) */
+              <div className="space-y-8">
+                <div className="flex flex-wrap justify-between items-center gap-4 bg-neutral-900/60 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+                  <div>
+                    <button 
+                      onClick={() => setAlbumSeleccionado(null)}
+                      className="text-amber-400 font-wrc text-xs uppercase tracking-wider hover:underline mb-2 flex items-center gap-1"
+                    >
+                      ← Volver a todas las carpetas
+                    </button>
+                    <h2 className="font-wrc text-3xl text-white tracking-wide">📂 {albumSeleccionado.nombre}</h2>
                   </div>
-                ))}
+
+                  {esAdmin && (
+                    <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                      <span>{subiendoFotoAlbum ? '⏳ Subiendo foto...' : '📸 + Subir Foto al Álbum'}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleSubirFotoAlAlbum} 
+                        disabled={subiendoFotoAlbum} 
+                        className="hidden" 
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {fotosAlbumActual.length === 0 ? (
+                  <div className="text-center py-16 bg-neutral-900/40 border border-neutral-800 rounded-3xl">
+                    <p className="text-neutral-400 font-sans">Aún no hay fotos en este álbum.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {fotosAlbumActual.map((foto) => (
+                      <div 
+                        key={foto.id} 
+                        onClick={() => setFotoAmpliada(foto.imagen_url)}
+                        className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden group shadow-lg relative cursor-pointer transform hover:scale-[1.02] transition"
+                      >
+                        <div className="w-full h-64 overflow-hidden relative">
+                          <img 
+                            src={foto.imagen_url} 
+                            alt="Foto Rally" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                            <span className="bg-black/70 text-amber-400 font-wrc text-xs px-4 py-2 rounded-xl backdrop-blur-md border border-white/10">
+                              🔍 Clic para ampliar / descargar
+                            </span>
+                          </div>
+                        </div>
+
+                        {esAdmin && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEliminarFotoAlbum(foto.id); }}
+                            className="absolute top-3 right-3 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-xl text-xs backdrop-blur-md transition shadow-md z-10"
+                            title="Eliminar foto"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1055,6 +1203,39 @@ export default function App() {
         )}
 
       </main>
+
+      {/* MODAL LIGHTBOX PARA AMPLIAR Y DESCARGAR FOTO */}
+      {fotoAmpliada && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <div className="relative max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-amber-500/40 shadow-2xl bg-neutral-950" onClick={(e) => e.stopPropagation()}>
+            <img src={fotoAmpliada} alt="Foto Ampliada" className="max-w-full max-h-[75vh] object-contain block mx-auto" />
+            
+            <div className="p-4 bg-neutral-900 flex flex-wrap justify-between items-center gap-4 border-t border-neutral-800">
+              <span className="text-xs text-neutral-400 font-sans">Vista ampliada de fotografía oficial</span>
+              <div className="flex items-center gap-3">
+                <a 
+                  href={fotoAmpliada} 
+                  download={`espindola_competicion_${Date.now()}.png`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-6 py-2.5 rounded-xl transition font-bold shadow-md flex items-center gap-2"
+                >
+                  <span>⬇️ Descargar Imagen</span>
+                </a>
+                <button 
+                  onClick={() => setFotoAmpliada(null)}
+                  className="bg-neutral-800 hover:bg-neutral-700 text-white font-wrc text-sm px-5 py-2.5 rounded-xl transition"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {mostrarAuthModal && (
         <AuthModal onClose={() => setMostrarAuthModal(false)} />
