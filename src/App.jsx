@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import PerfilModal from './PerfilModal';
 
-// Array de fotos de fondo estilo WRC para el carrusel dinámico
+// Tus 4 fotos personalizadas de rally con mayor tiempo de transición
 const fotosRally = [
   'https://files.catbox.moe/t5ffu8.png',
   'https://files.catbox.moe/pfh5gw.png',
@@ -15,32 +15,29 @@ export default function App() {
   const [perfil, setPerfil] = useState(null);
   const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
+  const [esAdmin, setEsAdmin] = useState(false);
 
-  // Estado para el carrusel automático de fotos de fondo
+  // Carrusel configurado a 9 segundos por foto y mayor visibilidad
   const [fondoActual, setFondoActual] = useState(0);
-
-  useEffect(() => {
-    const intervaloFondo = setInterval(() => {
-      setFondoActual((prev) => (prev + 1) % fotosRally.length);
-    }, 6000);
-    return () => clearInterval(intervaloFondo);
-  }, []);
-
-  // Estados para Eventos y Admin
   const [eventos, setEventos] = useState([
     { id: 1, titulo: 'Rally de Misiones - Fecha 1', fecha: '2026-04-12', circuito: 'Tramo Tierra Colorada', inscriptos: 12 },
     { id: 2, titulo: 'Desafío Asfalto Neuquén', fecha: '2026-04-28', circuito: 'Autovía Norte', inscriptos: 8 }
   ]);
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', circuito: '' });
-  const [esAdmin, setEsAdmin] = useState(false);
 
-  // Cargar usuario actual y su perfil vinculado
+  useEffect(() => {
+    const intervaloFondo = setInterval(() => {
+      setFondoActual((prev) => (prev + 1) % fotosRally.length);
+    }, 9000); // 9 segundos por imagen
+    return () => clearInterval(intervaloFondo);
+  }, []);
+
   useEffect(() => {
     async function obtenerDatosSesion() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUsuario(session.user);
-        cargarPerfil(session.user.id);
+        verificarAdminYPerfil(session.user);
       }
     }
 
@@ -49,27 +46,29 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUsuario(session?.user || null);
       if (session?.user) {
-        cargarPerfil(session.user.id);
+        verificarAdminYPerfil(session.user);
       } else {
         setPerfil(null);
+        setEsAdmin(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  async function cargarPerfil(userId) {
+  async function verificarAdminYPerfil(user) {
+    if (user.email === 'leosimracingok@gmail.com') {
+      setEsAdmin(true);
+    }
+
     const { data, error } = await supabase
       .from('perfiles')
       .select('nombre_piloto, steam_id, nacionalidad, avatar_url')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
 
     if (data) {
       setPerfil(data);
-      if (usuario?.email === 'leosimracingok@gmail.com') {
-        setEsAdmin(true);
-      }
     }
   }
 
@@ -79,15 +78,27 @@ export default function App() {
 
   const handleCrearEvento = (e) => {
     e.preventDefault();
-    if (!nuevoEvento.titulo || !nuevoEvento.fecha) return;
-    setEventos([...eventos, { id: Date.now(), ...nuevoEvento, inscriptos: 0 }]);
+    if (!nuevoEvento.titulo || !nuevoEvento.fecha || !nuevoEvento.circuito) return;
+    
+    const eventoCreado = {
+      id: Date.now(),
+      titulo: nuevoEvento.titulo,
+      fecha: nuevoEvento.fecha,
+      circuito: nuevoEvento.circuito,
+      inscriptos: 0
+    };
+
+    setEventos([eventoCreado, ...eventos]);
     setNuevoEvento({ titulo: '', fecha: '', circuito: '' });
+  };
+
+  const handleEliminarEvento = (id) => {
+    setEventos(eventos.filter(ev => ev.id !== id));
   };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
-      {/* Importación directa de la tipografía WRC Clean Negrita (Barlow Condensed) */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700&display=swap');
         
@@ -99,25 +110,23 @@ export default function App() {
         }
       `}</style>
 
-      {/* ----------------- ENCABEZADO 100% FLOTANTE Y TRANSLÚCIDO REAL ----------------- */}
+      {/* ENCABEZADO TRANSLÚCIDO ESTILO WRC */}
       <header 
         className="sticky top-0 z-50 backdrop-blur-md border-b border-white/10 px-6 py-3.5 shadow-xl"
         style={{ backgroundColor: 'rgba(5, 5, 5, 0.35)' }}
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
-          {/* Logo y Nombre de la Escudería */}
           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setPestanaActiva('inicio')}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center font-wrc font-black text-black text-xl shadow-lg shadow-amber-500/20 group-hover:scale-105 transition">
               E
             </div>
             <div>
               <h1 className="font-wrc text-xl font-black tracking-wider text-white">ESPÍNDOLA <span className="text-amber-400">COMPETICIÓN</span></h1>
-              <p className="text-[10px] tracking-widest text-neutral-400 font-mono uppercase">Official WRC Hub</p>
+              <p className="text-[10px] tracking-widest text-neutral-400 font-mono uppercase">Official WRC Hub {esAdmin && '• [ADMIN]'}</p>
             </div>
           </div>
 
-          {/* Menú de Navegación Central */}
           <nav className="flex items-center gap-1 p-1.5 rounded-full border border-white/10 shadow-inner overflow-x-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
             <button
               onClick={() => setPestanaActiva('inicio')}
@@ -141,7 +150,7 @@ export default function App() {
                 pestanaActiva === 'eventos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'text-neutral-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              Eventos
+              Eventos {esAdmin && '⚙️'}
             </button>
             <button
               onClick={() => setPestanaActiva('fama')}
@@ -153,7 +162,6 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Bloque de Usuario / Perfil a la derecha */}
           <div className="flex items-center gap-3">
             {usuario ? (
               <div className="flex items-center gap-3 border border-white/10 px-4 py-1.5 rounded-2xl shadow-inner" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
@@ -193,33 +201,34 @@ export default function App() {
         </div>
       </header>
 
-      {/* ----------------- HERO SECTION CON CARRUSEL DE FONDOS DE RALLY ----------------- */}
+      {/* HERO SECTION CON FOTOS DE RALLY MÁS CLARAS Y LENTAS */}
       {pestanaActiva === 'inicio' && (
         <div className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
           {fotosRally.map((foto, index) => (
             <div
               key={index}
               className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
-                index === fondoActual ? 'opacity-50 scale-105' : 'opacity-0 scale-100'
+                index === fondoActual ? 'opacity-85 scale-105' : 'opacity-0 scale-100'
               }`}
               style={{ backgroundImage: `url(${foto})` }}
             />
           ))}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/70 via-transparent to-[#050505]/70"></div>
+          {/* Capas oscuras reducidas para que las fotos resalten mucho más */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/40 via-transparent to-[#050505]/40"></div>
 
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6 py-20">
             <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md">
-              Temporada Oficial 2026 • Simracing Rally Hub
+              Temporada Oficial 2026 • Simracing Rally Hub {esAdmin && '• Panel Admin Activo'}
             </span>
 
-            <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-2xl">
-              PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.5)]">GLORIA</span>
+            <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_15px_rgba(0,0,0,0.9)]">
+              PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.6)]">GLORIA</span>
             </h1>
 
-            <p className="max-w-2xl mx-auto text-neutral-300 text-base md:text-lg font-medium leading-relaxed font-sans">
-              Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y la escudería líder en Argentina.
+            <p className="max-w-2xl mx-auto text-neutral-200 text-base md:text-lg font-medium leading-relaxed font-sans drop-shadow-md">
+              Bienvenido al portal oficial de Espíndola Competición. Telemetría en vivo, campeonatos de rally de alta exigencia y gestión centralizada.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
@@ -231,19 +240,19 @@ export default function App() {
               </button>
               <button
                 onClick={() => setPestanaActiva('eventos')}
-                className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
+                className="bg-neutral-950/60 backdrop-blur-md hover:bg-neutral-900 text-white border border-white/20 font-wrc text-lg px-8 py-3.5 rounded-xl uppercase tracking-wider transition shadow-lg"
               >
-                📅 Inscribirse a Fechas
+                📅 Gestionar Eventos
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ----------------- CONTENIDO DE LAS PESTAÑAS ----------------- */}
+      {/* CONTENIDO DE LAS PESTAÑAS */}
       <main className="max-w-7xl mx-auto px-6 py-10">
         
-        {/* 1. LIVETIMING (AssettoHosting Directo) */}
+        {/* 1. LIVETIMING */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6">
             <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
@@ -280,55 +289,69 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. EVENTOS & INSCRIPCIONES */}
+        {/* 2. EVENTOS & PANEL DE ADMINISTRACIÓN */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
                 <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Próximos Eventos y Rallies</h2>
-                <p className="text-neutral-400 text-sm font-sans">Inscribite a las fechas oficiales del campeonato.</p>
+                <p className="text-neutral-400 text-sm font-sans">Inscribite a las fechas oficiales o administra el calendario.</p>
               </div>
-              {esAdmin && (
-                <span className="font-wrc bg-amber-500/20 text-amber-400 text-xs tracking-wider px-3 py-1.5 rounded-lg border border-amber-500/40">
-                  Modo Administrador Activo
+              {esAdmin ? (
+                <span className="font-wrc bg-amber-500 text-black text-xs tracking-wider font-extrabold px-4 py-2 rounded-xl shadow-lg">
+                  ⚙️ Modo Administrador Activo
+                </span>
+              ) : (
+                <span className="text-xs text-neutral-400 font-mono">
+                  Inicia sesión como {`leosimracingok@gmail.com`} para crear eventos.
                 </span>
               )}
             </div>
 
+            {/* PANEL DE CREACIÓN DE EVENTOS (SOLO ADMIN) */}
             {esAdmin && (
-              <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
-                <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider">Crear Nueva Fecha de Campeonato</h3>
+              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
+                <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
+                  Panel de Control Exclusivo
+                </div>
+                <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider flex items-center gap-2">
+                  <span>➕</span> Crear Nueva Fecha de Campeonato
+                </h3>
                 <form onSubmit={handleCrearEvento} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <input 
                     type="text" 
-                    placeholder="Nombre del Rally / Evento" 
+                    placeholder="Título del Rally (ej: Rally de Misiones)" 
                     value={nuevoEvento.titulo}
                     onChange={(e) => setNuevoEvento({...nuevoEvento, titulo: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    required
                   />
                   <input 
                     type="date" 
                     value={nuevoEvento.fecha}
                     onChange={(e) => setNuevoEvento({...nuevoEvento, fecha: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    required
                   />
                   <input 
                     type="text" 
-                    placeholder="Nombre del Tramo / Circuito" 
+                    placeholder="Circuito / Tramo (ej: Tierra Colorada)" 
                     value={nuevoEvento.circuito}
                     onChange={(e) => setNuevoEvento({...nuevoEvento, circuito: e.target.value})}
-                    className="bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    required
                   />
                   <button 
                     type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc uppercase text-sm rounded-xl py-2.5 transition shadow-lg shadow-amber-500/20 tracking-wider"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm rounded-xl py-3 transition shadow-lg shadow-amber-500/20 tracking-wider flex items-center justify-center gap-2"
                   >
-                    Publicar Evento
+                    <span>🚀 Publicar Evento</span>
                   </button>
                 </form>
               </div>
             )}
 
+            {/* LISTA DE EVENTOS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {eventos.map((ev) => (
                 <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-amber-500/50 transition shadow-lg relative group">
@@ -337,14 +360,27 @@ export default function App() {
                   </div>
                   <h3 className="font-wrc text-3xl text-white mb-2 group-hover:text-amber-400 transition">{ev.titulo}</h3>
                   <p className="text-neutral-400 text-sm mb-4 font-sans">📍 Tramo: <span className="text-white font-medium">{ev.circuito}</span></p>
-                  <div className="flex justify-between items-center pt-4 border-t border-neutral-800">
-                    <span className="text-xs text-neutral-400 font-medium font-sans">Pilotos Inscriptos: <strong className="text-amber-400">{ev.inscriptos}</strong></span>
-                    <button 
-                      onClick={() => alert(`¡Te has inscripto exitosamente a ${ev.titulo}!`)}
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider"
-                    >
-                      Inscribirse Ahora
-                    </button>
+                  
+                  <div className="flex justify-between items-center pt-4 border-t border-neutral-800 gap-4">
+                    <span className="text-xs text-neutral-400 font-medium font-sans">Inscriptos: <strong className="text-amber-400">{ev.inscriptos}</strong></span>
+                    
+                    <div className="flex items-center gap-2">
+                      {esAdmin && (
+                        <button 
+                          onClick={() => handleEliminarEvento(ev.id)}
+                          className="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white font-wrc text-xs uppercase px-3 py-2 rounded-xl transition border border-red-500/30"
+                          title="Eliminar evento"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => alert(`¡Te has inscripto exitosamente a ${ev.titulo}!`)}
+                        className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase px-5 py-2 rounded-xl transition shadow-md tracking-wider font-bold"
+                      >
+                        Inscribirse
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -395,7 +431,7 @@ export default function App() {
         <PerfilModal 
           usuario={usuario} 
           onClose={() => setMostrarPerfilModal(false)} 
-          onPerfilGuardado={() => cargarPerfil(usuario.id)}
+          onPerfilGuardado={() => verificarAdminYPerfil(usuario)}
         />
       )}
     </div>
