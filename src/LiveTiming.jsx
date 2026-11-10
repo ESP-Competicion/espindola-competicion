@@ -5,8 +5,8 @@ export default function LiveTiming() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // Usamos un proxy CORS público para rutear la llamada HTTP de forma segura
-  const URL_LIVE = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('http://br.assettohosting.com:10314/api/v1/live');
+  // Apuntamos a nuestra propia Serverless Function de Vercel
+  const URL_LIVE = '/api/live';
 
   const obtenerDatos = async () => {
     try {
