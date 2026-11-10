@@ -23,6 +23,24 @@ export default function App() {
   ]);
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', circuito: '' });
 
+  // Estado inicial para el Salón de la Fama (Top 3 en podio + 9 pilotos en lista = 12 en total)
+  const [hallFama, setHallFama] = useState([
+    { id: 1, puesto: 1, nombre: 'Lucas Negri', categoria: 'Rally4 - Renault Clio', campeonatos: 5, foto: 'https://files.catbox.moe/f3xmld.png' },
+    { id: 2, puesto: 2, nombre: 'Pedro Laninha', categoria: 'Rally2 - Peugeot 208', campeonatos: 3, foto: 'https://files.catbox.moe/t3phov.png' },
+    { id: 3, puesto: 3, nombre: 'Marcos Espíndola', categoria: 'WRC - Ford Fiesta', campeonatos: 2, foto: 'https://files.catbox.moe/f3xmld.png' },
+    { id: 4, puesto: 4, nombre: 'Matías Giménez', categoria: 'Rally3 - Renault Clio', campeonatos: 1, foto: '' },
+    { id: 5, puesto: 5, nombre: 'Lucas Benítez', categoria: 'Rally4 - Opel Corsa', campeonatos: 1, foto: '' },
+    { id: 6, puesto: 6, nombre: 'Gastón Duarte', categoria: 'Rally2 - Skoda Fabia', campeonatos: 1, foto: '' },
+    { id: 7, puesto: 7, nombre: 'Rodrigo Vera', categoria: 'WRC - Toyota Yaris', campeonatos: 1, foto: '' },
+    { id: 8, puesto: 8, nombre: 'Ezequiel Silva', categoria: 'Rally4 - Ford Fiesta', campeonatos: 1, foto: '' },
+    { id: 9, puesto: 9, nombre: 'Nahuel Acosta', categoria: 'Rally3 - Ford Fiesta', campeonatos: 1, foto: '' },
+    { id: 10, puesto: 10, nombre: 'Facundo Ramos', categoria: 'Rally2 - Hyundai i20', campeonatos: 1, foto: '' },
+    { id: 11, puesto: 11, nombre: 'Brian Soria', categoria: 'WRC - Citroen C3', campeonatos: 1, foto: '' },
+    { id: 12, puesto: 12, nombre: 'Alan Maidana', categoria: 'Rally4 - Peugeot 208', campeonatos: 1, foto: '' }
+  ]);
+
+  const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
+
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
       setFondoActual((prev) => (prev + 1) % fotosRally.length);
@@ -94,6 +112,40 @@ export default function App() {
     setEventos(eventos.filter(ev => ev.id !== id));
   };
 
+  // Agregar piloto al Salón de la Fama y ordenar por campeonatos
+  const handleAgregarPilotoFama = (e) => {
+    e.preventDefault();
+    if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
+
+    const listaActualizada = [
+      ...hallFama,
+      {
+        id: Date.now(),
+        nombre: nuevoPilotoFama.nombre,
+        categoria: nuevoPilotoFama.categoria || 'Categoría General',
+        campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 1,
+        foto: nuevoPilotoFama.foto || 'https://files.catbox.moe/f3xmld.png'
+      }
+    ];
+
+    // Ordenar de mayor a menor por cantidad de campeonatos y reasignar puestos
+    listaActualizada.sort((a, b) => b.campeonatos - a.campeonatos);
+    const listaConPuestos = listaActualizada.map((p, idx) => ({ ...p, puesto: idx + 1 }));
+
+    setHallFama(listaConPuestos);
+    setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' });
+  };
+
+  const handleEliminarPilotoFama = (id) => {
+    const listaFiltrada = hallFama.filter(p => p.id !== id);
+    const listaConPuestos = listaFiltrada.map((p, idx) => ({ ...p, puesto: idx + 1 }));
+    setHallFama(listaConPuestos);
+  };
+
+  // Separar Top 3 para el podio y el resto para la lista
+  const top3 = hallFama.slice(0, 3);
+  const restoPilotos = hallFama.slice(3);
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black">
       
@@ -129,7 +181,6 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
-          {/* ÚNICAMENTE EL LOGO GRANDE EN LA ESQUINA (INTERACTIVO PARA VOLVER AL INICIO) */}
           <div 
             className="cursor-pointer group flex items-center" 
             onClick={() => setPestanaActiva('inicio')}
@@ -392,38 +443,193 @@ export default function App() {
           </div>
         )}
 
+        {/* 3. SALÓN DE LA FAMA (PODIO + LISTA + ADMIN) */}
         {pestanaActiva === 'fama' && (
-          <div className="space-y-6">
+          <div className="space-y-12">
             <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Espindola Competición</h2>
-              <p className="text-neutral-400 text-sm font-sans">Historial de títulos, podios y campeonatos obtenidos por nuestros pilotos.</p>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Salón de la Fama - Podio de Campeones</h2>
+              <p className="text-neutral-300 text-sm font-sans">Los pilotos con más títulos oficiales en la historia de Espíndola Competición.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-amber-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-amber-500 text-black font-wrc text-xs px-4 py-1 rounded-bl-xl tracking-wider">CAMPEÓN 2026</div>
-                <div className="text-4xl mb-3">🥇</div>
-                <h3 className="font-wrc text-2xl text-white">MIT CUP Championship</h3>
-                <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Piloto: Lucas Negri</p>
-                <p className="text-neutral-400 text-xs mt-3 font-sans">Categoría Rally4 - Renault Clio Rally5</p>
+            {/* PANEL DE ADMIN PARA AGREGAR PILOTOS AL SALÓN DE LA FAMA */}
+            {esAdmin && (
+              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950 border border-amber-500/50 rounded-2xl p-6 shadow-2xl relative">
+                <div className="absolute top-0 right-0 bg-amber-500/20 text-amber-400 font-wrc text-xs px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/30">
+                  Panel de Control Exclusivo (Salón de la Fama)
+                </div>
+                <h3 className="font-wrc text-xl text-amber-400 mb-4 tracking-wider flex items-center gap-2">
+                  <span>🏆</span> Registrar / Actualizar Campeón
+                </h3>
+                <form onSubmit={handleAgregarPilotoFama} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <input 
+                    type="text" 
+                    placeholder="Nombre del Piloto" 
+                    value={nuevoPilotoFama.nombre}
+                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, nombre: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    required
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Categoría (ej: Rally4 - Clio)" 
+                    value={nuevoPilotoFama.categoria}
+                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, categoria: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Cantidad de Campeonatos" 
+                    value={nuevoPilotoFama.campeonatos}
+                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, campeonatos: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                    required
+                  />
+                  <input 
+                    type="url" 
+                    placeholder="URL de la Foto (Avatar)" 
+                    value={nuevoPilotoFama.foto}
+                    onChange={(e) => setNuevoPilotoFama({...nuevoPilotoFama, foto: e.target.value})}
+                    className="bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                  />
+                  <div className="md:col-span-4 flex justify-end">
+                    <button 
+                      type="submit"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black uppercase text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
+                    >
+                      ➕ Añadir al Salón de la Fama
+                    </button>
+                  </div>
+                </form>
               </div>
+            )}
 
-              <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-1 rounded-bl-xl border-l border-b border-neutral-700 tracking-wider">PODIO</div>
-                <div className="text-4xl mb-3">🥉</div>
-                <h3 className="font-wrc text-2xl text-white">SIMRALLY Series</h3>
-                <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Piloto: Pedro Laninha</p>
-                <p className="text-neutral-400 text-xs mt-3 font-sans">Categoría Rally2 - Peugeot 208</p>
-              </div>
+            {/* DISEÑO DE ESCALONES DE PODIO PARA EL TOP 3 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 max-w-5xl mx-auto">
+              
+              {/* 2º PUESTO (Izquierda) */}
+              {top3[1] && (
+                <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-700 rounded-3xl p-6 text-center shadow-2xl relative order-2 md:order-1 transform md:-translate-y-4">
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-neutral-400 text-black font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
+                    🥈 2º PUESTO
+                  </div>
+                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-2 border-neutral-400 overflow-hidden mb-4 shadow-xl mt-2">
+                    <img src={top3[1].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[1].nombre} className="w-full h-full object-cover" />
+                  </div>
+                  <h3 className="font-wrc text-2xl text-white font-bold">{top3[1].nombre}</h3>
+                  <p className="text-neutral-400 text-xs font-sans mt-1">{top3[1].categoria}</p>
+                  <div className="mt-4 bg-neutral-950/80 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
+                    <span className="text-neutral-400 text-xs uppercase font-sans">Títulos: </span>
+                    <strong className="text-neutral-300 font-wrc text-lg">{top3[1].campeonatos} 🏆</strong>
+                  </div>
+                  {esAdmin && (
+                    <button 
+                      onClick={() => handleEliminarPilotoFama(top3[1].id)}
+                      className="mt-4 text-xs text-red-400 hover:text-red-300 block mx-auto underline font-sans"
+                    >
+                      Eliminar del Podio
+                    </button>
+                  )}
+                </div>
+              )}
 
-              <div className="bg-gradient-to-b from-neutral-900/80 to-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-1 rounded-bl-xl tracking-wider">TOP 2 MUNDIAL</div>
-                <div className="text-4xl mb-3">🌍</div>
-                <h3 className="font-wrc text-2xl text-white">Greece Gravel Challenge</h3>
-                <p className="text-amber-400 text-sm font-semibold mt-1 font-sans">Equipo Espíndola</p>
-                <p className="text-neutral-400 text-xs mt-3 font-sans">Setup por defecto - Etapa extrema</p>
-              </div>
+              {/* 1º PUESTO (Centro - Más alto) */}
+              {top3[0] && (
+                <div className="bg-gradient-to-b from-amber-500/20 via-neutral-900/80 to-neutral-950 backdrop-blur-2xl border-2 border-amber-500 rounded-3xl p-8 text-center shadow-2xl relative order-1 md:order-2 transform md:-translate-y-10">
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-500 text-black font-wrc font-black text-base px-6 py-1.5 rounded-full shadow-xl border-2 border-white tracking-widest">
+                    👑 1º CAMPEÓN MUNDIAL
+                  </div>
+                  <div className="w-28 h-28 mx-auto rounded-full bg-neutral-800 border-4 border-amber-400 overflow-hidden mb-4 shadow-2xl mt-3">
+                    <img src={top3[0].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[0].nombre} className="w-full h-full object-cover" />
+                  </div>
+                  <h3 className="font-wrc text-3xl text-amber-400 font-black">{top3[0].nombre}</h3>
+                  <p className="text-neutral-300 text-xs font-sans mt-1">{top3[0].categoria}</p>
+                  <div className="mt-4 bg-amber-500/10 border border-amber-500/40 py-2.5 px-6 rounded-2xl inline-block shadow-inner">
+                    <span className="text-amber-300 text-xs uppercase font-sans">Títulos Absolutos: </span>
+                    <strong className="text-amber-400 font-wrc text-xl">{top3[0].campeonatos} 🏆🏆🏆</strong>
+                  </div>
+                  {esAdmin && (
+                    <button 
+                      onClick={() => handleEliminarPilotoFama(top3[0].id)}
+                      className="mt-4 text-xs text-red-400 hover:text-red-300 block mx-auto underline font-sans"
+                    >
+                      Eliminar del Podio
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* 3º PUESTO (Derecha) */}
+              {top3[2] && (
+                <div className="bg-neutral-900/70 backdrop-blur-xl border border-amber-700/50 rounded-3xl p-6 text-center shadow-2xl relative order-3">
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc font-black text-sm px-4 py-1 rounded-full shadow-lg border border-white">
+                    🥉 3º PUESTO
+                  </div>
+                  <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 border-2 border-amber-700 overflow-hidden mb-4 shadow-xl mt-2">
+                    <img src={top3[2].foto || 'https://files.catbox.moe/f3xmld.png'} alt={top3[2].nombre} className="w-full h-full object-cover" />
+                  </div>
+                  <h3 className="font-wrc text-2xl text-white font-bold">{top3[2].nombre}</h3>
+                  <p className="text-neutral-400 text-xs font-sans mt-1">{top3[2].categoria}</p>
+                  <div className="mt-4 bg-neutral-950/80 border border-neutral-800 py-2 px-4 rounded-xl inline-block">
+                    <span className="text-neutral-400 text-xs uppercase font-sans">Títulos: </span>
+                    <strong className="text-amber-600 font-wrc text-lg">{top3[2].campeonatos} 🏆</strong>
+                  </div>
+                  {esAdmin && (
+                    <button 
+                      onClick={() => handleEliminarPilotoFama(top3[2].id)}
+                      className="mt-4 text-xs text-red-400 hover:text-red-300 block mx-auto underline font-sans"
+                    >
+                      Eliminar del Podio
+                    </button>
+                  )}
+                </div>
+              )}
+
             </div>
+
+            {/* LISTADO DE LOS DEMÁS PILOTOS (4º en adelante) */}
+            {restoPilotos.length > 0 && (
+              <div className="space-y-4 pt-10">
+                <h3 className="font-wrc text-2xl text-amber-400 tracking-wide border-b border-neutral-800 pb-3">
+                  Resto del Salón de la Fama (Pilotos Destacados)
+                </h3>
+                
+                <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                  <div className="divide-y divide-neutral-800">
+                    {restoPilotos.map((piloto) => (
+                      <div key={piloto.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition">
+                        <div className="flex items-center gap-4">
+                          <span className="font-wrc text-xl font-bold text-amber-500 w-8 text-center">
+                            #{piloto.puesto}
+                          </span>
+                          <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex-shrink-0">
+                            <img src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'} alt={piloto.nombre} className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <h4 className="font-wrc text-lg text-white font-bold">{piloto.nombre}</h4>
+                            <p className="text-neutral-400 text-xs font-sans">{piloto.categoria}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6">
+                          <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3.5 py-1.5 rounded-full text-xs font-wrc font-bold">
+                            {piloto.campeonatos} 🏆 Título{piloto.campeonatos > 1 ? 's' : ''}
+                          </span>
+                          {esAdmin && (
+                            <button 
+                              onClick={() => handleEliminarPilotoFama(piloto.id)}
+                              className="text-red-400 hover:text-red-300 text-xs font-mono bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded-lg transition"
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
