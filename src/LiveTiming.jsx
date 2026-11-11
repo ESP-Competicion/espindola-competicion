@@ -23,7 +23,7 @@ export default function LiveTiming() {
     };
 
     fetchLiveTiming();
-    const interval = setInterval(fetchLiveTiming, 3000);
+    const interval = setInterval(fetchLiveTiming, 3000); // Actualiza cada 3 segundos en tiempo real
     return () => clearInterval(interval);
   }, []);
 
