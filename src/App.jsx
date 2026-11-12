@@ -6,9 +6,8 @@ import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
 
-// Las imágenes de fondo ahora cargan directo desde tu carpeta public/
 const fotosRally = [
-  '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public (ej: /bg-rally.jpg)
+  '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public
 ];
 
 export default function App() {
@@ -26,13 +25,14 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  // CONFIGURACIÓN SOCIAL Y HISTORIA
+  // CONFIGURACIÓN SOCIAL E HISTORIA (CON DOS FOTOS: RALLY Y CIRCUITO)
   const [config, setConfig] = useState({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: 'Espíndola Competición nació de la pasión por el rally de alta competencia y la simulación deportiva. Con dedicación en cada fecha, combinamos telemetría, puesta a punto y constancia para estar siempre peleando la punta del campeonato.',
-    historia_imagen: 'https://files.catbox.moe/t5ffu8.png'
+    historia_texto: 'Espíndola Competición abarca tanto la alta competencia en rally como el rendimiento en circuito, combinando telemetría, puesta a punto y constancia.',
+    historia_imagen: 'https://files.catbox.moe/t5ffu8.png',
+    historia_imagen_2: 'https://files.catbox.moe/pfh5gw.png'
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
@@ -67,7 +67,6 @@ export default function App() {
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
   const [editandoId, setEditandoId] = useState(null);
 
-  // CÁLCULO AUTOMÁTICO DE CAMPEONATOS TOTALES
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
 
   useEffect(() => {
@@ -343,7 +342,7 @@ export default function App() {
       {/* ENCABEZADO / HUD FLOTANTE */}
       <header className="relative z-50 w-full max-w-[1600px] mx-auto px-6 pt-6 flex flex-wrap items-center justify-between gap-4">
         
-        {/* Izquierda: Logo Espíndola Competición local (/logo.svg) como Botón de Inicio */}
+        {/* Izquierda: Logo del equipo más sutil y pequeño (/logo.svg) */}
         <button 
           onClick={() => { setPestanaActiva('inicio'); setAlbumSeleccionado(null); }}
           className="cursor-pointer group flex items-center focus:outline-none"
@@ -353,7 +352,7 @@ export default function App() {
             src="/logo.svg" 
             alt="Logo Espíndola Competición" 
             onError={(e) => { e.target.src = 'https://files.catbox.moe/f3xmld.png'; }}
-            className="h-12 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
+            className="h-9 md:h-10 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] opacity-90"
           />
         </button>
 
@@ -377,7 +376,6 @@ export default function App() {
               </button>
             ))}
 
-            {/* Botón Hamburguesa Central (Despliega Calendario, Galería, Miembros) */}
             <button
               onClick={() => {
                 setMenuPrincipalAbierto(!menuPrincipalAbierto);
@@ -392,7 +390,6 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Caja Desplegable: CALENDARIO / GALERIA / MIEMBROS */}
           {menuPrincipalAbierto && (
             <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/45 shadow-2xl py-4 px-5 flex flex-col items-center gap-3.5 z-50">
               <button
@@ -417,7 +414,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Derecha: Píldora de Usuario / Autenticación */}
+        {/* Derecha: Píldora de Usuario */}
         <div className="relative">
           {usuario ? (
             <div className="flex items-center gap-3 pl-2 pr-5 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/45 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
@@ -459,7 +456,6 @@ export default function App() {
             </button>
           )}
 
-          {/* Caja Desplegable de Usuario: MI PERFIL / CONFIGURACION / SALIR */}
           {usuario && menuUsuarioAbierto && (
             <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/45 shadow-2xl py-4 px-5 flex flex-col items-center gap-3.5 z-50">
               <button
@@ -564,36 +560,48 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. NUESTRA HISTORIA */}
+        {/* 2. NUESTRA HISTORIA (TEXTO COMPLETO ARRIBA Y 2 FOTOS ABAJO PARA RALLY Y CIRCUITO) */}
         {pestanaActiva === 'historia' && (
           <div className="space-y-8 max-w-4xl mx-auto">
-            <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Nuestra Historia - Espíndola Competición</h2>
-              <p className="text-neutral-300 text-sm font-sans">El origen, nuestros valores y la trayectoria del equipo.</p>
+            {/* Ventana de texto arriba ocupando todo el ancho */}
+            <div className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
+              <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-sans whitespace-pre-line">
+                {config.historia_texto}
+              </p>
+
+              {/* 2 Fotos abajo (Rally y Circuito) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">Foto 1 (Rally)</span>
+                  <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl h-56 bg-neutral-950">
+                    <img 
+                      src={config.historia_imagen || 'https://files.catbox.moe/t5ffu8.png'} 
+                      alt="Rally Espíndola" 
+                      className="w-full h-full object-cover hover:scale-105 transition duration-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">Foto 2 (Circuito)</span>
+                  <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl h-56 bg-neutral-950">
+                    <img 
+                      src={config.historia_imagen_2 || 'https://files.catbox.moe/pfh5gw.png'} 
+                      alt="Circuito Espíndola" 
+                      className="w-full h-full object-cover hover:scale-105 transition duration-500"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-4">
-                <h3 className="font-wrc text-2xl text-white">Pasión Por El Motor y La Competición</h3>
-                <p className="text-neutral-200 text-base leading-relaxed font-sans whitespace-pre-line">
-                  {config.historia_texto}
-                </p>
-              </div>
-              <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl">
-                <img 
-                  src={config.historia_imagen || 'https://files.catbox.moe/t5ffu8.png'} 
-                  alt="Historia del equipo" 
-                  className="w-full h-72 object-cover hover:scale-105 transition duration-500"
-                />
-              </div>
-            </div>
-
+            {/* Panel de administración exclusivo para editar texto y las 2 fotos desde la PC */}
             {esAdmin && (
-              <div className="bg-neutral-900/50 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">⚙️ Editar Reseña de Historia e Imagen</h3>
+              <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="font-wrc text-xl text-amber-400">⚙️ Administrar Sección Historia (Texto y 2 Fotos)</h3>
                 <form onSubmit={handleGuardarConfig} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Texto de la Historia</label>
+                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Texto Principal</label>
                     <textarea
                       rows={5}
                       value={config.historia_texto}
@@ -601,15 +609,21 @@ export default function App() {
                       className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Imagen Representativa</label>
-                    <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 1 (Rally - Desde PC)</label>
+                      <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 2 (Circuito - Desde PC)</label>
+                      <SubirImagen currentUrl={config.historia_imagen_2} onUpload={(url) => setConfig({ ...config, historia_imagen_2: url })} />
+                    </div>
                   </div>
                   <button
                     type="submit"
                     className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
                   >
-                    💾 Guardar Historia
+                    💾 Guardar Cambios de Historia
                   </button>
                 </form>
               </div>
@@ -1042,16 +1056,16 @@ export default function App() {
 
       </main>
 
-      {/* BARRA INFERIOR / FOOTER FLOTANTE CON SPONSORS SVG LOCAL */}
+      {/* BARRA INFERIOR / FOOTER FLOTANTE CON SPONSORS SVG MÁS SUTILES Y PEQUEÑOS */}
       <footer className="relative z-40 w-full max-w-[1600px] mx-auto px-8 pb-6 flex flex-col md:flex-row items-center justify-between gap-4 mt-12">
         <div className="hidden md:block w-24" />
 
-        {/* Tira central de Sponsors local en formato SVG (/sponsor.svg) */}
+        {/* Tira central de Sponsors local en formato SVG (/sponsor.svg) más sutil */}
         <div className="flex items-center justify-center">
           <img 
             src="/sponsor.svg" 
             alt="Sponsors Espíndola Competición" 
-            className="h-7 md:h-9 w-auto object-contain opacity-95 hover:opacity-100 transition drop-shadow-md"
+            className="h-5 md:h-6 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md"
           />
         </div>
 
@@ -1062,12 +1076,12 @@ export default function App() {
               <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
             </svg>
           </a>
-          <a href={config.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 transition" aria-label="TikTok">
+          <a href={config.tiktok} target="_blank" rel="noreferrer" className="hover:text-amber-400 transition" aria-label="TikTok">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
             </svg>
           </a>
-          <a href={config.discord} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 transition" aria-label="Discord">
+          <a href={config.discord} target="_blank" rel="noreferrer" className="hover:text-amber-400 transition" aria-label="Discord">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
             </svg>
