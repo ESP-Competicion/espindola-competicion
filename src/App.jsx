@@ -25,7 +25,7 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  // CONFIGURACIÓN SOCIAL E HISTORIA (CON DOS FOTOS: RALLY Y CIRCUITO)
+  // CONFIGURACIÓN SOCIAL E HISTORIA
   const [config, setConfig] = useState({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
@@ -36,7 +36,7 @@ export default function App() {
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
-  // ESTADOS DE GALERÍA Y ÁLBUMES (CARPETAS)
+  // ESTADOS DE GALERÍA Y ÁLBUMES
   const [albumes, setAlbumes] = useState([]);
   const [albumSeleccionado, setAlbumSeleccionado] = useState(null);
   const [fotosAlbumActual, setFotosAlbumActual] = useState([]);
@@ -47,9 +47,12 @@ export default function App() {
   const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
   const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
 
-  // EVENTOS Y CALENDARIO
+  // EVENTOS Y CALENDARIO (VISUAL 2027+)
   const [eventos, setEventos] = useState([]);
   const [calendario, setCalendario] = useState([]);
+  const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1)); // Inicia en Enero 2027
+  const [diaSeleccionadoModal, setDiaSeleccionadoModal] = useState(null);
+
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
     fecha: '',
@@ -350,6 +353,44 @@ export default function App() {
     cargarSalónDeLaFama();
   };
 
+  // FUNCIONES PARA EL CALENDARIO VISUAL
+  const cambiarMes = (direccion) => {
+    const nuevo = new Date(fechaActualCalendario);
+    nuevo.setMonth(nuevo.getMonth() + direccion);
+    // Limitar a partir del año 2027 en adelante
+    if (nuevo.getFullYear() >= 2027) {
+      setFechaActualCalendario(nuevo);
+    }
+  };
+
+  const obtenerDiasDelMes = () => {
+    const año = fechaActualCalendario.getFullYear();
+    const mes = fechaActualCalendario.getMonth();
+    const primerDiaIndex = new Date(año, mes, 1).getDay();
+    const totalDias = new Date(año, mes + 1, 0).getDate();
+
+    const dias = [];
+    // Espacios vacíos antes del primer día del mes
+    for (let i = 0; i < (primerDiaIndex === 0 ? 6 : primerDiaIndex - 1); i++) {
+      dias.push(null);
+    }
+    // Días del mes
+    for (let d = 1; d <= totalDias; d++) {
+      const mesStr = String(mes + 1).padStart(2, '0');
+      const diaStr = String(d).padStart(2, '0');
+      const fechaFormato = `${año}-${mesStr}-${diaStr}`;
+      
+      const eventosDelDia = calendario.filter(c => c.fecha === fechaFormato);
+      dias.push({ dia: d, fecha: fechaFormato, eventos: eventosDelDia });
+    }
+    return dias;
+  };
+
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
   const restoPilotos = hallFama.slice(3);
 
   return (
@@ -383,7 +424,6 @@ export default function App() {
       {/* ENCABEZADO / HUD FLOTANTE */}
       <header className="relative z-50 w-full max-w-[1600px] mx-auto px-6 pt-6 flex flex-wrap items-center justify-between gap-4">
         
-        {/* Izquierda: Logo del equipo más sutil y pequeño (/logo.svg) */}
         <button 
           onClick={() => { setPestanaActiva('inicio'); setAlbumSeleccionado(null); }}
           className="cursor-pointer group flex items-center focus:outline-none"
@@ -397,7 +437,6 @@ export default function App() {
           />
         </button>
 
-        {/* Centro: Píldora de Navegación + Menú Hamburguesa */}
         <div className="relative">
           <nav className="flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 rounded-full bg-black/45 backdrop-blur-md border border-white/45 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             {[
@@ -455,7 +494,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Derecha: Píldora de Usuario */}
         <div className="relative">
           {usuario ? (
             <div className="flex items-center gap-3 pl-2 pr-5 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/45 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
@@ -531,7 +569,7 @@ export default function App() {
           <div className="min-h-[65vh] flex flex-col items-center justify-center">
             <div className="max-w-xl mx-auto text-center space-y-6 py-12">
               <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
-                Temporada Oficial 2026 • Espíndola Competición {esAdmin && '• Modo Admin'}
+                Temporada Oficial 2027 • Espíndola Competición {esAdmin && '• Modo Admin'}
               </span>
 
               <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
@@ -669,37 +707,104 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. CALENDARIO */}
+        {/* 3. CALENDARIO VISUAL 2027+ INTERACTIVO */}
         {pestanaActiva === 'calendario' && (
           <div className="space-y-8 max-w-5xl mx-auto">
-            <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Calendario Oficial</h2>
-              <p className="text-neutral-300 text-sm font-sans">Fechas y cronograma general de la temporada.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Calendario de Carreras</h2>
+                <p className="text-neutral-300 text-sm font-sans">Navega por los meses del 2027 en adelante para consultar las fechas oficiales.</p>
+              </div>
+
+              {/* Botones de navegación de meses */}
+              <div className="flex items-center gap-3 bg-neutral-900/80 border border-amber-500/40 px-4 py-2 rounded-2xl shadow-xl">
+                <button
+                  onClick={() => cambiarMes(-1)}
+                  className="text-amber-400 hover:text-white font-wrc text-sm px-3 py-1 bg-neutral-950 rounded-xl border border-neutral-800 transition cursor-pointer"
+                >
+                  ◀ Mes Anterior
+                </button>
+                <span className="font-wrc text-lg text-white tracking-wider px-2 min-w-[140px] text-center">
+                  {nombresMeses[fechaActualCalendario.getMonth()]} {fechaActualCalendario.getFullYear()}
+                </span>
+                <button
+                  onClick={() => cambiarMes(1)}
+                  className="text-amber-400 hover:text-white font-wrc text-sm px-3 py-1 bg-neutral-950 rounded-xl border border-neutral-800 transition cursor-pointer"
+                >
+                  Mes Siguiente ▶
+                </button>
+              </div>
             </div>
 
+            {/* Grilla del Calendario */}
+            <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl space-y-4">
+              
+              {/* Días de la semana */}
+              <div className="grid grid-cols-7 gap-2 text-center font-wrc text-amber-400 text-xs md:text-sm border-b border-white/10 pb-3">
+                <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+              </div>
+
+              {/* Días del mes */}
+              <div className="grid grid-cols-7 gap-2 md:gap-3">
+                {obtenerDiasDelMes().map((item, idx) => {
+                  if (!item) {
+                    return <div key={`empty-${idx}`} className="h-20 md:h-28 rounded-2xl bg-black/20 border border-transparent"></div>;
+                  }
+
+                  const tieneCarrera = item.eventos.length > 0;
+
+                  return (
+                    <div
+                      key={item.fecha}
+                      onClick={() => tieneCarrera && setDiaSeleccionadoModal(item)}
+                      className={`h-20 md:h-28 rounded-2xl p-2.5 flex flex-col justify-between transition border relative overflow-hidden ${
+                        tieneCarrera 
+                          ? 'bg-amber-500/15 border-amber-500/60 shadow-[0_0_15px_rgba(251,191,36,0.3)] cursor-pointer hover:bg-amber-500/25' 
+                          : 'bg-neutral-950/40 border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <span className={`font-wrc text-sm md:text-base ${tieneCarrera ? 'text-amber-400 font-black' : 'text-neutral-400'}`}>
+                        {item.dia}
+                      </span>
+
+                      {tieneCarrera && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-[10px] md:text-xs font-wrc text-amber-300 uppercase bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 truncate">
+                            <span>🏁</span>
+                            <span className="truncate">{item.eventos[0].titulo}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Panel de administración para agregar fecha al calendario */}
             {esAdmin && (
-              <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">➕ Agregar Fecha al Calendario</h3>
+              <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="font-wrc text-xl text-amber-400">➕ Agregar Fecha de Carrera al Calendario</h3>
                 <form onSubmit={handleCrearCalendario} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Título / Fecha</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Título de la Carrera</label>
                     <input
                       type="text"
                       value={nuevoCalendario.titulo}
                       onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value })}
-                      placeholder="Ej: Gran Premio Apertura"
+                      placeholder="Ej: Gran Premio Misiones 2027"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha (Día del Calendario)</label>
                     <input
                       type="date"
                       value={nuevoCalendario.fecha}
                       onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, fecha: e.target.value })}
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
                     />
                   </div>
                   <div>
@@ -707,27 +812,29 @@ export default function App() {
                       type="submit"
                       className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase py-2.5 rounded-xl transition shadow-lg cursor-pointer font-black"
                     >
-                      Guardar en Calendario
+                      Guardar Fecha
                     </button>
                   </div>
                 </form>
               </div>
             )}
 
-            <div className="space-y-4">
+            {/* Lista administrable de fechas guardadas */}
+            <div className="space-y-3 pt-4">
+              <h3 className="font-wrc text-xl text-white tracking-wide">Listado de Fechas Registradas</h3>
               {calendario.length === 0 ? (
-                <p className="text-neutral-400 text-center py-8">No hay fechas cargadas en el calendario todavía.</p>
+                <p className="text-neutral-400 text-sm">No hay fechas cargadas en el calendario todavía.</p>
               ) : (
                 calendario.map((cal) => (
-                  <div key={cal.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex justify-between items-center">
+                  <div key={cal.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex justify-between items-center shadow-lg">
                     <div>
                       <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{cal.fecha}</span>
-                      <h3 className="font-wrc text-2xl text-white mt-1">{cal.titulo}</h3>
+                      <h4 className="font-wrc text-xl text-white mt-0.5">{cal.titulo}</h4>
                     </div>
                     {esAdmin && (
                       <button
                         onClick={() => handleEliminarCalendario(cal.id)}
-                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-2 rounded-xl text-xs border border-red-500/30 cursor-pointer"
+                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-xl text-xs border border-red-500/30 cursor-pointer"
                       >
                         🗑️ Eliminar
                       </button>
@@ -736,6 +843,7 @@ export default function App() {
                 ))
               )}
             </div>
+
           </div>
         )}
 
@@ -759,7 +867,7 @@ export default function App() {
                           type="text"
                           value={nuevoAlbumNombre}
                           onChange={(e) => setNuevoAlbumNombre(e.target.value)}
-                          placeholder="Ej: Rally de Córdoba 2026"
+                          placeholder="Ej: Rally de Córdoba 2027"
                           className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
                         />
                       </div>
@@ -996,11 +1104,10 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. SALÓN DE LA FAMA - PODIO ESCALONADO ORIGINAL */}
+        {/* 7. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-12 max-w-6xl mx-auto">
             
-            {/* Encabezado y Contador Total */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <h2 className="font-wrc text-4xl md:text-5xl text-amber-400 tracking-wide drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
@@ -1026,7 +1133,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Formulario Admin */}
             {esAdmin && (
               <div className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
                 <h3 className="font-wrc text-xl text-amber-400">
@@ -1090,7 +1196,7 @@ export default function App() {
               </div>
             )}
 
-            {/* PODIO ESCALONADO (2º IZQUIERDA - 1º CENTRO GRANDE - 3º DERECHA) */}
+            {/* PODIO ESCALONADO ORIGINAL */}
             {hallFama.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center pt-8 pb-4">
                 
@@ -1184,7 +1290,6 @@ export default function App() {
               </div>
             )}
 
-            {/* RESTO DE LA LISTA (4º PUESTO EN ADELANTE) */}
             {restoPilotos.length > 0 && (
               <div className="space-y-3 pt-4">
                 {restoPilotos.map((piloto) => (
@@ -1316,6 +1421,26 @@ export default function App() {
           </a>
         </div>
       </footer>
+
+      {/* MODAL DETALLE DE DÍA EN CALENDARIO */}
+      {diaSeleccionadoModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
+          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="font-wrc text-2xl text-amber-400">Carreras del {diaSeleccionadoModal.fecha}</h3>
+              <button onClick={() => setDiaSeleccionadoModal(null)} className="text-neutral-400 hover:text-white text-lg">✕</button>
+            </div>
+            <div className="space-y-3">
+              {diaSeleccionadoModal.eventos.map(ev => (
+                <div key={ev.id} className="bg-neutral-950 p-4 rounded-2xl border border-amber-500/30 space-y-1">
+                  <h4 className="font-wrc text-xl text-white">{ev.titulo}</h4>
+                  {ev.descripcion && <p className="text-xs text-neutral-300">{ev.descripcion}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODALES AUXILIARES */}
       {mostrarPerfilModal && (
