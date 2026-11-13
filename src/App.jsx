@@ -123,7 +123,22 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // SUSCRIPCIÓN EN TIEMPO REAL PARA MIEMBROS / PERFILES
+    const canalMiembros = supabase
+      .channel('cambios-perfiles')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'perfiles' },
+        () => {
+          cargarMiembros();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(canalMiembros);
+    };
   }, []);
 
   async function cargarConfiguracion() {
