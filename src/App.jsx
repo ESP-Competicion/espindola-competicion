@@ -199,7 +199,7 @@ export default function App() {
 
     const { data } = await supabase
       .from('perfiles')
-      .select('nombre_piloto, steam_id, nacionalidad, avatar_url')
+      .select('nombre_piloto, steam_id, nacionalidad, provincia, avatar_url')
       .eq('id', user.id)
       .single();
 
@@ -1426,8 +1426,8 @@ export default function App() {
                     </div>
                     <div className="space-y-1 overflow-hidden">
                       <h3 className="font-wrc text-xl text-white truncate">{m.nombre_piloto || 'Piloto sin nombre'}</h3>
-                      <p className="text-xs text-amber-400 uppercase font-wrc">Nacionalidad: {m.nacionalidad || 'Argentina 🇦🇷'}</p>
-                      {m.steam_id && <p className="text-xs text-neutral-400 truncate">Steam ID: {m.steam_id}</p>}
+                      <p className="text-xs text-amber-400 uppercase font-wrc">País: {m.nacionalidad || 'Argentina 🇦🇷'}</p>
+                      {m.provincia && <p className="text-xs text-neutral-300 font-sans">Provincia: {m.provincia}</p>}
                     </div>
                   </div>
                 ))
@@ -1458,7 +1458,7 @@ export default function App() {
               onClick={() => setMostrarPerfilModal(true)}
               className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow-lg cursor-pointer"
             >
-              Editar Datos y Steam ID
+              Editar Datos Personales
             </button>
 
             <button
