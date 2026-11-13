@@ -47,8 +47,9 @@ export default function App() {
   const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
   const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
 
-  // EVENTOS
+  // EVENTOS Y CALENDARIO
   const [eventos, setEventos] = useState([]);
+  const [calendario, setCalendario] = useState([]);
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
     fecha: '',
@@ -56,6 +57,11 @@ export default function App() {
     categorias: '',
     modelos_autos: '',
     pais_origen: 'Argentina 🇦🇷'
+  });
+  const [nuevoCalendario, setNuevoCalendario] = useState({
+    titulo: '',
+    fecha: '',
+    descripcion: ''
   });
 
   // MODAL INSCRIPCIÓN
@@ -67,6 +73,10 @@ export default function App() {
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
   const [editandoId, setEditandoId] = useState(null);
 
+  // MIEMBROS REGISTRADOS
+  const [miembros, setMiembros] = useState([]);
+
+  // CÁLCULO AUTOMÁTICO DE CAMPEONATOS TOTALES
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
 
   useEffect(() => {
@@ -89,7 +99,9 @@ export default function App() {
     cargarConfiguracion();
     cargarAlbumes();
     cargarEventos();
+    cargarCalendario();
     cargarSalónDeLaFama();
+    cargarMiembros();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -127,12 +139,22 @@ export default function App() {
     if (data) setEventos(data);
   }
 
+  async function cargarCalendario() {
+    const { data } = await supabase.from('calendario').select('*').order('fecha', { ascending: true });
+    if (data) setCalendario(data);
+  }
+
   async function cargarSalónDeLaFama() {
     const { data } = await supabase.from('salon_fama').select('*').order('campeonatos', { ascending: false });
     if (data) {
       const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
       setHallFama(listaConPuestos);
     }
+  }
+
+  async function cargarMiembros() {
+    const { data } = await supabase.from('perfiles').select('*');
+    if (data) setMiembros(data);
   }
 
   async function verificarAdminYPerfil(user) {
@@ -269,6 +291,26 @@ export default function App() {
     if (!error) cargarEventos();
   };
 
+  const handleCrearCalendario = async (e) => {
+    e.preventDefault();
+    if (!nuevoCalendario.titulo || !nuevoCalendario.fecha) return;
+
+    const { error } = await supabase.from('calendario').insert([nuevoCalendario]);
+
+    if (error) {
+      alert('Error al crear fecha de calendario: ' + error.message);
+    } else {
+      setNuevoCalendario({ titulo: '', fecha: '', descripcion: '' });
+      cargarCalendario();
+    }
+  };
+
+  const handleEliminarCalendario = async (id) => {
+    if (!confirm('¿Eliminar esta fecha del calendario?')) return;
+    const { error } = await supabase.from('calendario').delete().eq('id', id);
+    if (!error) cargarCalendario();
+  };
+
   const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
@@ -358,7 +400,7 @@ export default function App() {
 
         {/* Centro: Píldora de Navegación + Menú Hamburguesa */}
         <div className="relative">
-          <nav className="flex items-center gap-5 md:gap-7 px-6 md:px-8 py-3 rounded-full bg-black/45 backdrop-blur-md border border-white/45 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <nav className="flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 rounded-full bg-black/45 backdrop-blur-md border border-white/45 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             {[
               { id: 'historia', label: 'HISTORIA' },
               { id: 'eventos', label: `EVENTOS${esAdmin ? ' ⚙️' : ''}` },
@@ -393,8 +435,8 @@ export default function App() {
           {menuPrincipalAbierto && (
             <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/45 shadow-2xl py-4 px-5 flex flex-col items-center gap-3.5 z-50">
               <button
-                onClick={() => { setPestanaActiva('eventos'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
-                className="text-sm font-wrc tracking-wider transition text-white hover:text-amber-300 cursor-pointer"
+                onClick={() => { setPestanaActiva('calendario'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                className={`text-sm font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'calendario' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
                 CALENDARIO
               </button>
@@ -405,8 +447,8 @@ export default function App() {
                 GALERIA
               </button>
               <button
-                onClick={() => { setPestanaActiva('fama'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
-                className="text-sm font-wrc tracking-wider transition text-white hover:text-amber-300 cursor-pointer"
+                onClick={() => { setPestanaActiva('miembros'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                className={`text-sm font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'miembros' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
                 MIEMBROS
               </button>
@@ -560,16 +602,14 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. NUESTRA HISTORIA (TEXTO COMPLETO ARRIBA Y 2 FOTOS ABAJO PARA RALLY Y CIRCUITO) */}
+        {/* 2. NUESTRA HISTORIA */}
         {pestanaActiva === 'historia' && (
           <div className="space-y-8 max-w-4xl mx-auto">
-            {/* Ventana de texto arriba ocupando todo el ancho */}
             <div className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
               <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-sans whitespace-pre-line">
                 {config.historia_texto}
               </p>
 
-              {/* 2 Fotos abajo (Rally y Circuito) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
                 <div className="space-y-2">
                   <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">Foto 1 (Rally)</span>
@@ -595,10 +635,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* Panel de administración exclusivo para editar texto y las 2 fotos desde la PC */}
             {esAdmin && (
               <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">⚙️ Administrar Sección Historia (Texto y 2 Fotos)</h3>
+                <h3 className="font-wrc text-xl text-amber-400">⚙️ Administrar Sección Historia</h3>
                 <form onSubmit={handleGuardarConfig} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Texto Principal</label>
@@ -611,11 +650,11 @@ export default function App() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 1 (Rally - Desde PC)</label>
+                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 1 (Rally)</label>
                       <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 2 (Circuito - Desde PC)</label>
+                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 2 (Circuito)</label>
                       <SubirImagen currentUrl={config.historia_imagen_2} onUpload={(url) => setConfig({ ...config, historia_imagen_2: url })} />
                     </div>
                   </div>
@@ -631,7 +670,77 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. GALERÍA DE EVENTOS */}
+        {/* 3. CALENDARIO */}
+        {pestanaActiva === 'calendario' && (
+          <div className="space-y-8 max-w-5xl mx-auto">
+            <div>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Calendario Oficial</h2>
+              <p className="text-neutral-300 text-sm font-sans">Fechas y cronograma general de la temporada.</p>
+            </div>
+
+            {esAdmin && (
+              <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="font-wrc text-xl text-amber-400">➕ Agregar Fecha al Calendario</h3>
+                <form onSubmit={handleCrearCalendario} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                  <div>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Título / Fecha</label>
+                    <input
+                      type="text"
+                      value={nuevoCalendario.titulo}
+                      onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value })}
+                      placeholder="Ej: Gran Premio Apertura"
+                      required
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha</label>
+                    <input
+                      type="date"
+                      value={nuevoCalendario.fecha}
+                      onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, fecha: e.target.value })}
+                      required
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <button
+                      type="submit"
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase py-2.5 rounded-xl transition shadow-lg cursor-pointer font-black"
+                    >
+                      Guardar en Calendario
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {calendario.length === 0 ? (
+                <p className="text-neutral-400 text-center py-8">No hay fechas cargadas en el calendario todavía.</p>
+              ) : (
+                calendario.map((cal) => (
+                  <div key={cal.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex justify-between items-center">
+                    <div>
+                      <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{cal.fecha}</span>
+                      <h3 className="font-wrc text-2xl text-white mt-1">{cal.titulo}</h3>
+                    </div>
+                    {esAdmin && (
+                      <button
+                        onClick={() => handleEliminarCalendario(cal.id)}
+                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-2 rounded-xl text-xs border border-red-500/30 cursor-pointer"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 4. GALERÍA DE EVENTOS */}
         {pestanaActiva === 'galeria' && (
           <div className="space-y-8 max-w-6xl mx-auto">
             {!albumSeleccionado ? (
@@ -756,7 +865,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. LIVETIMING */}
+        {/* 5. LIVETIMING */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div>
@@ -773,17 +882,17 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. EVENTOS */}
+        {/* 6. EVENTOS */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Calendario de Eventos y Campeonatos</h2>
-              <p className="text-neutral-300 text-sm font-sans">Próximas fechas, horarios y categorías del equipo.</p>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Inscripciones y Campeonatos</h2>
+              <p className="text-neutral-300 text-sm font-sans">Fechas activas para anotarte a competir.</p>
             </div>
 
             {esAdmin && (
               <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">➕ Crear Nuevo Evento / Fecha</h3>
+                <h3 className="font-wrc text-xl text-amber-400">➕ Crear Nuevo Evento / Inscripción</h3>
                 <form onSubmit={handleCrearEvento} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Título del Evento</label>
@@ -888,7 +997,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. SALÓN DE LA FAMA */}
+        {/* 7. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-10 max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/10 pb-6">
@@ -963,7 +1072,7 @@ export default function App() {
               </div>
             )}
 
-            {/* PODIO TOP 3 */}
+            {/* PODIO TOP 3 ORIGINAL */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
               {top3.map((piloto, idx) => (
                 <div key={piloto.id} className={`relative bg-neutral-900/50 backdrop-blur-md border rounded-3xl p-6 text-center shadow-2xl flex flex-col items-center justify-between ${idx === 0 ? 'border-amber-400 bg-amber-500/5 scale-105' : 'border-white/10'}`}>
@@ -1020,7 +1129,40 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. MI PERFIL */}
+        {/* 8. MIEMBROS */}
+        {pestanaActiva === 'miembros' && (
+          <div className="space-y-8 max-w-5xl mx-auto">
+            <div>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Pilotos Registrados</h2>
+              <p className="text-neutral-300 text-sm font-sans">Comunidad de pilotos y miembros de Espíndola Competición.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {miembros.length === 0 ? (
+                <p className="text-neutral-400 col-span-full text-center py-8">No hay miembros registrados todavía.</p>
+              ) : (
+                miembros.map((m) => (
+                  <div key={m.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-neutral-800 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc text-amber-400 text-lg flex-shrink-0">
+                      {m.avatar_url ? (
+                        <img src={m.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        m.nombre_piloto ? m.nombre_piloto.charAt(0).toUpperCase() : 'E'
+                      )}
+                    </div>
+                    <div className="space-y-1 overflow-hidden">
+                      <h3 className="font-wrc text-xl text-white truncate">{m.nombre_piloto || 'Piloto sin nombre'}</h3>
+                      <p className="text-xs text-amber-400 uppercase font-wrc">Nacionalidad: {m.nacionalidad || 'Argentina 🇦🇷'}</p>
+                      {m.steam_id && <p className="text-xs text-neutral-400 truncate">Steam ID: {m.steam_id}</p>}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 9. MI PERFIL */}
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-xl mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
             <h2 className="font-wrc text-3xl text-amber-400">Configuración de Perfil</h2>
@@ -1056,11 +1198,10 @@ export default function App() {
 
       </main>
 
-      {/* BARRA INFERIOR / FOOTER FLOTANTE CON SPONSORS SVG MÁS SUTILES Y PEQUEÑOS */}
+      {/* BARRA INFERIOR / FOOTER FLOTANTE */}
       <footer className="relative z-40 w-full max-w-[1600px] mx-auto px-8 pb-6 flex flex-col md:flex-row items-center justify-between gap-4 mt-12">
         <div className="hidden md:block w-24" />
 
-        {/* Tira central de Sponsors local en formato SVG (/sponsor.svg) más sutil */}
         <div className="flex items-center justify-center">
           <img 
             src="/sponsor.svg" 
@@ -1069,9 +1210,8 @@ export default function App() {
           />
         </div>
 
-        {/* Íconos sociales a la derecha */}
         <div className="flex items-center gap-5 text-white">
-          <a href={config.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 transition" aria-label="Instagram">
+          <a href={config.instagram} target="_blank" rel="noreferrer" className="hover:text-amber-400 transition" aria-label="Instagram">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
             </svg>
