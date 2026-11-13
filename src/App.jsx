@@ -721,7 +721,7 @@ export default function App() {
         {pestanaActiva === 'historia' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
-              <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-sans whitespace-pre-line uppercase">
+              <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-wrc uppercase">
                 {config.historia_texto}
               </p>
 
@@ -760,7 +760,7 @@ export default function App() {
                       rows={5}
                       value={config.historia_texto}
                       onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-wrc uppercase"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -791,7 +791,7 @@ export default function App() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">CALENDARIO DE CARRERAS</h2>
-                <p className="text-neutral-300 text-sm font-sans">NAVEGA POR LOS MESES DEL 2027 EN ADELANTE, CONFIRMA TU PARTICIPACIÓN Y VE LOS INSCRIPTOS.</p>
+                <p className="text-neutral-300 text-sm font-wrc">NAVEGA POR LOS MESES DEL 2027 EN ADELANTE, CONFIRMA TU PARTICIPACIÓN Y VE LOS INSCRIPTOS.</p>
               </div>
 
               <div className="flex items-center gap-3 bg-neutral-900/80 border border-amber-500/40 px-4 py-2 rounded-2xl shadow-xl">
@@ -872,7 +872,7 @@ export default function App() {
                       onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value.toUpperCase() })}
                       placeholder="EJ: GRAN PREMIO MISIONES 2027"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
@@ -882,7 +882,7 @@ export default function App() {
                       value={nuevoCalendario.fecha}
                       onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, fecha: e.target.value })}
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
                   <div>
@@ -900,7 +900,7 @@ export default function App() {
             <div className="space-y-3 pt-4">
               <h3 className="font-wrc text-xl text-white tracking-wide">LISTADO DE FECHAS REGISTRADAS</h3>
               {calendario.length === 0 ? (
-                <p className="text-neutral-400 text-sm">NO HAY FECHAS CARGADAS EN EL CALENDARIO TODAVÍA.</p>
+                <p className="text-neutral-400 text-sm font-wrc">NO HAY FECHAS CARGADAS EN EL CALENDARIO TODAVÍA.</p>
               ) : (
                 calendario.map((cal) => (
                   <div key={cal.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex justify-between items-center shadow-lg">
@@ -911,7 +911,7 @@ export default function App() {
                     {esAdmin && (
                       <button
                         onClick={() => handleEliminarCalendario(cal.id)}
-                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-xl text-xs border border-red-500/30 cursor-pointer"
+                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-xl text-xs border border-red-500/30 cursor-pointer font-wrc"
                       >
                         🗑️ ELIMINAR
                       </button>
@@ -931,7 +931,7 @@ export default function App() {
               <div className="space-y-8">
                 <div>
                   <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">ÁLBUMES DE EVENTOS</h2>
-                  <p className="text-neutral-300 text-sm font-sans">SELECCIONA UNA CARPETA PARA VER LAS FOTOGRAFÍAS OFICIALES DE CADA COMPETENCIA.</p>
+                  <p className="text-neutral-300 text-sm font-wrc">SELECCIONA UNA CARPETA PARA VER LAS FOTOGRAFÍAS OFICIALES DE CADA COMPETENCIA.</p>
                 </div>
 
                 {esAdmin && (
@@ -945,7 +945,7 @@ export default function App() {
                           value={nuevoAlbumNombre}
                           onChange={(e) => setNuevoAlbumNombre(e.target.value.toUpperCase())}
                           placeholder="EJ: RALLY DE CÓRDOBA 2027"
-                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                         />
                       </div>
                       <div>
@@ -984,7 +984,7 @@ export default function App() {
                         {esAdmin && (
                           <button
                             onClick={(e) => handleEliminarAlbum(album.id, e)}
-                            className="text-red-400 hover:text-red-300 text-xs px-3 py-1 bg-red-500/10 rounded-lg border border-red-500/30 cursor-pointer"
+                            className="text-red-400 hover:text-red-300 text-xs px-3 py-1 bg-red-500/10 rounded-lg border border-red-500/30 cursor-pointer font-wrc"
                           >
                             ELIMINAR
                           </button>
@@ -1054,7 +1054,7 @@ export default function App() {
           <div className="space-y-6 max-w-6xl mx-auto">
             <div>
               <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">LIVE TIMING OFICIAL</h2>
-              <p className="text-neutral-300 text-sm font-sans">SIGUE EN TIEMPO REAL LAS CLASIFICACIONES Y TIEMPOS DE NUESTRAS COMPETENCIAS.</p>
+              <p className="text-neutral-300 text-sm font-wrc">SIGUE EN TIEMPO REAL LAS CLASIFICACIONES Y TIEMPOS DE NUESTRAS COMPETENCIAS.</p>
             </div>
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl h-[70vh]">
               <iframe
@@ -1071,7 +1071,7 @@ export default function App() {
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
               <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
-              <p className="text-neutral-300 text-sm font-sans">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR.</p>
+              <p className="text-neutral-300 text-sm font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR.</p>
             </div>
 
             {esAdmin && (
@@ -1086,7 +1086,7 @@ export default function App() {
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value.toUpperCase() })}
                       placeholder="EJ: FECHA 1 - RALLY MIT CUP"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
@@ -1096,7 +1096,7 @@ export default function App() {
                       value={nuevoEvento.fecha}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, fecha: e.target.value })}
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
                   <div>
@@ -1106,7 +1106,7 @@ export default function App() {
                       value={nuevoEvento.horario}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value.toUpperCase() })}
                       placeholder="EJ: 21:00 HS (ARG)"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
@@ -1116,7 +1116,7 @@ export default function App() {
                       value={nuevoEvento.categorias}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
                       placeholder="EJ: RALLY2 / RALLY4"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
@@ -1126,7 +1126,7 @@ export default function App() {
                       value={nuevoEvento.modelos_autos}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
                       placeholder="EJ: SKODA FABIA / PEUGEOT 208"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div className="flex items-end">
@@ -1147,7 +1147,7 @@ export default function App() {
                   <div className="space-y-1">
                     <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
                     <h3 className="font-wrc text-2xl text-white">{ev.titulo}</h3>
-                    <p className="text-neutral-300 text-xs font-sans uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
+                    <p className="text-neutral-300 text-xs font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
                   </div>
 
                   <div className="flex items-center gap-3 w-full md:w-auto justify-end">
@@ -1198,7 +1198,7 @@ export default function App() {
                 <h2 className="font-wrc text-4xl md:text-5xl text-amber-400 tracking-wide drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                   SALÓN DE LA FAMA - PODIO DE CAMPEONES
                 </h2>
-                <p className="text-neutral-200 text-sm md:text-base font-sans mt-1 drop-shadow uppercase">
+                <p className="text-neutral-200 text-sm md:text-base font-wrc mt-1 drop-shadow uppercase">
                   LOS PILOTOS CON MÁS TÍTULOS OFICIALES EN LA HISTORIA DE ESPÍNDOLA COMPETICIÓN.
                 </p>
               </div>
@@ -1232,7 +1232,7 @@ export default function App() {
                       onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value.toUpperCase() })}
                       placeholder="EJ: JOACO CASTAÑO"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
@@ -1242,7 +1242,7 @@ export default function App() {
                       value={nuevoPilotoFama.categoria}
                       onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value.toUpperCase() })}
                       placeholder="EJ: POSADAS - MISIONES"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
@@ -1253,7 +1253,7 @@ export default function App() {
                       onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
                       placeholder="EJ: 17"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
                   <div>
@@ -1303,7 +1303,7 @@ export default function App() {
 
                     <div className="space-y-1 my-2">
                       <h3 className="font-wrc text-2xl md:text-3xl text-white tracking-wide">{hallFama[1].nombre}</h3>
-                      <p className="text-neutral-300 text-xs font-sans uppercase">{hallFama[1].categoria}</p>
+                      <p className="text-neutral-300 text-xs font-wrc uppercase">{hallFama[1].categoria}</p>
                     </div>
 
                     <div className="mt-4 bg-white/5 border border-white/15 rounded-xl px-5 py-2 font-wrc text-sm tracking-wider text-neutral-200">
@@ -1331,7 +1331,7 @@ export default function App() {
 
                     <div className="space-y-1 my-2">
                       <h3 className="font-wrc text-3xl md:text-4xl text-amber-400 tracking-wide drop-shadow">{hallFama[0].nombre}</h3>
-                      <p className="text-neutral-200 text-xs md:text-sm font-sans uppercase">{hallFama[0].categoria}</p>
+                      <p className="text-neutral-200 text-xs md:text-sm font-wrc uppercase">{hallFama[0].categoria}</p>
                     </div>
 
                     <div className="mt-4 bg-amber-500/15 border border-amber-400/50 rounded-xl px-6 py-2.5 font-wrc text-base tracking-wider text-amber-300">
@@ -1359,7 +1359,7 @@ export default function App() {
 
                     <div className="space-y-1 my-2">
                       <h3 className="font-wrc text-2xl md:text-3xl text-white tracking-wide">{hallFama[2].nombre}</h3>
-                      <p className="text-neutral-300 text-xs font-sans uppercase">{hallFama[2].categoria}</p>
+                      <p className="text-neutral-300 text-xs font-wrc uppercase">{hallFama[2].categoria}</p>
                     </div>
 
                     <div className="mt-4 bg-white/5 border border-amber-700/40 rounded-xl px-5 py-2 font-wrc text-sm tracking-wider text-neutral-200">
@@ -1382,7 +1382,7 @@ export default function App() {
                       </div>
                       <div>
                         <h4 className="font-wrc text-xl text-white tracking-wide">{piloto.nombre}</h4>
-                        <p className="text-xs text-neutral-400 font-sans uppercase">{piloto.categoria}</p>
+                        <p className="text-xs text-neutral-400 font-wrc uppercase">{piloto.categoria}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
@@ -1408,12 +1408,12 @@ export default function App() {
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
               <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">PILOTOS REGISTRADOS</h2>
-              <p className="text-neutral-300 text-sm font-sans">COMUNIDAD DE PILOTOS Y MIEMBROS DE ESPÍNDOLA COMPETICIÓN.</p>
+              <p className="text-neutral-300 text-sm font-wrc">COMUNIDAD DE PILOTOS Y MIEMBROS DE ESPÍNDOLA COMPETICIÓN.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {miembros.length === 0 ? (
-                <p className="text-neutral-400 col-span-full text-center py-8">NO HAY MIEMBROS REGISTRADOS TODAVÍA.</p>
+                <p className="text-neutral-400 col-span-full text-center py-8 font-wrc">NO HAY MIEMBROS REGISTRADOS TODAVÍA.</p>
               ) : (
                 miembros.map((m) => (
                   <div key={m.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex items-center gap-4">
@@ -1430,7 +1430,7 @@ export default function App() {
                         <span className="text-amber-400">PAÍS:</span> <span className="text-white">{(m.nacionalidad || 'ARGENTINA 🇦🇷').toUpperCase()}</span>
                       </p>
                       {m.provincia && (
-                        <p className="text-xs font-sans uppercase">
+                        <p className="text-xs font-wrc uppercase">
                           <span className="text-amber-400">PROVINCIA:</span> <span className="text-white">{m.provincia.toUpperCase()}</span>
                         </p>
                       )}
@@ -1456,7 +1456,7 @@ export default function App() {
               </div>
               <div>
                 <h3 className="font-wrc text-2xl text-white">{(perfil?.nombre_piloto || 'PILOTO ESPÍNDOLA').toUpperCase()}</h3>
-                <p className="text-neutral-400 text-xs font-sans uppercase">{usuario.email}</p>
+                <p className="text-neutral-400 text-xs font-wrc uppercase">{usuario.email}</p>
               </div>
             </div>
 
@@ -1514,7 +1514,7 @@ export default function App() {
 
             {modoModalCalendario === 'detalle' && (
               <div className="space-y-4 py-2">
-                <p className="text-neutral-300 text-sm font-sans uppercase">{diaSeleccionadoModal.descripcion || 'COMPETENCIA OFICIAL PROGRAMADA EN EL CALENDARIO.'}</p>
+                <p className="text-neutral-300 text-sm font-wrc uppercase">{diaSeleccionadoModal.descripcion || 'COMPETENCIA OFICIAL PROGRAMADA EN EL CALENDARIO.'}</p>
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setModoModalCalendario('formulario')}
@@ -1536,7 +1536,7 @@ export default function App() {
                     onChange={(e) => setFormAsistencia({ ...formAsistencia, categoria: e.target.value.toUpperCase() })}
                     placeholder="EJ: RALLY2 / WRC / TC"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                   />
                 </div>
                 <div>
@@ -1547,7 +1547,7 @@ export default function App() {
                     onChange={(e) => setFormAsistencia({ ...formAsistencia, modelo_auto: e.target.value.toUpperCase() })}
                     placeholder="EJ: SKODA FABIA RS"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                   />
                 </div>
                 <button
@@ -1562,13 +1562,13 @@ export default function App() {
             {modoModalCalendario === 'lista' && (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {asistentesEvento.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-6 text-sm">TODAVÍA NO HAY PILOTOS CONFIRMADOS PARA ESTA FECHA.</p>
+                  <p className="text-neutral-400 text-center py-6 text-sm font-wrc">TODAVÍA NO HAY PILOTOS CONFIRMADOS PARA ESTA FECHA.</p>
                 ) : (
                   asistentesEvento.map((asistente) => (
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         CONFIRMADO ✅
@@ -1621,7 +1621,7 @@ export default function App() {
                     onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, categoria: e.target.value.toUpperCase() })}
                     placeholder="EJ: RALLY2 / RALLY4"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                   />
                 </div>
                 <div>
@@ -1632,7 +1632,7 @@ export default function App() {
                     onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value.toUpperCase() })}
                     placeholder="EJ: PEUGEOT 208 RALLY4"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                   />
                 </div>
                 <button
@@ -1647,13 +1647,13 @@ export default function App() {
             {modoModalEvento === 'lista' && (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {asistentesEventoEquipo.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-6 text-sm">TODAVÍA NO HAY PILOTOS INSCRIPTOS EN ESTE EVENTO.</p>
+                  <p className="text-neutral-400 text-center py-6 text-sm font-wrc">TODAVÍA NO HAY PILOTOS INSCRIPTOS EN ESTE EVENTO.</p>
                 ) : (
                   asistentesEventoEquipo.map((asistente) => (
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         INSCRIPTO ✅
