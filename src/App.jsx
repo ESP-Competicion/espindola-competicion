@@ -9,7 +9,7 @@ const fotosRally = [
   '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public
 ];
 
-// FUNCIÓN AUXILIAR PARA OBTENER EL CÓDIGO ISO DEL PAÍS Y RENDERIZAR SU IMAGEN DE BANDERA
+// FUNCIÓN AUXILIAR PARA OBTENER EL CÓDIGO ISO DEL PAÍS Y RENDERIZAR SUA BANDERA
 const obtenerBanderaPais = (pais) => {
   if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
   
@@ -67,38 +67,105 @@ export default function App() {
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: `UNA HISTORIA DE PASIÓN, EVOLUCIÓN Y COMPETITIVIDAD
+    historia_texto: `HISTORIA DE ESPINDOLA COMPETICIÓN
 
-UNA HISTORIA FAMILIAR QUE COMENZÓ EN LOS CAMINOS DEL RALLY MISIONERO Y TERMINÓ CONVIRTIÉNDOSE EN UN PROYECTO INTERNACIONAL DE AUTOMOVILISMO VIRTUAL.
+UNA HISTORIA DE PASIÓN, EVOLUCIÓN Y COMPETITIVIDAD
 
-ANTES DEL SIMRACING: LOS ORÍGENES DE UNA PASIÓN
-LA HISTORIA DE ESPINDOLA COMPETICIÓN COMENZÓ MUCHO ANTES DE LLEGAR AL AUTOMOVILISMO VIRTUAL. EN LOS CAMINOS DEL RALLY ARGENTINO, JOSÉ “POLACO” ESPINDOLA CONSTRUYÓ UNA IDENTIDAD DEPORTIVA BASADA EN LA PASIÓN POR LOS MOTORES, LA COMPETENCIA Y LOS DESAFÍOS DE CADA CARRERA. AÑOS MÁS TARDE, ESE LEGADO FAMILIAR SERÍA EL PUNTO DE PARTIDA DE UN NUEVO PROYECTO, TRASLADANDO LOS MISMOS VALORES AL MUNDO DEL SIMRACING.
+Una historia familiar que comenzó en los caminos del rally Misionero y terminó convirtiéndose en un proyecto internacional de automovilismo virtual.
 
-2017: EL NACIMIENTO DE ESPINDOLA COMPETICIÓN VIRTUAL
-LEONARDO ESPINDOLA DECIDIÓ CONTINUAR EL LEGADO FAMILIAR FUNDANDO ESPINDOLA COMPETICIÓN VIRTUAL. TODO COMENZÓ EN RFACTOR, COMO UN GRUPO DE AMIGOS QUE SE REUNÍAN POR DIVERSIÓN PARA COMPARTIR CARRERAS Y DISFRUTAR DEL AUTOMOVILISMO. CON EL TIEMPO, AQUELLA INICIATIVA COMENZÓ A CRECER. LAS GANAS DE COMPETIR, MEJORAR Y CONSEGUIR NUEVOS OBJETIVOS TRANSFORMARON ESE GRUPO EN UN EQUIPO CON IDENTIDAD PROPIA Y ASPIRACIONES PROFESIONALES.
+ANTES DEL SIMRACING
+Los orígenes de una pasión
 
-EVOLUCIÓN: DE RFACTOR A LOS GRANDES SIMULADORES
-EL CRECIMIENTO DEL EQUIPO ESTUVO ACOMPAÑADO POR LA EVOLUCIÓN DEL SIMRACING. DESDE SUS PRIMEROS PASOS EN RFACTOR, ESPINDOLA COMPETICIÓN FUE EXPANSIONIÉNDOSE HACIA DIFERENTES PLATAFORMAS COMO AUTOMOBILISTA, RICHARD BURNS RALLY (RBR) Y ASSETTO CORSA. EN CADA SIMULADOR ENCONTRÓ NUEVOS DESAFÍOS Y OPORTUNIDADES, CONSIGUIENDO VICTORIAS Y CAMPEONATOS EN TODOS ELLOS. LO QUE COMENZÓ COMO UN PROYECTO ENTRE AMIGOS TERMINÓ CONVIRTIÉNDOSE EN UNA ESTRUCTURA COMPETITIVA, RECONOCIDA POR SUA TRAYECTORIA Y SUS RESULTADOS.
+La historia de Espindola Competición comenzó mucho antes de llegar al automovilismo virtual.
 
-EXPANSIÓN INTERNACIONAL: UN EQUIPO SIN FRONTERAS
-EL CRECIMIENTO DEPORTIVO TAMBIÉN PERMITIÓ EXPANDIR LAS FRONTERAS DEL EQUIPO. CON EL PASO DE LOS AÑOS SE INCORPORARON PILOTOS DE DIFERENTES NACIONALIDADES, LLEVANDO LOS COLORES DE ESPINDOLA COMPETICIÓN A CAMPEONATOS DE ARGENTINA Y EUROPA. HOY CONTAMOS CON REPRESENTANTES EN DISTINTAS DISCIPLINAS Y CATEGORÍAS, FORMANDO UNA ESTRUCTURA INTERNACIONAL DONDE EL TALENTO, EL COMPROMISO Y LA COMPETITIVIDAD SON PARTE DE NUESTRA IDENTIDAD.
+En los caminos del rally argentino, José “Polaco” Espindola construyó una identidad deportiva basada en la pasión por los motores, la competencia y los desafíos de cada carrera.
 
-2023: DOS DISCIPLINAS, UNA MISMA IDENTIDAD
-EN 2023, EL CRECIMIENTO DEL PROYECTO DIO LUGAR A UNA NUEVA ORGANIZACIÓN DEPORTIVA: ESPINDOLA COMPETICIÓN SE DIVIDIÓ EN DOS ESTRUCTURAS ESPECIALIZADAS, RALLY Y PISTA. ESTA DECISIÓN PERMITIÓ DESARROLLAR AMBAS DISCIPLINAS DE MANERA INDEPENDIENTE, CON PILOTOS, OBJETIVOS Y PREPARACIONES ESPECÍFICAS PARA CADA CATEGORÍA. TAMBIÉN MARCÓ EL COMIENZO DE UNA ETAPA MUY IMPORTANTE: LA INCORPORACIÓN DE PILOTOS CON EXPERIENCIA EN EL AUTOMOVILISMO PROFESIONAL.
+Años más tarde, ese legado familiar sería el punto de partida de un nuevo proyecto, trasladando los mismos valores al mundo del simracing.
 
-ESPINDOLA COMPETICIÓN PISTA: EL EQUIPO COMENZÓ A REUNIR PILOTOS PROVENIENTES DEL AUTOMOVILISMO REAL, FORTALECIENDO EL VÍNCULO ENTRE LAS COMPETENCIAS VIRTUALES Y LAS PISTAS. ENTRE ELLOS SE DESTACAN LUCIANO “CHULE” MARTÍNEZ (CAMPEÓN DEL TURISMO PISTA CLASE 1) Y ALEJANDRO FELICE (ACTUAL PILOTO DEL TURISMO PISTA). LA PRESENCIA DE PILOTOS PROFESIONALES DENTRO DE NUESTRA ESTRUCTURA REPRESENTA UN ORGULLO Y DEMUESTRA EL CRECIMIENTO QUE ALCANZÓ EL PROYECTO.
+2017
+El nacimiento de Espindola Competición Virtual
 
-ESPINDOLA COMPETICIÓN RALLY: EN LA DISCIPLINA DE RALLY TAMBIÉN LOGRAMOS INCORPORAR PILOTOS DE GRAN TRAYECTORIA INTERNACIONAL. UNO DE LOS NOMBRES MÁS DESTACADOS ES EL DEL PERUANO JOSÉ ABELARDO “ABITO” CAPARÓ, PILOTO QUE LLEGÓ A COMPETIR EN EL CAMPEONATO MUNDIAL DE RALLY (WRC), DENTRO DE LA CATEGORÍA JUNIOR WRC. SU INCORPORACIÓN REPRESENTA UN PASO MUY IMPORTANTE PARA EL EQUIPO Y REFUERZA NUESTRA PRESENCIA INTERNACIONAL EN EL MUNDO DEL RALLY.
+Leonardo Espindola decidió continuar el legado familiar fundando Espindola Competición Virtual.
 
-2025: UN AÑO HISTÓRICO: CAMPEONES ARGENTINOS
-EL 2025 QUEDÓ MARCADO COMO UNO DE LOS AÑOS MÁS IMPORTANTES EN LA HISTORIA DE ESPINDOLA COMPETICIÓN. LOGRAMOS CONSAGRARNOS CAMPEONES ARGENTINOS DEL CAMPEONATO ARGENTINO VIRTUAL EN TRES CATEGORÍAS DIFERENTES: RC5 CON LEO ESPINDOLA, RC3 CON LUCAS HUTTER Y COPA YARIS CON LÁZARO CAMPOS. TRES TÍTULOS NACIONALES QUE REFLEJAN EL TRABAJO, LA DEDICACIÓN Y EL NIVEL COMPETITIVO DE NUESTROS PILOTOS. UN LOGRO COLECTIVO QUE REAFIRMÓ NUESTRO PROTAGONISMO DENTRO DEL AUTOMOVILISMO VIRTUAL ARGENTINO.
+Todo comenzó en rFactor, como un grupo de amigos que se reunían por diversión para compartir carreras y disfrutar del automovilismo.
 
-ACTUALIDAD: 60 CAMPEONATOS Y UNA HISTORIA QUE CONTINÚA
-DESDE NUESTROS COMIENZOS HASTA LA ACTUALIDAD, ESPINDOLA COMPETICIÓN HA CONSEGUIDO ALCANZAR UN TOTAL DE 60 CAMPEONATOS, CONQUISTADOS EN COMPETENCIAS DE ARGENTINA Y EUROPA. UNA TRAYECTORIA CONSTRUIDA A TRAVÉS DE DIFERENTES SIMULADORES, DISCIPLINAS Y CATEGORÍAS, CON PILOTOS QUE HAN REPRESENTADO NUESTROS COLORES DENTRO Y FUERA DEL PAÍS. HOY SEGUIMOS CRECIENDO COMO UNA ESTRUCTURA INTERNACIONAL, CON PRESENCIA EN RALLY Y PISTA, NUEVOS TALENTOS Y GRANDES OBJETIVOS POR DELANTE.
+Con el tiempo, aquella iniciativa comenzó a crecer. Las ganas de competir, mejorar y conseguir nuevos objetivos transformaron ese grupo en un equipo con identidad propia y aspiraciones profesionales.
 
-60 CAMPEONATOS. MÚLTIPLES DISCIPLINAS. UNA MISMA PASIÓN. LA HISTORIA CONTINÚA Y TODAVÍA QUEDAN MUCHOS KILÓMETROS POR RECORRER.
+EVOLUCIÓN
+De rFactor a los grandes simuladores
 
-“NO IMPORTA CUÁNTOS KILÓMETROS TENGA EL TRAMO; LO IMPORTANTE ES DEJAR UNA HUELLA EN CADA UNO DE ELLOS.”`
+El crecimiento del equipo estuvo acompañado por la evolución del simracing.
+
+Desde sus primeros pasos en rFactor, Espindola Competición fue expandiéndose hacia diferentes plataformas como Automobilista, Richard Burns Rally (RBR) y Assetto Corsa.
+
+En cada simulador encontró nuevos desafíos y oportunidades, consiguiendo victorias y campeonatos en todos ellos.
+
+Lo que comenzó como un proyecto entre amigos terminó convirtiéndose en una estructura competitiva, reconocida por su trayectoria y sus resultados.
+
+EXPANSIÓN INTERNACIONAL
+Un equipo sin fronteras
+
+El crecimiento deportivo también permitió expandir las fronteras del equipo.
+
+Con el paso de los años se incorporaron pilotos de diferentes nacionalidades, llevando los colores de Espindola Competición a campeonatos de Argentina y Europa.
+
+Hoy contamos con representantes en distintas disciplinas y categorías, formando una estructura internacional donde el talento, el compromiso y la competitividad son parte de nuestra identidad.
+
+2023
+Dos disciplinas, una misma identidad
+
+En 2023, el crecimiento del proyecto dio lugar a una nueva organización deportiva: Espindola Competición se dividió en dos estructuras especializadas, Rally y Pista.
+
+Esta decisión permitió desarrollar ambas disciplinas de manera independiente, con pilotos, objetivos y preparaciones específicas para cada categoría.
+
+También marcó el comienzo de una etapa muy importante: la incorporación de pilotos con experiencia en el automovilismo profesional.
+
+ESPINDOLA COMPETICIÓN PISTA
+El equipo comenzó a reunir pilotos provenientes del automovilismo real, fortaleciendo el vínculo entre las competencias virtuales y las pistas.
+
+Entre ellos se destacan:
+- Luciano “Chule” Martínez, Campeón del Turismo Pista Clase 1.
+- Alejandro Felice, Actual piloto del Turismo Pista.
+
+La presencia de pilotos profesionales dentro de nuestra estructura representa un orgullo y demuestra el crecimiento que alcanzó el proyecto.
+
+ESPINDOLA COMPETICIÓN RALLY
+En la disciplina de rally también logramos incorporar pilotos de gran trayectoria internacional.
+
+Uno de los nombres más destacados es el del peruano José Abelardo “Abito” Caparó, piloto que llegó a competir en el Campeonato Mundial de Rally (WRC), dentro de la categoría Junior WRC.
+
+Su incorporación representa un paso muy importante para el equipo y refuerza nuestra presencia internacional en el mundo del rally.
+
+2025
+Un año histórico: campeones argentinos
+
+El 2025 quedó marcado como uno de los años más importantes en la historia de Espindola Competición.
+
+Logramos consagrarnos campeones argentinos del Campeonato Argentino Virtual en tres categorías diferentes:
+- RC5 — Leo Espindola
+- RC3 — Lucas Hutter
+- COPA YARIS — Lázaro Campos
+
+Tres títulos nacionales que reflejan el trabajo, la dedicación y el nivel competitivo de nuestros pilotos.
+
+Un logro colectivo que reafirmó nuestro protagonismo dentro del automovilismo virtual argentino.
+
+ACTUALIDAD
+60 campeonatos y una historia que continúa
+
+Desde nuestros comienzos hasta la actualidad, Espindola Competición ha conseguido alcanzar un total de 60 campeonatos, conquistados en competencias de Argentina y Europa.
+
+Una trayectoria construida a través de diferentes simuladores, disciplinas y categorías, con pilotos que han representado nuestros colores dentro y fuera del país.
+
+Hoy seguimos creciendo como una estructura internacional, con presencia en Rally y Pista, nuevos talentos y grandes objetivos por delante.
+
+Aquello que comenzó como un grupo de amigos en rFactor se convirtió en un equipo con identidad, historia y reconocimiento deportivo.
+
+60 CAMPEONATOS. MÚLTIPLES DISCIPLINAS. UNA MISMA PASIÓN.
+
+La historia continúa y todavía quedan muchos kilómetros por recorrer.
+
+“No importa cuántos kilómetros tenga el tramo; lo importante es dejar una huella en cada uno de ellos.”`
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
@@ -210,7 +277,9 @@ DESDE NUESTROS COMIENZOS HASTA LA ACTUALIDAD, ESPINDOLA COMPETICIÓN HA CONSEGUI
 
   async function cargarConfiguracion() {
     const { data } = await supabase.from('configuracion_equipo').select('*').eq('id', 1).single();
-    if (data) setConfig(data);
+    if (data && data.historia_texto && data.historia_texto.length > 50) {
+      setConfig(prev => ({ ...prev, ...data }));
+    }
   }
 
   async function cargarAlbumes() {
@@ -285,7 +354,7 @@ DESDE NUESTROS COMIENZOS HASTA LA ACTUALIDAD, ESPINDOLA COMPETICIÓN HA CONSEGUI
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
     } else {
-      alert('¡Configuración e historia guardadas exitosamente!');
+      alert('¡Historia guardada exitosamente!');
       setEditandoConfig(false);
     }
   };
@@ -750,7 +819,7 @@ DESDE NUESTROS COMIENZOS HASTA LA ACTUALIDAD, ESPINDOLA COMPETICIÓN HA CONSEGUI
                 <form onSubmit={handleGuardarConfig} className="space-y-4">
                   <p className="text-xs text-amber-400 font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
                   <textarea
-                    rows={20}
+                    rows={22}
                     value={config.historia_texto}
                     onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
                     className="w-full bg-neutral-950 border border-amber-500/50 rounded-2xl p-5 text-sm text-white focus:border-amber-500 outline-none font-wrc uppercase leading-relaxed"
