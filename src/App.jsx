@@ -62,14 +62,43 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  // CONFIGURACIÓN SOCIAL E HISTORIA
+  // CONFIGURACIÓN SOCIAL E HISTORIA COMPLETA
   const [config, setConfig] = useState({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: 'Espíndola Competición abarca tanto la alta competencia en rally como el rendimiento en circuito, combinando telemetría, puesta a punto y constancia.',
-    historia_imagen: 'https://files.catbox.moe/t5ffu8.png',
-    historia_imagen_2: 'https://files.catbox.moe/pfh5gw.png'
+    historia_texto: `UNA HISTORIA DE PASIÓN, EVOLUCIÓN Y COMPETITIVIDAD
+
+UNA HISTORIA FAMILIAR QUE COMENZÓ EN LOS CAMINOS DEL RALLY MISIONERO Y TERMINÓ CONVIRTIÉNDOSE EN UN PROYECTO INTERNACIONAL DE AUTOMOVILISMO VIRTUAL.
+
+ANTES DEL SIMRACING: LOS ORÍGENES DE UNA PASIÓN
+LA HISTORIA DE ESPINDOLA COMPETICIÓN COMENZÓ MUCHO ANTES DE LLEGAR AL AUTOMOVILISMO VIRTUAL. EN LOS CAMINOS DEL RALLY ARGENTINO, JOSÉ “POLACO” ESPINDOLA CONSTRUYÓ UNA IDENTIDAD DEPORTIVA BASADA EN LA PASIÓN POR LOS MOTORES, LA COMPETENCIA Y LOS DESAFÍOS DE CADA CARRERA. AÑOS MÁS TARDE, ESE LEGADO FAMILIAR SERÍA EL PUNTO DE PARTIDA DE UN NUEVO PROYECTO, TRASLADANDO LOS MISMOS VALORES AL MUNDO DEL SIMRACING.
+
+2017: EL NACIMIENTO DE ESPINDOLA COMPETICIÓN VIRTUAL
+LEONARDO ESPINDOLA DECIDIÓ CONTINUAR EL LEGADO FAMILIAR FUNDANDO ESPINDOLA COMPETICIÓN VIRTUAL. TODO COMENZÓ EN RFACTOR, COMO UN GRUPO DE AMIGOS QUE SE REUNÍAN POR DIVERSIÓN PARA COMPARTIR CARRERAS Y DISFRUTAR DEL AUTOMOVILISMO. CON EL TIEMPO, AQUELLA INICIATIVA COMENZÓ A CRECER. LAS GANAS DE COMPETIR, MEJORAR Y CONSEGUIR NUEVOS OBJETIVOS TRANSFORMARON ESE GRUPO EN UN EQUIPO CON IDENTIDAD PROPIA Y ASPIRACIONES PROFESIONALES.
+
+EVOLUCIÓN: DE RFACTOR A LOS GRANDES SIMULADORES
+EL CRECIMIENTO DEL EQUIPO ESTUVO ACOMPAÑADO POR LA EVOLUCIÓN DEL SIMRACING. DESDE SUS PRIMEROS PASOS EN RFACTOR, ESPINDOLA COMPETICIÓN FUE EXPANSIONIÉNDOSE HACIA DIFERENTES PLATAFORMAS COMO AUTOMOBILISTA, RICHARD BURNS RALLY (RBR) Y ASSETTO CORSA. EN CADA SIMULADOR ENCONTRÓ NUEVOS DESAFÍOS Y OPORTUNIDADES, CONSIGUIENDO VICTORIAS Y CAMPEONATOS EN TODOS ELLOS. LO QUE COMENZÓ COMO UN PROYECTO ENTRE AMIGOS TERMINÓ CONVIRTIÉNDOSE EN UNA ESTRUCTURA COMPETITIVA, RECONOCIDA POR SUA TRAYECTORIA Y SUS RESULTADOS.
+
+EXPANSIÓN INTERNACIONAL: UN EQUIPO SIN FRONTERAS
+EL CRECIMIENTO DEPORTIVO TAMBIÉN PERMITIÓ EXPANDIR LAS FRONTERAS DEL EQUIPO. CON EL PASO DE LOS AÑOS SE INCORPORARON PILOTOS DE DIFERENTES NACIONALIDADES, LLEVANDO LOS COLORES DE ESPINDOLA COMPETICIÓN A CAMPEONATOS DE ARGENTINA Y EUROPA. HOY CONTAMOS CON REPRESENTANTES EN DISTINTAS DISCIPLINAS Y CATEGORÍAS, FORMANDO UNA ESTRUCTURA INTERNACIONAL DONDE EL TALENTO, EL COMPROMISO Y LA COMPETITIVIDAD SON PARTE DE NUESTRA IDENTIDAD.
+
+2023: DOS DISCIPLINAS, UNA MISMA IDENTIDAD
+EN 2023, EL CRECIMIENTO DEL PROYECTO DIO LUGAR A UNA NUEVA ORGANIZACIÓN DEPORTIVA: ESPINDOLA COMPETICIÓN SE DIVIDIÓ EN DOS ESTRUCTURAS ESPECIALIZADAS, RALLY Y PISTA. ESTA DECISIÓN PERMITIÓ DESARROLLAR AMBAS DISCIPLINAS DE MANERA INDEPENDIENTE, CON PILOTOS, OBJETIVOS Y PREPARACIONES ESPECÍFICAS PARA CADA CATEGORÍA. TAMBIÉN MARCÓ EL COMIENZO DE UNA ETAPA MUY IMPORTANTE: LA INCORPORACIÓN DE PILOTOS CON EXPERIENCIA EN EL AUTOMOVILISMO PROFESIONAL.
+
+ESPINDOLA COMPETICIÓN PISTA: EL EQUIPO COMENZÓ A REUNIR PILOTOS PROVENIENTES DEL AUTOMOVILISMO REAL, FORTALECIENDO EL VÍNCULO ENTRE LAS COMPETENCIAS VIRTUALES Y LAS PISTAS. ENTRE ELLOS SE DESTACAN LUCIANO “CHULE” MARTÍNEZ (CAMPEÓN DEL TURISMO PISTA CLASE 1) Y ALEJANDRO FELICE (ACTUAL PILOTO DEL TURISMO PISTA). LA PRESENCIA DE PILOTOS PROFESIONALES DENTRO DE NUESTRA ESTRUCTURA REPRESENTA UN ORGULLO Y DEMUESTRA EL CRECIMIENTO QUE ALCANZÓ EL PROYECTO.
+
+ESPINDOLA COMPETICIÓN RALLY: EN LA DISCIPLINA DE RALLY TAMBIÉN LOGRAMOS INCORPORAR PILOTOS DE GRAN TRAYECTORIA INTERNACIONAL. UNO DE LOS NOMBRES MÁS DESTACADOS ES EL DEL PERUANO JOSÉ ABELARDO “ABITO” CAPARÓ, PILOTO QUE LLEGÓ A COMPETIR EN EL CAMPEONATO MUNDIAL DE RALLY (WRC), DENTRO DE LA CATEGORÍA JUNIOR WRC. SU INCORPORACIÓN REPRESENTA UN PASO MUY IMPORTANTE PARA EL EQUIPO Y REFUERZA NUESTRA PRESENCIA INTERNACIONAL EN EL MUNDO DEL RALLY.
+
+2025: UN AÑO HISTÓRICO: CAMPEONES ARGENTINOS
+EL 2025 QUEDÓ MARCADO COMO UNO DE LOS AÑOS MÁS IMPORTANTES EN LA HISTORIA DE ESPINDOLA COMPETICIÓN. LOGRAMOS CONSAGRARNOS CAMPEONES ARGENTINOS DEL CAMPEONATO ARGENTINO VIRTUAL EN TRES CATEGORÍAS DIFERENTES: RC5 CON LEO ESPINDOLA, RC3 CON LUCAS HUTTER Y COPA YARIS CON LÁZARO CAMPOS. TRES TÍTULOS NACIONALES QUE REFLEJAN EL TRABAJO, LA DEDICACIÓN Y EL NIVEL COMPETITIVO DE NUESTROS PILOTOS. UN LOGRO COLECTIVO QUE REAFIRMÓ NUESTRO PROTAGONISMO DENTRO DEL AUTOMOVILISMO VIRTUAL ARGENTINO.
+
+ACTUALIDAD: 60 CAMPEONATOS Y UNA HISTORIA QUE CONTINÚA
+DESDE NUESTROS COMIENZOS HASTA LA ACTUALIDAD, ESPINDOLA COMPETICIÓN HA CONSEGUIDO ALCANZAR UN TOTAL DE 60 CAMPEONATOS, CONQUISTADOS EN COMPETENCIAS DE ARGENTINA Y EUROPA. UNA TRAYECTORIA CONSTRUIDA A TRAVÉS DE DIFERENTES SIMULADORES, DISCIPLINAS Y CATEGORÍAS, CON PILOTOS QUE HAN REPRESENTADO NUESTROS COLORES DENTRO Y FUERA DEL PAÍS. HOY SEGUIMOS CRECIENDO COMO UNA ESTRUCTURA INTERNACIONAL, CON PRESENCIA EN RALLY Y PISTA, NUEVOS TALENTOS Y GRANDES OBJETIVOS POR DELANTE.
+
+60 CAMPEONATOS. MÚLTIPLES DISCIPLINAS. UNA MISMA PASIÓN. LA HISTORIA CONTINÚA Y TODAVÍA QUEDAN MUCHOS KILÓMETROS POR RECORRER.
+
+“NO IMPORTA CUÁNTOS KILÓMETROS TENGA EL TRAMO; LO IMPORTANTE ES DEJAR UNA HUELLA EN CADA UNO DE ELLOS.”`
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
@@ -162,7 +191,6 @@ export default function App() {
       }
     });
 
-    // SUSCRIPCIÓN EN TIEMPO REAL PARA MIEMBROS / PERFILES
     const canalMiembros = supabase
       .channel('cambios-perfiles')
       .on(
@@ -257,7 +285,7 @@ export default function App() {
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
     } else {
-      alert('¡Configuración guardada exitosamente!');
+      alert('¡Configuración e historia guardadas exitosamente!');
       setEditandoConfig(false);
     }
   };
@@ -693,66 +721,6 @@ export default function App() {
               <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
                 PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.7)]">GLORIA</span>
               </h1>
-
-              {esAdmin && (
-                <div className="pt-2 max-w-xl mx-auto">
-                  {!editandoConfig ? (
-                    <button
-                      onClick={() => setEditandoConfig(true)}
-                      className="text-xs font-wrc bg-neutral-900/80 hover:bg-neutral-800 text-amber-400 border border-amber-500/40 px-5 py-2.5 rounded-xl transition shadow-md uppercase tracking-wider cursor-pointer"
-                    >
-                      ⚙️ EDITAR REDES SOCIALES DEL INICIO
-                    </button>
-                  ) : (
-                    <form onSubmit={handleGuardarConfig} className="bg-neutral-900/90 border border-amber-500/50 p-6 rounded-2xl text-left space-y-4 shadow-2xl backdrop-blur-md">
-                      <h3 className="font-wrc text-lg text-amber-400 uppercase">EDITAR ENLACES DE REDES SOCIALES</h3>
-                      <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL INSTAGRAM</label>
-                        <input
-                          type="url"
-                          value={config.instagram}
-                          onChange={(e) => setConfig({ ...config, instagram: e.target.value })}
-                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL DISCORD</label>
-                        <input
-                          type="url"
-                          value={config.discord}
-                          onChange={(e) => setConfig({ ...config, discord: e.target.value })}
-                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL TIKTOK</label>
-                        <input
-                          type="url"
-                          value={config.tiktok}
-                          onChange={(e) => setConfig({ ...config, tiktok: e.target.value })}
-                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-3 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditandoConfig(false)}
-                          className="text-xs font-wrc bg-neutral-800 text-neutral-300 px-4 py-2 rounded-xl cursor-pointer"
-                        >
-                          CANCELAR
-                        </button>
-                        <button
-                          type="submit"
-                          className="text-xs font-wrc bg-amber-500 text-black font-bold px-5 py-2 rounded-xl cursor-pointer"
-                        >
-                          GUARDAR CAMBIOS
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-
             </div>
           </div>
         )}
@@ -760,68 +728,52 @@ export default function App() {
         {/* 2. NUESTRA HISTORIA */}
         {pestanaActiva === 'historia' && (
           <div className="space-y-8 max-w-4xl mx-auto">
-            <div className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
-              <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-wrc uppercase">
-                {config.historia_texto}
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
-                <div className="space-y-2">
-                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">FOTO 1 (RALLY)</span>
-                  <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl h-56 bg-neutral-950">
-                    <img 
-                      src={config.historia_imagen || 'https://files.catbox.moe/t5ffu8.png'} 
-                      alt="Rally Espíndola" 
-                      className="w-full h-full object-cover hover:scale-105 transition duration-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">FOTO 2 (CIRCUITO)</span>
-                  <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl h-56 bg-neutral-950">
-                    <img 
-                      src={config.historia_imagen_2 || 'https://files.catbox.moe/pfh5gw.png'} 
-                      alt="Circuito Espíndola" 
-                      className="w-full h-full object-cover hover:scale-105 transition duration-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {esAdmin && (
-              <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">⚙️ ADMINISTRAR SECCIÓN HISTORIA</h3>
-                <form onSubmit={handleGuardarConfig} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">TEXTO PRINCIPAL</label>
-                    <textarea
-                      rows={5}
-                      value={config.historia_texto}
-                      onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-wrc uppercase"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">FOTO 1 (RALLY)</label>
-                      <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">FOTO 2 (CIRCUITO)</label>
-                      <SubirImagen currentUrl={config.historia_imagen_2} onUpload={(url) => setConfig({ ...config, historia_imagen_2: url })} />
-                    </div>
-                  </div>
+            <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl space-y-8">
+              
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <h2 className="font-wrc text-3xl md:text-4xl text-amber-400 tracking-wide">HISTORIA DEL EQUIPO</h2>
+                {esAdmin && !editandoConfig && (
                   <button
-                    type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
+                    onClick={() => setEditandoConfig(true)}
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-5 py-2.5 rounded-xl transition shadow cursor-pointer font-black"
                   >
-                    💾 GUARDAR CAMBIOS DE HISTORIA
+                    ✏️ EDITAR HISTORIA
                   </button>
-                </form>
+                )}
               </div>
-            )}
+
+              {!editandoConfig ? (
+                <div className="text-neutral-200 text-sm md:text-base leading-relaxed font-wrc whitespace-pre-line space-y-6">
+                  {config.historia_texto}
+                </div>
+              ) : (
+                <form onSubmit={handleGuardarConfig} className="space-y-4">
+                  <p className="text-xs text-amber-400 font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
+                  <textarea
+                    rows={20}
+                    value={config.historia_texto}
+                    onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
+                    className="w-full bg-neutral-950 border border-amber-500/50 rounded-2xl p-5 text-sm text-white focus:border-amber-500 outline-none font-wrc uppercase leading-relaxed"
+                  />
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditandoConfig(false)}
+                      className="bg-neutral-800 text-neutral-300 font-wrc text-xs px-6 py-3 rounded-xl cursor-pointer"
+                    >
+                      CANCELAR
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black px-6 py-3 rounded-xl transition shadow cursor-pointer"
+                    >
+                      💾 GUARDAR CAMBIOS
+                    </button>
+                  </div>
+                </form>
+              )}
+
+            </div>
           </div>
         )}
 
