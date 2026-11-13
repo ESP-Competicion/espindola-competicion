@@ -47,11 +47,16 @@ export default function App() {
   const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
   const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
 
-  // EVENTOS Y CALENDARIO (VISUAL 2027+)
+  // EVENTOS Y CALENDARIO VISUAL
   const [eventos, setEventos] = useState([]);
   const [calendario, setCalendario] = useState([]);
-  const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1)); // Inicia en Enero 2027
+  const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
+  
+  // MODAL ASISTENCIA CALENDARIO
   const [diaSeleccionadoModal, setDiaSeleccionadoModal] = useState(null);
+  const [modoModalCalendario, setModoModalCalendario] = useState('detalle'); // 'detalle', 'formulario', 'lista'
+  const [asistentesEvento, setAsistentesEvento] = useState([]);
+  const [formAsistencia, setFormAsistencia] = useState({ categoria: '', modelo_auto: '' });
 
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
@@ -67,7 +72,7 @@ export default function App() {
     descripcion: ''
   });
 
-  // MODAL INSCRIPCIÓN
+  // MODAL INSCRIPCIÓN EVENTOS
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [modoModalInscripcion, setModoModalInscripcion] = useState('formulario');
 
@@ -79,7 +84,6 @@ export default function App() {
   // MIEMBROS REGISTRADOS
   const [miembros, setMiembros] = useState([]);
 
-  // CÁLCULO AUTOMÁTICO DE CAMPEONATOS TOTALES
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
 
   useEffect(() => {
@@ -158,6 +162,11 @@ export default function App() {
   async function cargarMiembros() {
     const { data } = await supabase.from('perfiles').select('*');
     if (data) setMiembros(data);
+  }
+
+  async function cargarAsistentesCalendario(calendarioId) {
+    const { data } = await supabase.from('asistencias_calendario').select('*').eq('calendario_id', calendarioId);
+    if (data) setAsistentesEvento(data);
   }
 
   async function verificarAdminYPerfil(user) {
@@ -353,11 +362,35 @@ export default function App() {
     cargarSalónDeLaFama();
   };
 
-  // FUNCIONES PARA EL CALENDARIO VISUAL
+  const handleInscribirseCalendario = async (e, calId) => {
+    e.preventDefault();
+    if (!usuario) {
+      alert('Debes iniciar sesión para confirmar tu participación.');
+      setMostrarAuthModal(true);
+      return;
+    }
+
+    const { error } = await supabase.from('asistencias_calendario').insert([{
+      calendario_id: calId,
+      user_id: usuario.id,
+      categoria: formAsistencia.categoria,
+      modelo_auto: formAsistencia.modelo_auto,
+      nombre_piloto: perfil?.nombre_piloto || usuario.email.split('@')[0]
+    }]);
+
+    if (error) {
+      alert('Error al registrar participación (quizás ya estás anotado): ' + error.message);
+    } else {
+      alert('¡Te has anotado exitosamente a la competencia!');
+      setFormAsistencia({ categoria: '', modelo_auto: '' });
+      setModoModalCalendario('detalle');
+      cargarAsistentesCalendario(calId);
+    }
+  };
+
   const cambiarMes = (direccion) => {
     const nuevo = new Date(fechaActualCalendario);
     nuevo.setMonth(nuevo.getMonth() + direccion);
-    // Limitar a partir del año 2027 en adelante
     if (nuevo.getFullYear() >= 2027) {
       setFechaActualCalendario(nuevo);
     }
@@ -370,11 +403,9 @@ export default function App() {
     const totalDias = new Date(año, mes + 1, 0).getDate();
 
     const dias = [];
-    // Espacios vacíos antes del primer día del mes
     for (let i = 0; i < (primerDiaIndex === 0 ? 6 : primerDiaIndex - 1); i++) {
       dias.push(null);
     }
-    // Días del mes
     for (let d = 1; d <= totalDias; d++) {
       const mesStr = String(mes + 1).padStart(2, '0');
       const diaStr = String(d).padStart(2, '0');
@@ -707,16 +738,15 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. CALENDARIO VISUAL 2027+ INTERACTIVO */}
+        {/* 3. CALENDARIO VISUAL 2027+ CON INSCRIPCIÓN Y LISTA */}
         {pestanaActiva === 'calendario' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Calendario de Carreras</h2>
-                <p className="text-neutral-300 text-sm font-sans">Navega por los meses del 2027 en adelante para consultar las fechas oficiales.</p>
+                <p className="text-neutral-300 text-sm font-sans">Navega por los meses del 2027 en adelante, confirma tu participación y ve los inscriptos.</p>
               </div>
 
-              {/* Botones de navegación de meses */}
               <div className="flex items-center gap-3 bg-neutral-900/80 border border-amber-500/40 px-4 py-2 rounded-2xl shadow-xl">
                 <button
                   onClick={() => cambiarMes(-1)}
@@ -736,15 +766,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* Grilla del Calendario */}
             <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl space-y-4">
-              
-              {/* Días de la semana */}
               <div className="grid grid-cols-7 gap-2 text-center font-wrc text-amber-400 text-xs md:text-sm border-b border-white/10 pb-3">
                 <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
               </div>
 
-              {/* Días del mes */}
               <div className="grid grid-cols-7 gap-2 md:gap-3">
                 {obtenerDiasDelMes().map((item, idx) => {
                   if (!item) {
@@ -756,7 +782,13 @@ export default function App() {
                   return (
                     <div
                       key={item.fecha}
-                      onClick={() => tieneCarrera && setDiaSeleccionadoModal(item)}
+                      onClick={() => {
+                        if (tieneCarrera) {
+                          setDiaSeleccionadoModal(item.eventos[0]);
+                          setModoModalCalendario('detalle');
+                          cargarAsistentesCalendario(item.eventos[0].id);
+                        }
+                      }}
                       className={`h-20 md:h-28 rounded-2xl p-2.5 flex flex-col justify-between transition border relative overflow-hidden ${
                         tieneCarrera 
                           ? 'bg-amber-500/15 border-amber-500/60 shadow-[0_0_15px_rgba(251,191,36,0.3)] cursor-pointer hover:bg-amber-500/25' 
@@ -781,7 +813,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Panel de administración para agregar fecha al calendario */}
             {esAdmin && (
               <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
                 <h3 className="font-wrc text-xl text-amber-400">➕ Agregar Fecha de Carrera al Calendario</h3>
@@ -798,7 +829,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha (Día del Calendario)</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha</label>
                     <input
                       type="date"
                       value={nuevoCalendario.fecha}
@@ -819,7 +850,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Lista administrable de fechas guardadas */}
             <div className="space-y-3 pt-4">
               <h3 className="font-wrc text-xl text-white tracking-wide">Listado de Fechas Registradas</h3>
               {calendario.length === 0 ? (
@@ -847,7 +877,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. GALERÍA DE EVENTOS */}
+        {/* 4. GALERÍA */}
         {pestanaActiva === 'galeria' && (
           <div className="space-y-8 max-w-6xl mx-auto">
             {!albumSeleccionado ? (
@@ -1196,11 +1226,9 @@ export default function App() {
               </div>
             )}
 
-            {/* PODIO ESCALONADO ORIGINAL */}
             {hallFama.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center pt-8 pb-4">
                 
-                {/* 2º PUESTO (Izquierda) */}
                 {hallFama[1] && (
                   <div className="order-2 md:order-1 relative bg-black/70 backdrop-blur-md border border-neutral-400/50 rounded-3xl p-7 text-center shadow-2xl flex flex-col items-center justify-between">
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-neutral-200 text-black font-wrc text-xs px-4 py-1 rounded-full shadow-lg tracking-wider flex items-center gap-1.5 whitespace-nowrap">
@@ -1229,7 +1257,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 1º PUESTO (Centro y Grande) */}
                 {hallFama[0] && (
                   <div className="order-1 md:order-2 relative bg-gradient-to-b from-amber-500/20 via-black/80 to-black/85 backdrop-blur-md border-2 border-amber-400 rounded-3xl p-8 text-center shadow-[0_0_40px_rgba(251,191,36,0.25)] flex flex-col items-center justify-between md:-translate-y-4">
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-black font-wrc text-sm px-5 py-1 rounded-full shadow-lg tracking-wider flex items-center gap-1.5 whitespace-nowrap">
@@ -1258,7 +1285,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 3º PUESTO (Derecha) */}
                 {hallFama[2] && (
                   <div className="order-3 relative bg-black/70 backdrop-blur-md border border-amber-700/60 rounded-3xl p-7 text-center shadow-2xl flex flex-col items-center justify-between">
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc text-xs px-4 py-1 rounded-full shadow-lg tracking-wider flex items-center gap-1.5 whitespace-nowrap">
@@ -1391,6 +1417,115 @@ export default function App() {
 
       </main>
 
+      {/* MODAL INTERACTIVO DE CALENDARIO (DETALLE, PARTICIPAR Y LISTA) */}
+      {diaSeleccionadoModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
+          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6" onClick={(e) => e.stopPropagation()}>
+            
+            <div className="flex justify-between items-center border-b border-white/10 pb-4">
+              <div>
+                <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{diaSeleccionadoModal.fecha}</span>
+                <h3 className="font-wrc text-3xl text-white">{diaSeleccionadoModal.titulo}</h3>
+              </div>
+              <button onClick={() => setDiaSeleccionadoModal(null)} className="text-neutral-400 hover:text-white text-xl">✕</button>
+            </div>
+
+            {/* Pestañas internas del modal */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModoModalCalendario('detalle')}
+                className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'detalle' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+              >
+                Información
+              </button>
+              <button
+                onClick={() => setModoModalCalendario('formulario')}
+                className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+              >
+                Participar 🏁
+              </button>
+              <button
+                onClick={() => setModoModalCalendario('lista')}
+                className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+              >
+                Ver Inscriptos ({asistentesEvento.length})
+              </button>
+            </div>
+
+            {/* Contenido: DETALLE */}
+            {modoModalCalendario === 'detalle' && (
+              <div className="space-y-4 py-2">
+                <p className="text-neutral-300 text-sm font-sans">{diaSeleccionadoModal.descripcion || 'Competencia oficial programada en el calendario.'}</p>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setModoModalCalendario('formulario')}
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                  >
+                    Quiero Participar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Contenido: FORMULARIO DE PARTICIPACIÓN */}
+            {modoModalCalendario === 'formulario' && (
+              <form onSubmit={(e) => handleInscribirseCalendario(e, diaSeleccionadoModal.id)} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Categoría a Correr</label>
+                  <input
+                    type="text"
+                    value={formAsistencia.categoria}
+                    onChange={(e) => setFormAsistencia({ ...formAsistencia, categoria: e.target.value })}
+                    placeholder="Ej: Rally2 / WRC / TC"
+                    required
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Modelo de Auto</label>
+                  <input
+                    type="text"
+                    value={formAsistencia.modelo_auto}
+                    onChange={(e) => setFormAsistencia({ ...formAsistencia, modelo_auto: e.target.value })}
+                    placeholder="Ej: Skoda Fabia RS"
+                    required
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                >
+                  Confirmar Asistencia
+                </button>
+              </form>
+            )}
+
+            {/* Contenido: LISTA DE INSCRIPTOS */}
+            {modoModalCalendario === 'lista' && (
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                {asistentesEvento.length === 0 ? (
+                  <p className="text-neutral-400 text-center py-6 text-sm">Todavía no hay pilotos confirmados para esta fecha.</p>
+                ) : (
+                  asistentesEvento.map((asistente) => (
+                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
+                      <div>
+                        <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'Piloto Espíndola'}</h4>
+                        <p className="text-xs text-neutral-400">Cat: {asistente.categoria} | Auto: {asistente.modelo_auto}</p>
+                      </div>
+                      <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
+                        CONFIRMADO ✅
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
       {/* BARRA INFERIOR / FOOTER FLOTANTE */}
       <footer className="relative z-40 w-full max-w-[1600px] mx-auto px-8 pb-6 flex flex-col md:flex-row items-center justify-between gap-4 mt-12">
         <div className="hidden md:block w-24" />
@@ -1421,26 +1556,6 @@ export default function App() {
           </a>
         </div>
       </footer>
-
-      {/* MODAL DETALLE DE DÍA EN CALENDARIO */}
-      {diaSeleccionadoModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
-          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center border-b border-white/10 pb-3">
-              <h3 className="font-wrc text-2xl text-amber-400">Carreras del {diaSeleccionadoModal.fecha}</h3>
-              <button onClick={() => setDiaSeleccionadoModal(null)} className="text-neutral-400 hover:text-white text-lg">✕</button>
-            </div>
-            <div className="space-y-3">
-              {diaSeleccionadoModal.eventos.map(ev => (
-                <div key={ev.id} className="bg-neutral-950 p-4 rounded-2xl border border-amber-500/30 space-y-1">
-                  <h4 className="font-wrc text-xl text-white">{ev.titulo}</h4>
-                  {ev.descripcion && <p className="text-xs text-neutral-300">{ev.descripcion}</p>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODALES AUXILIARES */}
       {mostrarPerfilModal && (
