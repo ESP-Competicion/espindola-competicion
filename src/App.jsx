@@ -24,13 +24,16 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('PARAGUAY') || p === 'PY') codigoIso = 'py';
   else if (p.includes('COLOMBIA') || p === 'CO') codigoIso = 'co';
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
+  else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
   else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
   else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
 
-  // Limpiamos texto por si el usuario guardó "ARGENTINA AR" en la base de datos
-  const nombreLimpio = p.replace(/🇦🇷|🇧🇷|🇨🇱|🇺🇾|🇵🇾|🇨🇴|🇲🇽|🇪🇸|🇺🇸|🇮🇹|🇫🇷|🇵🇪/g, '').replace('AR', '').replace('PE', '').replace('BR', '').replace('CL', '').replace('UY', '').replace('PY', '').replace('CO', '').replace('MX', '').replace('ES', '').replace('US', '').replace('IT', '').replace('FR', '').trim() || 'ARGENTINA';
+  let nombreLimpio = p.replace(/🇦🇷|🇧🇷|🇨🇱|🇺🇾|🇵🇾|🇨🇴|🇲🇽|🇪🇸|🇺🇸|🇮🇹|🇫🇷|🇵🇪|🇮🇨/g, '').trim();
+  if (nombreLimpio === 'AR' || nombreLimpio === '') {
+    nombreLimpio = 'ARGENTINA';
+  }
 
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
