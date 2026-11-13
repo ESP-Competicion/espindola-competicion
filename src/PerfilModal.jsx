@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import SubirImagen from './SubirImagen';
 
 export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
   const [nombrePiloto, setNombrePiloto] = useState('');
   const [steamId, setSteamId] = useState('');
-  const [nacionalidad, setNacionalidad] = useState('Argentina');
+  const [nacionalidad, setNacionalidad] = useState('Argentina 🇦🇷');
+  const [provincia, setProvincia] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  // Cargar datos actuales al abrir
-  useState(() => {
+  // Cargar datos actuales al abrir (Corregido a useEffect para evitar warnings de React)
+  useEffect(() => {
     async function cargar() {
       if (!usuario) return;
       const { data } = await supabase
@@ -22,7 +24,9 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
       if (data) {
         setNombrePiloto(data.nombre_piloto || '');
         setSteamId(data.steam_id || '');
-        setNacionalidad(data.nacionalidad || 'Argentina');
+        setNacionalidad(data.nacionalidad || 'Argentina 🇦🇷');
+        setProvincia(data.provincia || '');
+        setTelefono(data.telefono || '');
         setAvatarUrl(data.avatar_url || '');
       }
     }
@@ -41,6 +45,8 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
         nombre_piloto: nombrePiloto,
         steam_id: steamId,
         nacionalidad: nacionalidad,
+        provincia: provincia,
+        telefono: telefono,
         avatar_url: avatarUrl,
         updated_at: new Date()
       });
@@ -51,14 +57,14 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
       alert('Error al guardar perfil: ' + error.message);
     } else {
       alert('¡Perfil actualizado con éxito!');
-      onPerfilGuardado();
+      if (onPerfilGuardado) onPerfilGuardado();
       onClose();
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-      <div className="bg-neutral-900 border border-amber-500/40 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative font-sans">
+      <div className="bg-neutral-900 border border-amber-500/40 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative font-sans max-h-[90vh] overflow-y-auto">
         <h2 className="font-wrc text-2xl font-black text-amber-400 mb-2 uppercase tracking-wide">
           Configurar Perfil de Piloto
         </h2>
@@ -68,13 +74,48 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
 
         <form onSubmit={handleGuardar} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Nombre del Piloto</label>
+            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Nombre y Apellido</label>
             <input 
               type="text" 
               value={nombrePiloto}
               onChange={(e) => setNombrePiloto(e.target.value)}
+              placeholder="Ej: Leonardo Espíndola"
               className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
               required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">País</label>
+              <input 
+                type="text" 
+                value={nacionalidad}
+                onChange={(e) => setNacionalidad(e.target.value)}
+                placeholder="Ej: Argentina 🇦🇷"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Provincia</label>
+              <input 
+                type="text" 
+                value={provincia}
+                onChange={(e) => setProvincia(e.target.value)}
+                placeholder="Ej: Misiones"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Número de Teléfono (WhatsApp)</label>
+            <input 
+              type="text" 
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              placeholder="Ej: +54 9 376..."
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
             />
           </div>
 
@@ -84,17 +125,8 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
               type="text" 
               value={steamId}
               onChange={(e) => setSteamId(e.target.value)}
+              placeholder="Ej: 76561199..."
               className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Nacionalidad</label>
-            <input 
-              type="text" 
-              value={nacionalidad}
-              onChange={(e) => setNacionalidad(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
             />
           </div>
 
@@ -107,14 +139,14 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
             <button 
               type="button" 
               onClick={onClose}
-              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-wrc text-sm uppercase px-5 py-2.5 rounded-xl transition"
+              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-wrc text-sm uppercase px-5 py-2.5 rounded-xl transition cursor-pointer"
             >
               Cancelar
             </button>
             <button 
               type="submit"
               disabled={guardando}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20"
+              className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
             >
               {guardando ? 'Guardando...' : 'Guardar Perfil'}
             </button>
