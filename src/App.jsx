@@ -9,6 +9,26 @@ const fotosRally = [
   '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public
 ];
 
+// FUNCIÓN AUXILIAR PARA OBTENER LA BANDERA AUTOMÁTICAMENTE SEGÚN EL PAÍS
+const obtenerBanderaPais = (pais) => {
+  if (!pais) return 'ARGENTINA 🇦🇷';
+  const p = pais.toUpperCase().trim();
+  if (p.includes('ARGENTINA')) return 'ARGENTINA 🇦🇷';
+  if (p.includes('PERU') || p.includes('PERÚ')) return 'PERÚ 🇵🇪';
+  if (p.includes('BRASIL') || p.includes('BRAZIL')) return 'BRASIL 🇧🇷';
+  if (p.includes('CHILE')) return 'CHILE 🇨🇱';
+  if (p.includes('URUGUAY')) return 'URUGUAY 🇺🇾';
+  if (p.includes('PARAGUAY')) return 'PARAGUAY 🇵🇾';
+  if (p.includes('COLOMBIA')) return 'COLOMBIA 🇨🇴';
+  if (p.includes('MEXICO') || p.includes('MÉXICO')) return 'MÉXICO 🇲🇽';
+  if (p.includes('ESPAÑA') || p.includes('SPAIN')) return 'ESPAÑA 🇪🇸';
+  if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU')) return 'ESTADOS UNIDOS 🇺🇸';
+  if (p.includes('ITALIA')) return 'ITALIA 🇮🇹';
+  if (p.includes('FRANCIA')) return 'FRANCIA 🇫🇷';
+  // Si ingresa otro país, devolvemos el texto original en mayúsculas
+  return p;
+};
+
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [perfil, setPerfil] = useState(null);
@@ -396,13 +416,14 @@ export default function App() {
       user_id: usuario.id,
       categoria: formAsistencia.categoria.toUpperCase(),
       modelo_auto: formAsistencia.modelo_auto.toUpperCase(),
-      nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()
+      nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase(),
+      nacionalidad: perfil?.nacionalidad || 'ARGENTINA 🇦🇷'
     }]);
 
     if (error) {
       alert('Error al registrar participación (quizás ya estás anotado): ' + error.message);
     } else {
-      alert('¡Te ha anotado exitosamente a la competencia!');
+      alert('¡Te has anotado exitosamente a la competencia!');
       setFormAsistencia({ categoria: '', modelo_auto: '' });
       setModoModalCalendario('lista');
       cargarAsistentesCalendario(calId);
@@ -422,7 +443,8 @@ export default function App() {
       user_id: usuario.id,
       categoria: formAsistenciaEvento.categoria.toUpperCase(),
       modelo_auto: formAsistenciaEvento.modelo_auto.toUpperCase(),
-      nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()
+      nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase(),
+      nacionalidad: perfil?.nacionalidad || 'ARGENTINA 🇦🇷'
     }]);
 
     if (error) {
@@ -1427,7 +1449,7 @@ export default function App() {
                     <div className="space-y-1 overflow-hidden">
                       <h3 className="font-wrc text-xl text-white truncate">{(m.nombre_piloto || 'PILOTO SIN NOMBRE').toUpperCase()}</h3>
                       <p className="text-xs font-wrc uppercase">
-                        <span className="text-amber-400">PAÍS:</span> <span className="text-white">{(m.nacionalidad || 'ARGENTINA 🇦🇷').toUpperCase()}</span>
+                        <span className="text-amber-400">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
                       </p>
                       {m.provincia && (
                         <p className="text-xs font-wrc uppercase">
@@ -1442,7 +1464,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 9. MI PERFIL - FICHA INFORMATIVA COMPLETA */}
+        {/* 9. MI PERFIL */}
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-xl mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
             <h2 className="font-wrc text-3xl text-amber-400">MI PERFIL DE PILOTO</h2>
@@ -1461,7 +1483,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* DATOS DETALLADOS DEL PERFIL */}
             <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-3 font-wrc text-sm">
               <div className="flex justify-between border-b border-white/10 pb-2.5">
                 <span className="text-amber-400">NOMBRE DE PILOTO:</span>
@@ -1469,7 +1490,7 @@ export default function App() {
               </div>
               <div className="flex justify-between border-b border-white/10 pb-2.5">
                 <span className="text-amber-400">PAÍS:</span>
-                <span className="text-white">{(perfil?.nacionalidad || 'ARGENTINA 🇦🇷').toUpperCase()}</span>
+                <span className="text-white">{obtenerBanderaPais(perfil?.nacionalidad)}</span>
               </div>
               <div className="flex justify-between border-b border-white/10 pb-2.5">
                 <span className="text-amber-400">PROVINCIA:</span>
@@ -1595,7 +1616,7 @@ export default function App() {
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto} {asistente.nacionalidad && `| 🌎 ${obtenerBanderaPais(asistente.nacionalidad)}`}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         CONFIRMADO ✅
@@ -1680,7 +1701,7 @@ export default function App() {
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto} {asistente.nacionalidad && `| 🌎 ${obtenerBanderaPais(asistente.nacionalidad)}`}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         INSCRIPTO ✅
