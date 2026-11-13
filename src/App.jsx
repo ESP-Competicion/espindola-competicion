@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import PerfilModal from './PerfilModal';
-import InscripcionModal from './InscripcionModal';
 import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
@@ -52,11 +51,17 @@ export default function App() {
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
   
-  // MODAL ASISTENCIA CALENDARIO
+  // MODALES INTERACTIVOS (CALENDARIO Y EVENTOS)
   const [diaSeleccionadoModal, setDiaSeleccionadoModal] = useState(null);
-  const [modoModalCalendario, setModoModalCalendario] = useState('detalle'); // 'detalle', 'formulario', 'lista'
+  const [modoModalCalendario, setModoModalCalendario] = useState('detalle'); 
   const [asistentesEvento, setAsistentesEvento] = useState([]);
   const [formAsistencia, setFormAsistencia] = useState({ categoria: '', modelo_auto: '' });
+
+  // MODAL INSCRIPCIÓN EVENTOS DEL EQUIPO
+  const [eventoModalActivo, setEventoModalActivo] = useState(null);
+  const [modoModalEvento, setModoModalEvento] = useState('formulario');
+  const [asistentesEventoEquipo, setAsistentesEventoEquipo] = useState([]);
+  const [formAsistenciaEvento, setFormAsistenciaEvento] = useState({ categoria: '', modelo_auto: '' });
 
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
@@ -71,10 +76,6 @@ export default function App() {
     fecha: '',
     descripcion: ''
   });
-
-  // MODAL INSCRIPCIÓN EVENTOS
-  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
-  const [modoModalInscripcion, setModoModalInscripcion] = useState('formulario');
 
   // SALÓN DE LA FAMA
   const [hallFama, setHallFama] = useState([]);
@@ -182,6 +183,11 @@ export default function App() {
   async function cargarAsistentesCalendario(calendarioId) {
     const { data } = await supabase.from('asistencias_calendario').select('*').eq('calendario_id', calendarioId);
     if (data) setAsistentesEvento(data);
+  }
+
+  async function cargarAsistentesEventoEquipo(eventoId) {
+    const { data } = await supabase.from('asistencias_eventos').select('*').eq('evento_id', eventoId);
+    if (data) setAsistentesEventoEquipo(data);
   }
 
   async function verificarAdminYPerfil(user) {
@@ -398,8 +404,34 @@ export default function App() {
     } else {
       alert('¡Te has anotado exitosamente a la competencia!');
       setFormAsistencia({ categoria: '', modelo_auto: '' });
-      setModoModalCalendario('detalle');
+      setModoModalCalendario('lista');
       cargarAsistentesCalendario(calId);
+    }
+  };
+
+  const handleInscribirseEventoEquipo = async (e, eventoId) => {
+    e.preventDefault();
+    if (!usuario) {
+      alert('Debes iniciar sesión para inscribirte.');
+      setMostrarAuthModal(true);
+      return;
+    }
+
+    const { error } = await supabase.from('asistencias_eventos').insert([{
+      evento_id: eventoId,
+      user_id: usuario.id,
+      categoria: formAsistenciaEvento.categoria,
+      modelo_auto: formAsistenciaEvento.modelo_auto,
+      nombre_piloto: perfil?.nombre_piloto || usuario.email.split('@')[0]
+    }]);
+
+    if (error) {
+      alert('Error al inscribirte (quizás ya estás anotado): ' + error.message);
+    } else {
+      alert('¡Inscripción realizada con éxito!');
+      setFormAsistenciaEvento({ categoria: '', modelo_auto: '' });
+      setModoModalEvento('lista');
+      cargarAsistentesEventoEquipo(eventoId);
     }
   };
 
@@ -753,7 +785,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. CALENDARIO VISUAL 2027+ CON INSCRIPCIÓN Y LISTA */}
+        {/* 3. CALENDARIO VISUAL 2027+ */}
         {pestanaActiva === 'calendario' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1034,7 +1066,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. EVENTOS */}
+        {/* 6. EVENTOS (INSCRIPCIÓN Y LISTA) */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
@@ -1120,14 +1152,22 @@ export default function App() {
 
                   <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                     <button
-                      onClick={() => { setEventoSeleccionado(ev); setModoModalInscripcion('formulario'); }}
+                      onClick={() => {
+                        setEventoModalActivo(ev);
+                        setModoModalEvento('formulario');
+                        cargarAsistentesEventoEquipo(ev.id);
+                      }}
                       className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-6 py-2.5 rounded-xl transition shadow tracking-wider cursor-pointer font-black uppercase"
                     >
                       Inscribirse
                     </button>
 
                     <button
-                      onClick={() => { setEventoSeleccionado(ev); setModoModalInscripcion('lista'); }}
+                      onClick={() => {
+                        setEventoModalActivo(ev);
+                        setModoModalEvento('lista');
+                        cargarAsistentesEventoEquipo(ev.id);
+                      }}
                       className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs px-5 py-2.5 rounded-xl transition cursor-pointer uppercase"
                     >
                       Ver Inscriptos
@@ -1432,7 +1472,7 @@ export default function App() {
 
       </main>
 
-      {/* MODAL INTERACTIVO DE CALENDARIO (DETALLE, PARTICIPAR Y LISTA) */}
+      {/* MODAL INTERACTIVO DE CALENDARIO */}
       {diaSeleccionadoModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
           <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6" onClick={(e) => e.stopPropagation()}>
@@ -1445,7 +1485,6 @@ export default function App() {
               <button onClick={() => setDiaSeleccionadoModal(null)} className="text-neutral-400 hover:text-white text-xl">✕</button>
             </div>
 
-            {/* Pestañas internas del modal */}
             <div className="flex gap-3">
               <button
                 onClick={() => setModoModalCalendario('detalle')}
@@ -1463,11 +1502,10 @@ export default function App() {
                 onClick={() => setModoModalCalendario('lista')}
                 className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
-                Ver Inscriptos ({asistentesEvento.length})
+                Inscriptos ({asistentesEvento.length})
               </button>
             </div>
 
-            {/* Contenido: DETALLE */}
             {modoModalCalendario === 'detalle' && (
               <div className="space-y-4 py-2">
                 <p className="text-neutral-300 text-sm font-sans">{diaSeleccionadoModal.descripcion || 'Competencia oficial programada en el calendario.'}</p>
@@ -1482,7 +1520,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Contenido: FORMULARIO DE PARTICIPACIÓN */}
             {modoModalCalendario === 'formulario' && (
               <form onSubmit={(e) => handleInscribirseCalendario(e, diaSeleccionadoModal.id)} className="space-y-4">
                 <div>
@@ -1516,7 +1553,6 @@ export default function App() {
               </form>
             )}
 
-            {/* Contenido: LISTA DE INSCRIPTOS */}
             {modoModalCalendario === 'lista' && (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {asistentesEvento.length === 0 ? (
@@ -1530,6 +1566,91 @@ export default function App() {
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         CONFIRMADO ✅
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INTERACTIVO DE EVENTOS DEL EQUIPO */}
+      {eventoModalActivo && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEventoModalActivo(null)}>
+          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6" onClick={(e) => e.stopPropagation()}>
+            
+            <div className="flex justify-between items-center border-b border-white/10 pb-4">
+              <div>
+                <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{eventoModalActivo.fecha} • {eventoModalActivo.horario || 'Por confirmar'}</span>
+                <h3 className="font-wrc text-3xl text-white">{eventoModalActivo.titulo}</h3>
+              </div>
+              <button onClick={() => setEventoModalActivo(null)} className="text-neutral-400 hover:text-white text-xl">✕</button>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModoModalEvento('formulario')}
+                className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalEvento === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+              >
+                Inscribirme 🏁
+              </button>
+              <button
+                onClick={() => setModoModalEvento('lista')}
+                className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalEvento === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+              >
+                Inscriptos ({asistentesEventoEquipo.length})
+              </button>
+            </div>
+
+            {modoModalEvento === 'formulario' && (
+              <form onSubmit={(e) => handleInscribirseEventoEquipo(e, eventoModalActivo.id)} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Categoría</label>
+                  <input
+                    type="text"
+                    value={formAsistenciaEvento.categoria}
+                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, categoria: e.target.value })}
+                    placeholder="Ej: Rally2 / Rally4"
+                    required
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Modelo de Auto</label>
+                  <input
+                    type="text"
+                    value={formAsistenciaEvento.modelo_auto}
+                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value })}
+                    placeholder="Ej: Peugeot 208 Rally4"
+                    required
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                >
+                  Confirmar Inscripción
+                </button>
+              </form>
+            )}
+
+            {modoModalEvento === 'lista' && (
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                {asistentesEventoEquipo.length === 0 ? (
+                  <p className="text-neutral-400 text-center py-6 text-sm">Todavía no hay pilotos inscriptos en este evento.</p>
+                ) : (
+                  asistentesEventoEquipo.map((asistente) => (
+                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
+                      <div>
+                        <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'Piloto Espíndola'}</h4>
+                        <p className="text-xs text-neutral-400">Cat: {asistente.categoria} | Auto: {asistente.modelo_auto}</p>
+                      </div>
+                      <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
+                        INSCRIPTO ✅
                       </span>
                     </div>
                   ))
@@ -1575,10 +1696,6 @@ export default function App() {
       {/* MODALES AUXILIARES */}
       {mostrarPerfilModal && (
         <PerfilModal usuario={usuario} perfil={perfil} onClose={() => setMostrarPerfilModal(false)} onActualizado={() => verificarAdminYPerfil(usuario)} />
-      )}
-
-      {eventoSeleccionado && (
-        <InscripcionModal evento={eventoSeleccionado} modoInicial={modoModalInscripcion} usuario={usuario} onClose={() => setEventoSeleccionado(null)} />
       )}
 
       {mostrarAuthModal && (
