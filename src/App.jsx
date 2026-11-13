@@ -69,7 +69,7 @@ export default function App() {
     horario: '',
     categorias: '',
     modelos_autos: '',
-    pais_origen: 'Argentina 🇦🇷'
+    pais_origen: 'ARGENTINA 🇦🇷'
   });
   const [nuevoCalendario, setNuevoCalendario] = useState({
     titulo: '',
@@ -312,7 +312,7 @@ export default function App() {
         horario: '',
         categorias: '',
         modelos_autos: '',
-        pais_origen: 'Argentina 🇦🇷'
+        pais_origen: 'ARGENTINA 🇦🇷'
       });
       cargarEventos();
     }
@@ -349,8 +349,8 @@ export default function App() {
     if (!nuevoPilotoFama.nombre || !nuevoPilotoFama.campeonatos) return;
 
     const datosPiloto = {
-      nombre: nuevoPilotoFama.nombre,
-      categoria: nuevoPilotoFama.categoria || 'Categoría General',
+      nombre: nuevoPilotoFama.nombre.toUpperCase(),
+      categoria: (nuevoPilotoFama.categoria || 'CATEGORÍA GENERAL').toUpperCase(),
       campeonatos: parseInt(nuevoPilotoFama.campeonatos) || 0,
       foto: nuevoPilotoFama.foto || 'https://files.catbox.moe/f3xmld.png'
     };
@@ -394,9 +394,9 @@ export default function App() {
     const { error } = await supabase.from('asistencias_calendario').insert([{
       calendario_id: calId,
       user_id: usuario.id,
-      categoria: formAsistencia.categoria,
-      modelo_auto: formAsistencia.modelo_auto,
-      nombre_piloto: perfil?.nombre_piloto || usuario.email.split('@')[0]
+      categoria: formAsistencia.categoria.toUpperCase(),
+      modelo_auto: formAsistencia.modelo_auto.toUpperCase(),
+      nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()
     }]);
 
     if (error) {
@@ -420,9 +420,9 @@ export default function App() {
     const { error } = await supabase.from('asistencias_eventos').insert([{
       evento_id: eventoId,
       user_id: usuario.id,
-      categoria: formAsistenciaEvento.categoria,
-      modelo_auto: formAsistenciaEvento.modelo_auto,
-      nombre_piloto: perfil?.nombre_piloto || usuario.email.split('@')[0]
+      categoria: formAsistenciaEvento.categoria.toUpperCase(),
+      modelo_auto: formAsistenciaEvento.modelo_auto.toUpperCase(),
+      nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()
     }]);
 
     if (error) {
@@ -465,14 +465,14 @@ export default function App() {
   };
 
   const nombresMeses = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
   ];
 
   const restoPilotos = hallFama.slice(3);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black flex flex-col justify-between">
+    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black flex flex-col justify-between uppercase">
       
       {/* FONDO GLOBAL */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -587,7 +587,7 @@ export default function App() {
                   )}
                 </div>
                 <span className="font-wrc text-xs md:text-sm tracking-wider text-white group-hover:text-amber-400 transition">
-                  {perfil?.nombre_piloto || usuario.email.split('@')[0]}
+                  {(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}
                 </span>
               </button>
               
@@ -609,7 +609,7 @@ export default function App() {
               onClick={() => setMostrarAuthModal(true)}
               className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-6 py-2.5 rounded-full transition shadow-lg shadow-amber-500/20 tracking-wider cursor-pointer"
             >
-              Acceder
+              ACCEDER
             </button>
           )}
 
@@ -647,7 +647,7 @@ export default function App() {
           <div className="min-h-[65vh] flex flex-col items-center justify-center">
             <div className="max-w-xl mx-auto text-center space-y-6 py-12">
               <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-lg">
-                Temporada Oficial 2027 • Espíndola Competición {esAdmin && '• Modo Admin'}
+                TEMPORADA OFICIAL 2027 • ESPÍNDOLA COMPETICIÓN {esAdmin && '• MODO ADMIN'}
               </span>
 
               <h1 className="font-wrc text-6xl md:text-8xl font-black tracking-tight text-white uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
@@ -661,13 +661,13 @@ export default function App() {
                       onClick={() => setEditandoConfig(true)}
                       className="text-xs font-wrc bg-neutral-900/80 hover:bg-neutral-800 text-amber-400 border border-amber-500/40 px-5 py-2.5 rounded-xl transition shadow-md uppercase tracking-wider cursor-pointer"
                     >
-                      ⚙️ Editar Redes Sociales del Inicio
+                      ⚙️ EDITAR REDES SOCIALES DEL INICIO
                     </button>
                   ) : (
                     <form onSubmit={handleGuardarConfig} className="bg-neutral-900/90 border border-amber-500/50 p-6 rounded-2xl text-left space-y-4 shadow-2xl backdrop-blur-md">
-                      <h3 className="font-wrc text-lg text-amber-400 uppercase">Editar Enlaces de Redes Sociales</h3>
+                      <h3 className="font-wrc text-lg text-amber-400 uppercase">EDITAR ENLACES DE REDES SOCIALES</h3>
                       <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL Instagram</label>
+                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL INSTAGRAM</label>
                         <input
                           type="url"
                           value={config.instagram}
@@ -676,7 +676,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL Discord</label>
+                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL DISCORD</label>
                         <input
                           type="url"
                           value={config.discord}
@@ -685,7 +685,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL TikTok</label>
+                        <label className="block text-xs text-neutral-400 uppercase mb-1">URL TIKTOK</label>
                         <input
                           type="url"
                           value={config.tiktok}
@@ -699,13 +699,13 @@ export default function App() {
                           onClick={() => setEditandoConfig(false)}
                           className="text-xs font-wrc bg-neutral-800 text-neutral-300 px-4 py-2 rounded-xl cursor-pointer"
                         >
-                          Cancelar
+                          CANCELAR
                         </button>
                         <button
                           type="submit"
                           className="text-xs font-wrc bg-amber-500 text-black font-bold px-5 py-2 rounded-xl cursor-pointer"
                         >
-                          Guardar Cambios
+                          GUARDAR CAMBIOS
                         </button>
                       </div>
                     </form>
@@ -721,13 +721,13 @@ export default function App() {
         {pestanaActiva === 'historia' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
-              <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-sans whitespace-pre-line">
+              <p className="text-neutral-100 text-base md:text-lg leading-relaxed font-sans whitespace-pre-line uppercase">
                 {config.historia_texto}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
                 <div className="space-y-2">
-                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">Foto 1 (Rally)</span>
+                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">FOTO 1 (RALLY)</span>
                   <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl h-56 bg-neutral-950">
                     <img 
                       src={config.historia_imagen || 'https://files.catbox.moe/t5ffu8.png'} 
@@ -738,7 +738,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">Foto 2 (Circuito)</span>
+                  <span className="text-xs font-wrc text-amber-400 uppercase tracking-widest">FOTO 2 (CIRCUITO)</span>
                   <div className="rounded-2xl overflow-hidden border border-amber-500/30 shadow-xl h-56 bg-neutral-950">
                     <img 
                       src={config.historia_imagen_2 || 'https://files.catbox.moe/pfh5gw.png'} 
@@ -752,24 +752,24 @@ export default function App() {
 
             {esAdmin && (
               <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">⚙️ Administrar Sección Historia</h3>
+                <h3 className="font-wrc text-xl text-amber-400">⚙️ ADMINISTRAR SECCIÓN HISTORIA</h3>
                 <form onSubmit={handleGuardarConfig} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Texto Principal</label>
+                    <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">TEXTO PRINCIPAL</label>
                     <textarea
                       rows={5}
                       value={config.historia_texto}
-                      onChange={(e) => setConfig({ ...config, historia_texto: e.target.value })}
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans"
+                      onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white focus:border-amber-500 outline-none font-sans uppercase"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 1 (Rally)</label>
+                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">FOTO 1 (RALLY)</label>
                       <SubirImagen currentUrl={config.historia_imagen} onUpload={(url) => setConfig({ ...config, historia_imagen: url })} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto 2 (Circuito)</label>
+                      <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">FOTO 2 (CIRCUITO)</label>
                       <SubirImagen currentUrl={config.historia_imagen_2} onUpload={(url) => setConfig({ ...config, historia_imagen_2: url })} />
                     </div>
                   </div>
@@ -777,7 +777,7 @@ export default function App() {
                     type="submit"
                     className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
                   >
-                    💾 Guardar Cambios de Historia
+                    💾 GUARDAR CAMBIOS DE HISTORIA
                   </button>
                 </form>
               </div>
@@ -790,8 +790,8 @@ export default function App() {
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Calendario de Carreras</h2>
-                <p className="text-neutral-300 text-sm font-sans">Navega por los meses del 2027 en adelante, confirma tu participación y ve los inscriptos.</p>
+                <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">CALENDARIO DE CARRERAS</h2>
+                <p className="text-neutral-300 text-sm font-sans">NAVEGA POR LOS MESES DEL 2027 EN ADELANTE, CONFIRMA TU PARTICIPACIÓN Y VE LOS INSCRIPTOS.</p>
               </div>
 
               <div className="flex items-center gap-3 bg-neutral-900/80 border border-amber-500/40 px-4 py-2 rounded-2xl shadow-xl">
@@ -799,7 +799,7 @@ export default function App() {
                   onClick={() => cambiarMes(-1)}
                   className="text-amber-400 hover:text-white font-wrc text-sm px-3 py-1 bg-neutral-950 rounded-xl border border-neutral-800 transition cursor-pointer"
                 >
-                  ◀ Mes Anterior
+                  ◀ MES ANTERIOR
                 </button>
                 <span className="font-wrc text-lg text-white tracking-wider px-2 min-w-[140px] text-center">
                   {nombresMeses[fechaActualCalendario.getMonth()]} {fechaActualCalendario.getFullYear()}
@@ -808,14 +808,14 @@ export default function App() {
                   onClick={() => cambiarMes(1)}
                   className="text-amber-400 hover:text-white font-wrc text-sm px-3 py-1 bg-neutral-950 rounded-xl border border-neutral-800 transition cursor-pointer"
                 >
-                  Mes Siguiente ▶
+                  MES SIGUIENTE ▶
                 </button>
               </div>
             </div>
 
             <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl space-y-4">
               <div className="grid grid-cols-7 gap-2 text-center font-wrc text-amber-400 text-xs md:text-sm border-b border-white/10 pb-3">
-                <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                <span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span>
               </div>
 
               <div className="grid grid-cols-7 gap-2 md:gap-3">
@@ -862,21 +862,21 @@ export default function App() {
 
             {esAdmin && (
               <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">➕ Agregar Fecha de Carrera al Calendario</h3>
+                <h3 className="font-wrc text-xl text-amber-400">➕ AGREGAR FECHA DE CARRERA AL CALENDARIO</h3>
                 <form onSubmit={handleCrearCalendario} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Título de la Carrera</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">TÍTULO DE LA CARRERA</label>
                     <input
                       type="text"
                       value={nuevoCalendario.titulo}
-                      onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value })}
-                      placeholder="Ej: Gran Premio Misiones 2027"
+                      onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value.toUpperCase() })}
+                      placeholder="EJ: GRAN PREMIO MISIONES 2027"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
                     <input
                       type="date"
                       value={nuevoCalendario.fecha}
@@ -890,7 +890,7 @@ export default function App() {
                       type="submit"
                       className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase py-2.5 rounded-xl transition shadow-lg cursor-pointer font-black"
                     >
-                      Guardar Fecha
+                      GUARDAR FECHA
                     </button>
                   </div>
                 </form>
@@ -898,9 +898,9 @@ export default function App() {
             )}
 
             <div className="space-y-3 pt-4">
-              <h3 className="font-wrc text-xl text-white tracking-wide">Listado de Fechas Registradas</h3>
+              <h3 className="font-wrc text-xl text-white tracking-wide">LISTADO DE FECHAS REGISTRADAS</h3>
               {calendario.length === 0 ? (
-                <p className="text-neutral-400 text-sm">No hay fechas cargadas en el calendario todavía.</p>
+                <p className="text-neutral-400 text-sm">NO HAY FECHAS CARGADAS EN EL CALENDARIO TODAVÍA.</p>
               ) : (
                 calendario.map((cal) => (
                   <div key={cal.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex justify-between items-center shadow-lg">
@@ -913,7 +913,7 @@ export default function App() {
                         onClick={() => handleEliminarCalendario(cal.id)}
                         className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-xl text-xs border border-red-500/30 cursor-pointer"
                       >
-                        🗑️ Eliminar
+                        🗑️ ELIMINAR
                       </button>
                     )}
                   </div>
@@ -930,26 +930,26 @@ export default function App() {
             {!albumSeleccionado ? (
               <div className="space-y-8">
                 <div>
-                  <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Álbumes de Eventos</h2>
-                  <p className="text-neutral-300 text-sm font-sans">Selecciona una carpeta para ver las fotografías oficiales de cada competencia.</p>
+                  <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">ÁLBUMES DE EVENTOS</h2>
+                  <p className="text-neutral-300 text-sm font-sans">SELECCIONA UNA CARPETA PARA VER LAS FOTOGRAFÍAS OFICIALES DE CADA COMPETENCIA.</p>
                 </div>
 
                 {esAdmin && (
                   <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                    <h3 className="font-wrc text-xl text-amber-400">📁 Crear Nueva Carpeta de Evento</h3>
+                    <h3 className="font-wrc text-xl text-amber-400">📁 CREAR NUEVA CARPETA DE EVENTO</h3>
                     <form onSubmit={handleCrearAlbum} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                       <div>
-                        <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Nombre del Álbum / Evento</label>
+                        <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">NOMBRE DEL ÁLBUM / EVENTO</label>
                         <input
                           type="text"
                           value={nuevoAlbumNombre}
-                          onChange={(e) => setNuevoAlbumNombre(e.target.value)}
-                          placeholder="Ej: Rally de Córdoba 2027"
-                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                          onChange={(e) => setNuevoAlbumNombre(e.target.value.toUpperCase())}
+                          placeholder="EJ: RALLY DE CÓRDOBA 2027"
+                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Foto de Portada</label>
+                        <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FOTO DE PORTADA</label>
                         <SubirImagen currentUrl={portadaAlbumUrl} onUpload={(url) => setPortadaAlbumUrl(url)} />
                       </div>
                       <div>
@@ -957,7 +957,7 @@ export default function App() {
                           type="submit"
                           className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
                         >
-                          Crear Álbum
+                          CREAR ÁLBUM
                         </button>
                       </div>
                     </form>
@@ -986,7 +986,7 @@ export default function App() {
                             onClick={(e) => handleEliminarAlbum(album.id, e)}
                             className="text-red-400 hover:text-red-300 text-xs px-3 py-1 bg-red-500/10 rounded-lg border border-red-500/30 cursor-pointer"
                           >
-                            Eliminar
+                            ELIMINAR
                           </button>
                         )}
                       </div>
@@ -1002,7 +1002,7 @@ export default function App() {
                       onClick={() => setAlbumSeleccionado(null)}
                       className="text-xs font-wrc text-amber-400 hover:underline mb-1 inline-block cursor-pointer"
                     >
-                      ← Volver a Álbumes
+                      ← VOLVER A ÁLBUMES
                     </button>
                     <h2 className="font-wrc text-4xl text-white">{albumSeleccionado.nombre}</h2>
                   </div>
@@ -1010,7 +1010,7 @@ export default function App() {
                   {esAdmin && (
                     <div className="flex items-center gap-3">
                       <label className={`bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer ${subiendoFotosMasivo ? 'opacity-50 pointer-events-none' : ''}`}>
-                        {subiendoFotosMasivo ? 'Subiendo fotos...' : '📷 Subir Fotos al Álbum'}
+                        {subiendoFotosMasivo ? 'SUBIENDO FOTOS...' : '📷 SUBIR FOTOS AL ÁLBUM'}
                         <input
                           type="file"
                           multiple
@@ -1053,8 +1053,8 @@ export default function App() {
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Live Timing Oficial</h2>
-              <p className="text-neutral-300 text-sm font-sans">Sigue en tiempo real las clasificaciones y tiempos de nuestras competencias.</p>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">LIVE TIMING OFICIAL</h2>
+              <p className="text-neutral-300 text-sm font-sans">SIGUE EN TIEMPO REAL LAS CLASIFICACIONES Y TIEMPOS DE NUESTRAS COMPETENCIAS.</p>
             </div>
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl h-[70vh]">
               <iframe
@@ -1070,27 +1070,27 @@ export default function App() {
         {pestanaActiva === 'eventos' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Inscripciones y Campeonatos</h2>
-              <p className="text-neutral-300 text-sm font-sans">Fechas activas para anotarte a competir.</p>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
+              <p className="text-neutral-300 text-sm font-sans">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR.</p>
             </div>
 
             {esAdmin && (
               <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="font-wrc text-xl text-amber-400">➕ Crear Nuevo Evento / Inscripción</h3>
+                <h3 className="font-wrc text-xl text-amber-400">➕ CREAR NUEVO EVENTO / INSCRIPCIÓN</h3>
                 <form onSubmit={handleCrearEvento} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Título del Evento</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">TÍTULO DEL EVENTO</label>
                     <input
                       type="text"
                       value={nuevoEvento.titulo}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value })}
-                      placeholder="Ej: Fecha 1 - Rally MIT CUP"
+                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value.toUpperCase() })}
+                      placeholder="EJ: FECHA 1 - RALLY MIT CUP"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Fecha</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
                     <input
                       type="date"
                       value={nuevoEvento.fecha}
@@ -1100,33 +1100,33 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Horario</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">HORARIO</label>
                     <input
                       type="text"
                       value={nuevoEvento.horario}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value })}
-                      placeholder="Ej: 21:00 hs (Arg)"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value.toUpperCase() })}
+                      placeholder="EJ: 21:00 HS (ARG)"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Categorías</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CATEGORÍAS</label>
                     <input
                       type="text"
                       value={nuevoEvento.categorias}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value })}
-                      placeholder="Ej: Rally2 / Rally4"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
+                      placeholder="EJ: RALLY2 / RALLY4"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Modelos de Autos</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">MODELOS DE AUTOS</label>
                     <input
                       type="text"
                       value={nuevoEvento.modelos_autos}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value })}
-                      placeholder="Ej: Skoda Fabia / Peugeot 208"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
+                      placeholder="EJ: SKODA FABIA / PEUGEOT 208"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div className="flex items-end">
@@ -1134,7 +1134,7 @@ export default function App() {
                       type="submit"
                       className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm uppercase py-2.5 rounded-xl transition shadow-lg cursor-pointer font-black"
                     >
-                      Publicar Evento
+                      PUBLICAR EVENTO
                     </button>
                   </div>
                 </form>
@@ -1145,9 +1145,9 @@ export default function App() {
               {eventos.map((ev) => (
                 <div key={ev.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                   <div className="space-y-1">
-                    <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{ev.fecha} • {ev.horario || 'Por confirmar'}</span>
+                    <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
                     <h3 className="font-wrc text-2xl text-white">{ev.titulo}</h3>
-                    <p className="text-neutral-300 text-xs font-sans">Categorías: {ev.categorias || 'General'} | Autos: {ev.modelos_autos || 'Libre'}</p>
+                    <p className="text-neutral-300 text-xs font-sans uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
                   </div>
 
                   <div className="flex items-center gap-3 w-full md:w-auto justify-end">
@@ -1159,7 +1159,7 @@ export default function App() {
                       }}
                       className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-6 py-2.5 rounded-xl transition shadow tracking-wider cursor-pointer font-black uppercase"
                     >
-                      Inscribirse
+                      INSCRIBIRSE
                     </button>
 
                     <button
@@ -1170,7 +1170,7 @@ export default function App() {
                       }}
                       className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs px-5 py-2.5 rounded-xl transition cursor-pointer uppercase"
                     >
-                      Ver Inscriptos
+                      VER INSCRIPTOS
                     </button>
 
                     {esAdmin && (
@@ -1198,8 +1198,8 @@ export default function App() {
                 <h2 className="font-wrc text-4xl md:text-5xl text-amber-400 tracking-wide drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                   SALÓN DE LA FAMA - PODIO DE CAMPEONES
                 </h2>
-                <p className="text-neutral-200 text-sm md:text-base font-sans mt-1 drop-shadow">
-                  Los pilotos con más títulos oficiales en la historia de Espíndola Competición.
+                <p className="text-neutral-200 text-sm md:text-base font-sans mt-1 drop-shadow uppercase">
+                  LOS PILOTOS CON MÁS TÍTULOS OFICIALES EN LA HISTORIA DE ESPÍNDOLA COMPETICIÓN.
                 </p>
               </div>
 
@@ -1221,43 +1221,43 @@ export default function App() {
             {esAdmin && (
               <div className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
                 <h3 className="font-wrc text-xl text-amber-400">
-                  {editandoId !== null ? '✏️ Editar Piloto del Podio' : '🏆 Agregar Piloto al Salón de la Fama'}
+                  {editandoId !== null ? '✏️ EDITAR PILOTO DEL PODIO' : '🏆 AGREGAR PILOTO AL SALÓN DE LA FAMA'}
                 </h3>
                 <form onSubmit={handleGuardarPilotoFama} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Nombre Piloto</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">NOMBRE PILOTO</label>
                     <input
                       type="text"
                       value={nuevoPilotoFama.nombre}
-                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value })}
-                      placeholder="Ej: Joaco Castaño"
+                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value.toUpperCase() })}
+                      placeholder="EJ: JOACO CASTAÑO"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Ciudad / Categoría</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CIUDAD / CATEGORÍA</label>
                     <input
                       type="text"
                       value={nuevoPilotoFama.categoria}
-                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value })}
-                      placeholder="Ej: Posadas - Misiones"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
+                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value.toUpperCase() })}
+                      placeholder="EJ: POSADAS - MISIONES"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Campeonatos</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CAMPEONATOS</label>
                     <input
                       type="number"
                       value={nuevoPilotoFama.campeonatos}
                       onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
-                      placeholder="Ej: 17"
+                      placeholder="EJ: 17"
                       required
                       className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Foto Piloto</label>
+                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FOTO PILOTO</label>
                     <SubirImagen currentUrl={nuevoPilotoFama.foto} onUpload={(url) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: url })} />
                   </div>
                   <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-2">
@@ -1267,14 +1267,14 @@ export default function App() {
                         onClick={() => { setEditandoId(null); setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' }); }}
                         className="bg-neutral-800 text-neutral-300 font-wrc text-xs px-5 py-2.5 rounded-xl cursor-pointer"
                       >
-                        Cancelar
+                        CANCELAR
                       </button>
                     )}
                     <button
                       type="submit"
                       className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase px-6 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
                     >
-                      {editandoId !== null ? 'Actualizar Piloto' : 'Guardar en el Salón'}
+                      {editandoId !== null ? 'ACTUALIZAR PILOTO' : 'GUARDAR EN EL SALÓN'}
                     </button>
                   </div>
                 </form>
@@ -1303,7 +1303,7 @@ export default function App() {
 
                     <div className="space-y-1 my-2">
                       <h3 className="font-wrc text-2xl md:text-3xl text-white tracking-wide">{hallFama[1].nombre}</h3>
-                      <p className="text-neutral-300 text-xs font-sans">{hallFama[1].categoria}</p>
+                      <p className="text-neutral-300 text-xs font-sans uppercase">{hallFama[1].categoria}</p>
                     </div>
 
                     <div className="mt-4 bg-white/5 border border-white/15 rounded-xl px-5 py-2 font-wrc text-sm tracking-wider text-neutral-200">
@@ -1331,7 +1331,7 @@ export default function App() {
 
                     <div className="space-y-1 my-2">
                       <h3 className="font-wrc text-3xl md:text-4xl text-amber-400 tracking-wide drop-shadow">{hallFama[0].nombre}</h3>
-                      <p className="text-neutral-200 text-xs md:text-sm font-sans">{hallFama[0].categoria}</p>
+                      <p className="text-neutral-200 text-xs md:text-sm font-sans uppercase">{hallFama[0].categoria}</p>
                     </div>
 
                     <div className="mt-4 bg-amber-500/15 border border-amber-400/50 rounded-xl px-6 py-2.5 font-wrc text-base tracking-wider text-amber-300">
@@ -1359,7 +1359,7 @@ export default function App() {
 
                     <div className="space-y-1 my-2">
                       <h3 className="font-wrc text-2xl md:text-3xl text-white tracking-wide">{hallFama[2].nombre}</h3>
-                      <p className="text-neutral-300 text-xs font-sans">{hallFama[2].categoria}</p>
+                      <p className="text-neutral-300 text-xs font-sans uppercase">{hallFama[2].categoria}</p>
                     </div>
 
                     <div className="mt-4 bg-white/5 border border-amber-700/40 rounded-xl px-5 py-2 font-wrc text-sm tracking-wider text-neutral-200">
@@ -1382,7 +1382,7 @@ export default function App() {
                       </div>
                       <div>
                         <h4 className="font-wrc text-xl text-white tracking-wide">{piloto.nombre}</h4>
-                        <p className="text-xs text-neutral-400 font-sans">{piloto.categoria}</p>
+                        <p className="text-xs text-neutral-400 font-sans uppercase">{piloto.categoria}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
@@ -1407,13 +1407,13 @@ export default function App() {
         {pestanaActiva === 'miembros' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">Pilotos Registrados</h2>
-              <p className="text-neutral-300 text-sm font-sans">Comunidad de pilotos y miembros de Espíndola Competición.</p>
+              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">PILOTOS REGISTRADOS</h2>
+              <p className="text-neutral-300 text-sm font-sans">COMUNIDAD DE PILOTOS Y MIEMBROS DE ESPÍNDOLA COMPETICIÓN.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {miembros.length === 0 ? (
-                <p className="text-neutral-400 col-span-full text-center py-8">No hay miembros registrados todavía.</p>
+                <p className="text-neutral-400 col-span-full text-center py-8">NO HAY MIEMBROS REGISTRADOS TODAVÍA.</p>
               ) : (
                 miembros.map((m) => (
                   <div key={m.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl flex items-center gap-4">
@@ -1425,9 +1425,15 @@ export default function App() {
                       )}
                     </div>
                     <div className="space-y-1 overflow-hidden">
-                      <h3 className="font-wrc text-xl text-white truncate">{m.nombre_piloto || 'Piloto sin nombre'}</h3>
-                      <p className="text-xs text-amber-400 uppercase font-wrc">País: {m.nacionalidad || 'Argentina 🇦🇷'}</p>
-                      {m.provincia && <p className="text-xs text-neutral-300 font-sans">Provincia: {m.provincia}</p>}
+                      <h3 className="font-wrc text-xl text-white truncate">{(m.nombre_piloto || 'PILOTO SIN NOMBRE').toUpperCase()}</h3>
+                      <p className="text-xs font-wrc uppercase">
+                        <span className="text-amber-400">PAÍS:</span> <span className="text-white">{(m.nacionalidad || 'ARGENTINA 🇦🇷').toUpperCase()}</span>
+                      </p>
+                      {m.provincia && (
+                        <p className="text-xs font-sans uppercase">
+                          <span className="text-amber-400">PROVINCIA:</span> <span className="text-white">{m.provincia.toUpperCase()}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))
@@ -1439,7 +1445,7 @@ export default function App() {
         {/* 9. MI PERFIL */}
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-xl mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
-            <h2 className="font-wrc text-3xl text-amber-400">Configuración de Perfil</h2>
+            <h2 className="font-wrc text-3xl text-amber-400">CONFIGURACIÓN DE PERFIL</h2>
             <div className="flex items-center gap-4 border-b border-white/10 pb-6">
               <div className="w-20 h-20 rounded-full bg-neutral-800 border-2 border-amber-500 overflow-hidden flex items-center justify-center font-wrc text-amber-400 text-2xl">
                 {perfil?.avatar_url ? (
@@ -1449,8 +1455,8 @@ export default function App() {
                 )}
               </div>
               <div>
-                <h3 className="font-wrc text-2xl text-white">{perfil?.nombre_piloto || 'Piloto Espíndola'}</h3>
-                <p className="text-neutral-400 text-xs font-sans">{usuario.email}</p>
+                <h3 className="font-wrc text-2xl text-white">{(perfil?.nombre_piloto || 'PILOTO ESPÍNDOLA').toUpperCase()}</h3>
+                <p className="text-neutral-400 text-xs font-sans uppercase">{usuario.email}</p>
               </div>
             </div>
 
@@ -1458,14 +1464,14 @@ export default function App() {
               onClick={() => setMostrarPerfilModal(true)}
               className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow-lg cursor-pointer"
             >
-              Editar Datos Personales
+              EDITAR DATOS PERSONALES
             </button>
 
             <button
               onClick={() => setMostrarCambiarPasswordModal(true)}
               className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-sm uppercase py-3 rounded-xl transition cursor-pointer"
             >
-              Cambiar Contraseña
+              CAMBIAR CONTRASEÑA
             </button>
           </div>
         )}
@@ -1475,7 +1481,7 @@ export default function App() {
       {/* MODAL INTERACTIVO DE CALENDARIO */}
       {diaSeleccionadoModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
-          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6 uppercase" onClick={(e) => e.stopPropagation()}>
             
             <div className="flex justify-between items-center border-b border-white/10 pb-4">
               <div>
@@ -1490,31 +1496,31 @@ export default function App() {
                 onClick={() => setModoModalCalendario('detalle')}
                 className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'detalle' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
-                Información
+                INFORMACIÓN
               </button>
               <button
                 onClick={() => setModoModalCalendario('formulario')}
                 className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
-                Participar 🏁
+                PARTICIPAR 🏁
               </button>
               <button
                 onClick={() => setModoModalCalendario('lista')}
                 className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalCalendario === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
-                Inscriptos ({asistentesEvento.length})
+                INSCRIPTOS ({asistentesEvento.length})
               </button>
             </div>
 
             {modoModalCalendario === 'detalle' && (
               <div className="space-y-4 py-2">
-                <p className="text-neutral-300 text-sm font-sans">{diaSeleccionadoModal.descripcion || 'Competencia oficial programada en el calendario.'}</p>
+                <p className="text-neutral-300 text-sm font-sans uppercase">{diaSeleccionadoModal.descripcion || 'COMPETENCIA OFICIAL PROGRAMADA EN EL CALENDARIO.'}</p>
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setModoModalCalendario('formulario')}
                     className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
                   >
-                    Quiero Participar
+                    QUIERO PARTICIPAR
                   </button>
                 </div>
               </div>
@@ -1523,32 +1529,32 @@ export default function App() {
             {modoModalCalendario === 'formulario' && (
               <form onSubmit={(e) => handleInscribirseCalendario(e, diaSeleccionadoModal.id)} className="space-y-4">
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Categoría a Correr</label>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA A CORRER</label>
                   <input
                     type="text"
                     value={formAsistencia.categoria}
-                    onChange={(e) => setFormAsistencia({ ...formAsistencia, categoria: e.target.value })}
-                    placeholder="Ej: Rally2 / WRC / TC"
+                    onChange={(e) => setFormAsistencia({ ...formAsistencia, categoria: e.target.value.toUpperCase() })}
+                    placeholder="EJ: RALLY2 / WRC / TC"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Modelo de Auto</label>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
                   <input
                     type="text"
                     value={formAsistencia.modelo_auto}
-                    onChange={(e) => setFormAsistencia({ ...formAsistencia, modelo_auto: e.target.value })}
-                    placeholder="Ej: Skoda Fabia RS"
+                    onChange={(e) => setFormAsistencia({ ...formAsistencia, modelo_auto: e.target.value.toUpperCase() })}
+                    placeholder="EJ: SKODA FABIA RS"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
                   />
                 </div>
                 <button
                   type="submit"
                   className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
                 >
-                  Confirmar Asistencia
+                  CONFIRMAR ASISTENCIA
                 </button>
               </form>
             )}
@@ -1556,13 +1562,13 @@ export default function App() {
             {modoModalCalendario === 'lista' && (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {asistentesEvento.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-6 text-sm">Todavía no hay pilotos confirmados para esta fecha.</p>
+                  <p className="text-neutral-400 text-center py-6 text-sm">TODAVÍA NO HAY PILOTOS CONFIRMADOS PARA ESTA FECHA.</p>
                 ) : (
                   asistentesEvento.map((asistente) => (
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
-                        <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'Piloto Espíndola'}</h4>
-                        <p className="text-xs text-neutral-400">Cat: {asistente.categoria} | Auto: {asistente.modelo_auto}</p>
+                        <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
+                        <p className="text-xs text-neutral-400">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         CONFIRMADO ✅
@@ -1580,11 +1586,11 @@ export default function App() {
       {/* MODAL INTERACTIVO DE EVENTOS DEL EQUIPO */}
       {eventoModalActivo && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEventoModalActivo(null)}>
-          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-neutral-900 border border-amber-500/50 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-6 uppercase" onClick={(e) => e.stopPropagation()}>
             
             <div className="flex justify-between items-center border-b border-white/10 pb-4">
               <div>
-                <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{eventoModalActivo.fecha} • {eventoModalActivo.horario || 'Por confirmar'}</span>
+                <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{eventoModalActivo.fecha} • {eventoModalActivo.horario || 'POR CONFIRMAR'}</span>
                 <h3 className="font-wrc text-3xl text-white">{eventoModalActivo.titulo}</h3>
               </div>
               <button onClick={() => setEventoModalActivo(null)} className="text-neutral-400 hover:text-white text-xl">✕</button>
@@ -1595,45 +1601,45 @@ export default function App() {
                 onClick={() => setModoModalEvento('formulario')}
                 className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalEvento === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
-                Inscribirme 🏁
+                INSCRIBIRME 🏁
               </button>
               <button
                 onClick={() => setModoModalEvento('lista')}
                 className={`flex-1 font-wrc text-xs py-2 rounded-xl transition cursor-pointer uppercase ${modoModalEvento === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
-                Inscriptos ({asistentesEventoEquipo.length})
+                INSCRIPTOS ({asistentesEventoEquipo.length})
               </button>
             </div>
 
             {modoModalEvento === 'formulario' && (
               <form onSubmit={(e) => handleInscribirseEventoEquipo(e, eventoModalActivo.id)} className="space-y-4">
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Categoría</label>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA</label>
                   <input
                     type="text"
                     value={formAsistenciaEvento.categoria}
-                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, categoria: e.target.value })}
-                    placeholder="Ej: Rally2 / Rally4"
+                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, categoria: e.target.value.toUpperCase() })}
+                    placeholder="EJ: RALLY2 / RALLY4"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">Modelo de Auto</label>
+                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
                   <input
                     type="text"
                     value={formAsistenciaEvento.modelo_auto}
-                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value })}
-                    placeholder="Ej: Peugeot 208 Rally4"
+                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value.toUpperCase() })}
+                    placeholder="EJ: PEUGEOT 208 RALLY4"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none uppercase"
                   />
                 </div>
                 <button
                   type="submit"
                   className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
                 >
-                  Confirmar Inscripción
+                  CONFIRMAR INSCRIPCIÓN
                 </button>
               </form>
             )}
@@ -1641,13 +1647,13 @@ export default function App() {
             {modoModalEvento === 'lista' && (
               <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {asistentesEventoEquipo.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-6 text-sm">Todavía no hay pilotos inscriptos en este evento.</p>
+                  <p className="text-neutral-400 text-center py-6 text-sm">TODAVÍA NO HAY PILOTOS INSCRIPTOS EN ESTE EVENTO.</p>
                 ) : (
                   asistentesEventoEquipo.map((asistente) => (
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
-                        <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'Piloto Espíndola'}</h4>
-                        <p className="text-xs text-neutral-400">Cat: {asistente.categoria} | Auto: {asistente.modelo_auto}</p>
+                        <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
+                        <p className="text-xs text-neutral-400">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         INSCRIPTO ✅
