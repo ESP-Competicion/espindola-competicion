@@ -199,7 +199,7 @@ export default function App() {
 
     const { data } = await supabase
       .from('perfiles')
-      .select('nombre_piloto, steam_id, nacionalidad, provincia, avatar_url')
+      .select('*')
       .eq('id', user.id)
       .single();
 
@@ -402,7 +402,7 @@ export default function App() {
     if (error) {
       alert('Error al registrar participación (quizás ya estás anotado): ' + error.message);
     } else {
-      alert('¡Te has anotado exitosamente a la competencia!');
+      alert('¡Te ha anotado exitosamente a la competencia!');
       setFormAsistencia({ categoria: '', modelo_auto: '' });
       setModoModalCalendario('lista');
       cargarAsistentesCalendario(calId);
@@ -1442,37 +1442,64 @@ export default function App() {
           </div>
         )}
 
-        {/* 9. MI PERFIL */}
+        {/* 9. MI PERFIL - FICHA INFORMATIVA COMPLETA */}
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-xl mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl space-y-6">
-            <h2 className="font-wrc text-3xl text-amber-400">CONFIGURACIÓN DE PERFIL</h2>
+            <h2 className="font-wrc text-3xl text-amber-400">MI PERFIL DE PILOTO</h2>
+            
             <div className="flex items-center gap-4 border-b border-white/10 pb-6">
-              <div className="w-20 h-20 rounded-full bg-neutral-800 border-2 border-amber-500 overflow-hidden flex items-center justify-center font-wrc text-amber-400 text-2xl">
+              <div className="w-20 h-20 rounded-full bg-neutral-800 border-2 border-amber-500 overflow-hidden flex items-center justify-center font-wrc text-amber-400 text-2xl flex-shrink-0">
                 {perfil?.avatar_url ? (
                   <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
                 )}
               </div>
-              <div>
-                <h3 className="font-wrc text-2xl text-white">{(perfil?.nombre_piloto || 'PILOTO ESPÍNDOLA').toUpperCase()}</h3>
-                <p className="text-neutral-400 text-xs font-wrc uppercase">{usuario.email}</p>
+              <div className="overflow-hidden">
+                <h3 className="font-wrc text-2xl text-white truncate">{(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}</h3>
+                <p className="text-neutral-400 text-xs font-wrc uppercase truncate">{usuario.email}</p>
               </div>
             </div>
 
-            <button
-              onClick={() => setMostrarPerfilModal(true)}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow-lg cursor-pointer"
-            >
-              EDITAR DATOS PERSONALES
-            </button>
+            {/* DATOS DETALLADOS DEL PERFIL */}
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-5 space-y-3 font-wrc text-sm">
+              <div className="flex justify-between border-b border-white/10 pb-2.5">
+                <span className="text-amber-400">NOMBRE DE PILOTO:</span>
+                <span className="text-white">{(perfil?.nombre_piloto || 'NO CONFIGURADO').toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/10 pb-2.5">
+                <span className="text-amber-400">PAÍS:</span>
+                <span className="text-white">{(perfil?.nacionalidad || 'ARGENTINA 🇦🇷').toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/10 pb-2.5">
+                <span className="text-amber-400">PROVINCIA:</span>
+                <span className="text-white">{(perfil?.provincia || 'NO CONFIGURADA').toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/10 pb-2.5">
+                <span className="text-amber-400">STEAM ID:</span>
+                <span className="text-white">{(perfil?.steam_id || 'NO CONFIGURADO').toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-amber-400">TELÉFONO:</span>
+                <span className="text-white">{(perfil?.telefono || 'NO CONFIGURADO').toUpperCase()}</span>
+              </div>
+            </div>
 
-            <button
-              onClick={() => setMostrarCambiarPasswordModal(true)}
-              className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-sm uppercase py-3 rounded-xl transition cursor-pointer"
-            >
-              CAMBIAR CONTRASEÑA
-            </button>
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() => setMostrarPerfilModal(true)}
+                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm font-black uppercase py-3 rounded-xl transition shadow-lg cursor-pointer"
+              >
+                EDITAR DATOS PERSONALES
+              </button>
+
+              <button
+                onClick={() => setMostrarCambiarPasswordModal(true)}
+                className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-sm uppercase py-3 rounded-xl transition cursor-pointer"
+              >
+                CAMBIAR CONTRASEÑA
+              </button>
+            </div>
           </div>
         )}
 
