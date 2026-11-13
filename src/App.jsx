@@ -9,24 +9,39 @@ const fotosRally = [
   '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public
 ];
 
-// FUNCIÓN AUXILIAR PARA OBTENER LA BANDERA AUTOMÁTICAMENTE SEGÚN EL PAÍS
+// FUNCIÓN AUXILIAR PARA OBTENER EL CÓDIGO ISO DEL PAÍS Y RENDERIZAR SU IMAGEN DE BANDERA
 const obtenerBanderaPais = (pais) => {
-  if (!pais) return 'ARGENTINA 🇦🇷';
+  if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
+  
   const p = pais.toUpperCase().trim();
-  if (p.includes('ARGENTINA') || p === 'AR') return 'ARGENTINA 🇦🇷';
-  if (p.includes('PERU') || p.includes('PERÚ') || p === 'PE') return 'PERÚ 🇵🇪';
-  if (p.includes('BRASIL') || p.includes('BRAZIL') || p === 'BR') return 'BRASIL 🇧🇷';
-  if (p.includes('CHILE') || p === 'CL') return 'CHILE 🇨🇱';
-  if (p.includes('URUGUAY') || p === 'UY') return 'URUGUAY 🇺🇾';
-  if (p.includes('PARAGUAY') || p === 'PY') return 'PARAGUAY 🇵🇾';
-  if (p.includes('COLOMBIA') || p === 'CO') return 'COLOMBIA 🇨🇴';
-  if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') return 'MÉXICO 🇲🇽';
-  if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') return 'ESPAÑA 🇪🇸';
-  if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') return 'ESTADOS UNIDOS 🇺🇸';
-  if (p.includes('ITALIA') || p === 'IT') return 'ITALIA 🇮🇹';
-  if (p.includes('FRANCIA') || p === 'FR') return 'FRANCIA 🇫🇷';
-  // Si ingresa otro país, devolvemos el texto original en mayúsculas
-  return p;
+  let codigoIso = 'ar'; // Por defecto Argentina
+
+  if (p.includes('ARGENTINA') || p === 'AR') codigoIso = 'ar';
+  else if (p.includes('PERU') || p.includes('PERÚ') || p === 'PE') codigoIso = 'pe';
+  else if (p.includes('BRASIL') || p.includes('BRAZIL') || p === 'BR') codigoIso = 'br';
+  else if (p.includes('CHILE') || p === 'CL') codigoIso = 'cl';
+  else if (p.includes('URUGUAY') || p === 'UY') codigoIso = 'uy';
+  else if (p.includes('PARAGUAY') || p === 'PY') codigoIso = 'py';
+  else if (p.includes('COLOMBIA') || p === 'CO') codigoIso = 'co';
+  else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
+  else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
+  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
+  else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
+  else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
+
+  // Limpiamos texto por si el usuario guardó "ARGENTINA AR" en la base de datos
+  const nombreLimpio = p.replace(/🇦🇷|🇧🇷|🇨🇱|🇺🇾|🇵🇾|🇨🇴|🇲🇽|🇪🇸|🇺🇸|🇮🇹|🇫🇷|🇵🇪/g, '').replace('AR', '').replace('PE', '').replace('BR', '').replace('CL', '').replace('UY', '').replace('PY', '').replace('CO', '').replace('MX', '').replace('ES', '').replace('US', '').replace('IT', '').replace('FR', '').trim() || 'ARGENTINA';
+
+  return (
+    <span className="inline-flex items-center gap-1.5 align-middle">
+      <span>{nombreLimpio}</span>
+      <img 
+        src={`https://flagcdn.com/w40/${codigoIso}.png`} 
+        alt={codigoIso} 
+        className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm inline-block align-middle border border-white/20" 
+      />
+    </span>
+  );
 };
 
 export default function App() {
@@ -89,7 +104,7 @@ export default function App() {
     horario: '',
     categorias: '',
     modelos_autos: '',
-    pais_origen: 'ARGENTINA 🇦🇷'
+    pais_origen: 'ARGENTINA'
   });
   const [nuevoCalendario, setNuevoCalendario] = useState({
     titulo: '',
@@ -332,7 +347,7 @@ export default function App() {
         horario: '',
         categorias: '',
         modelos_autos: '',
-        pais_origen: 'ARGENTINA 🇦🇷'
+        pais_origen: 'ARGENTINA'
       });
       cargarEventos();
     }
@@ -417,7 +432,7 @@ export default function App() {
       categoria: formAsistencia.categoria.toUpperCase(),
       modelo_auto: formAsistencia.modelo_auto.toUpperCase(),
       nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase(),
-      nacionalidad: perfil?.nacionalidad || 'ARGENTINA 🇦🇷'
+      nacionalidad: perfil?.nacionalidad || 'ARGENTINA'
     }]);
 
     if (error) {
@@ -444,7 +459,7 @@ export default function App() {
       categoria: formAsistenciaEvento.categoria.toUpperCase(),
       modelo_auto: formAsistenciaEvento.modelo_auto.toUpperCase(),
       nombre_piloto: (perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase(),
-      nacionalidad: perfil?.nacionalidad || 'ARGENTINA 🇦🇷'
+      nacionalidad: perfil?.nacionalidad || 'ARGENTINA'
     }]);
 
     if (error) {
@@ -1617,7 +1632,9 @@ export default function App() {
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
                         <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
-                        <p className="text-xs text-amber-400 font-wrc mt-0.5">PAÍS: {obtenerBanderaPais(asistente.nacionalidad)}</p>
+                        <p className="text-xs text-amber-400 font-wrc mt-0.5 flex items-center gap-1.5">
+                          <span>PAÍS:</span> {obtenerBanderaPais(asistente.nacionalidad)}
+                        </p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         CONFIRMADO ✅
@@ -1703,7 +1720,9 @@ export default function App() {
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
                         <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
-                        <p className="text-xs text-amber-400 font-wrc mt-0.5">PAÍS: {obtenerBanderaPais(asistente.nacionalidad)}</p>
+                        <p className="text-xs text-amber-400 font-wrc mt-0.5 flex items-center gap-1.5">
+                          <span>PAÍS:</span> {obtenerBanderaPais(asistente.nacionalidad)}
+                        </p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         INSCRIPTO ✅
