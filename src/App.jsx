@@ -13,18 +13,18 @@ const fotosRally = [
 const obtenerBanderaPais = (pais) => {
   if (!pais) return 'ARGENTINA 🇦🇷';
   const p = pais.toUpperCase().trim();
-  if (p.includes('ARGENTINA')) return 'ARGENTINA 🇦🇷';
-  if (p.includes('PERU') || p.includes('PERÚ')) return 'PERÚ 🇵🇪';
-  if (p.includes('BRASIL') || p.includes('BRAZIL')) return 'BRASIL 🇧🇷';
-  if (p.includes('CHILE')) return 'CHILE 🇨🇱';
-  if (p.includes('URUGUAY')) return 'URUGUAY 🇺🇾';
-  if (p.includes('PARAGUAY')) return 'PARAGUAY 🇵🇾';
-  if (p.includes('COLOMBIA')) return 'COLOMBIA 🇨🇴';
-  if (p.includes('MEXICO') || p.includes('MÉXICO')) return 'MÉXICO 🇲🇽';
-  if (p.includes('ESPAÑA') || p.includes('SPAIN')) return 'ESPAÑA 🇪🇸';
-  if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU')) return 'ESTADOS UNIDOS 🇺🇸';
-  if (p.includes('ITALIA')) return 'ITALIA 🇮🇹';
-  if (p.includes('FRANCIA')) return 'FRANCIA 🇫🇷';
+  if (p.includes('ARGENTINA') || p === 'AR') return 'ARGENTINA 🇦🇷';
+  if (p.includes('PERU') || p.includes('PERÚ') || p === 'PE') return 'PERÚ 🇵🇪';
+  if (p.includes('BRASIL') || p.includes('BRAZIL') || p === 'BR') return 'BRASIL 🇧🇷';
+  if (p.includes('CHILE') || p === 'CL') return 'CHILE 🇨🇱';
+  if (p.includes('URUGUAY') || p === 'UY') return 'URUGUAY 🇺🇾';
+  if (p.includes('PARAGUAY') || p === 'PY') return 'PARAGUAY 🇵🇾';
+  if (p.includes('COLOMBIA') || p === 'CO') return 'COLOMBIA 🇨🇴';
+  if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') return 'MÉXICO 🇲🇽';
+  if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') return 'ESPAÑA 🇪🇸';
+  if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') return 'ESTADOS UNIDOS 🇺🇸';
+  if (p.includes('ITALIA') || p === 'IT') return 'ITALIA 🇮🇹';
+  if (p.includes('FRANCIA') || p === 'FR') return 'FRANCIA 🇫🇷';
   // Si ingresa otro país, devolvemos el texto original en mayúsculas
   return p;
 };
@@ -1128,7 +1128,7 @@ export default function App() {
                       value={nuevoEvento.horario}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value.toUpperCase() })}
                       placeholder="EJ: 21:00 HS (ARG)"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
                   <div>
@@ -1138,7 +1138,7 @@ export default function App() {
                       value={nuevoEvento.categorias}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
                       placeholder="EJ: RALLY2 / RALLY4"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
                   <div>
@@ -1148,7 +1148,7 @@ export default function App() {
                       value={nuevoEvento.modelos_autos}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
                       placeholder="EJ: SKODA FABIA / PEUGEOT 208"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
                   <div className="flex items-end">
@@ -1616,7 +1616,8 @@ export default function App() {
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto} {asistente.nacionalidad && `| 🌎 ${obtenerBanderaPais(asistente.nacionalidad)}`}</p>
+                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-xs text-amber-400 font-wrc mt-0.5">PAÍS: {obtenerBanderaPais(asistente.nacionalidad)}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         CONFIRMADO ✅
@@ -1701,7 +1702,8 @@ export default function App() {
                     <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-2xl p-3 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-base">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto} {asistente.nacionalidad && `| 🌎 ${obtenerBanderaPais(asistente.nacionalidad)}`}</p>
+                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-xs text-amber-400 font-wrc mt-0.5">PAÍS: {obtenerBanderaPais(asistente.nacionalidad)}</p>
                       </div>
                       <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
                         INSCRIPTO ✅
