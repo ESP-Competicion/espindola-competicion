@@ -10,6 +10,8 @@ export default function LiveTiming() {
   const [errorLog, setErrorLog] = useState("");
 
   useEffect(() => {
+    let montado = true;
+
     async function obtenerTelemetria() {
       try {
         const headers = { 
@@ -17,34 +19,45 @@ export default function LiveTiming() {
           'Accept': 'application/json'
         };
         
-        // Datos de la sesión y pista
         const resServidor = await fetch(`${API_BASE}/server`, { headers });
         if (!resServidor.ok) throw new Error(`Error servidor: ${resServidor.status}`);
         const dataServidor = await resServidor.json();
-        setServidor(dataServidor);
 
-        // Datos de pilotos y tiempos en vivo
         const resJugadores = await fetch(`${API_BASE}/players`, { headers });
         if (!resJugadores.ok) throw new Error(`Error jugadores: ${resJugadores.status}`);
         const dataJugadores = await resJugadores.json();
         
-        const lista = Array.isArray(dataJugadores) 
-          ? dataJugadores 
-          : (dataJugadores?.data || dataJugadores?.players || []);
+        if (!montado) return;
 
+        // Validaciones seguras para evitar que explote si la estructura varía
+        let lista = [];
+        if (Array.isArray(dataJugadores)) {
+          lista = dataJugadores;
+        } else if (dataJugadores && Array.isArray(dataJugadores.data)) {
+          lista = dataJugadores.data;
+        } else if (dataJugadores && Array.isArray(dataJugadores.players)) {
+          lista = dataJugadores.players;
+        }
+
+        setServidor(dataServidor || {});
         setJugadores(lista);
         setErrorLog("");
       } catch (err) {
+        if (!montado) return;
         console.error("Error de telemetría:", err);
         setErrorLog(err.message);
       } finally {
-        setCargando(false);
+        if (montado) setCargando(false);
       }
     }
 
     obtenerTelemetria();
-    const intervalo = setInterval(obtenerTelemetria, 3000); // Refresco en vivo cada 3s
-    return () => clearInterval(intervalo);
+    const intervalo = setInterval(obtenerTelemetria, 3000);
+    
+    return () => {
+      montado = false;
+      clearInterval(intervalo);
+    };
   }, []);
 
   return (
@@ -91,7 +104,7 @@ export default function LiveTiming() {
       {/* 2. GRILLA PRINCIPAL: TABLA DE TIEMPOS PROPIA + MAPA DE PISTA */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* TABLA DE POSICIONES (Ocupa 2 columnas) */}
+        {/* TABLA DE POSICIONES */}
         <div className="lg:col-span-2 bg-neutral-900/80 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
           <div className="bg-black/60 px-6 py-4 border-b border-white/10 flex justify-between items-center">
             <h3 className="text-amber-400 text-lg tracking-wider font-black">CLASIFICACIÓN EN TIEMPO REAL</h3>
@@ -120,14 +133,14 @@ export default function LiveTiming() {
                   </tr>
                 ) : (
                   jugadores.map((j, index) => (
-                    <tr key={j.id || index} className="hover:bg-white/5 transition">
+                    <tr key={j?.id || index} className="hover:bg-white/5 transition">
                       <td className="py-3.5 px-5 font-black text-amber-400">#{index + 1}</td>
                       <td className="py-3.5 px-5 font-bold text-white flex items-center gap-2">
-                        <span>{j.name || j.driverName || "PILOTO"}</span>
+                        <span>{j?.name || j?.driverName || "PILOTO"}</span>
                       </td>
-                      <td className="py-3.5 px-5 text-neutral-300 text-xs">{j.car || j.carModel || "---"}</td>
-                      <td className="py-3.5 px-5 text-center text-white">{j.laps || 0}</td>
-                      <td className="py-3.5 px-5 text-right font-mono text-amber-300 font-bold">{j.bestLap || j.bestTime || "--:--.---"}</td>
+                      <td className="py-3.5 px-5 text-neutral-300 text-xs">{j?.car || j?.carModel || "---"}</td>
+                      <td className="py-3.5 px-5 text-center text-white">{j?.laps || 0}</td>
+                      <td className="py-3.5 px-5 text-right font-mono text-amber-300 font-bold">{j?.bestLap || j?.bestTime || "--:--.---"}</td>
                     </tr>
                   ))
                 )}
@@ -136,10 +149,8 @@ export default function LiveTiming() {
           </div>
         </div>
 
-        {/* CONTENEDOR DE SECTORES Y MAPA DE PISTA (Ocupa 1 columna) */}
+        {/* MAPA Y SECTORES */}
         <div className="space-y-6 flex flex-col">
-          
-          {/* MAPA DE PISTA */}
           <div className="bg-neutral-900/80 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl flex-1 flex flex-col justify-between min-h-[260px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
               <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA DEL CIRCUITO</h3>
@@ -155,7 +166,6 @@ export default function LiveTiming() {
             </div>
           </div>
 
-          {/* ESTADO DE SECTORES */}
           <div className="bg-neutral-900/80 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl">
             <h3 className="text-amber-400 text-sm tracking-wider font-black border-b border-white/10 pb-3 mb-4">CONTROL DE SECTORES</h3>
             <div className="grid grid-cols-3 gap-3 text-center text-xs">
@@ -173,7 +183,6 @@ export default function LiveTiming() {
               </div>
             </div>
           </div>
-
         </div>
 
       </div>
