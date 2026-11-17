@@ -4,6 +4,7 @@ import PerfilModal from './PerfilModal';
 import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
+import LiveTiming from './LiveTiming';
 
 const fotosRally = [
   '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public
@@ -62,7 +63,7 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  // CONFIGURACIÓN SOCIAL E HISTORIA COMPLETA (HISTORIA LIMPIA PARA INGRESAR MANUAL)
+  // CONFIGURACIÓN SOCIAL E HISTORIA COMPLETA
   const [config, setConfig] = useState({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
@@ -1012,21 +1013,9 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. LIVETIMING (CORREGIDO CON assettohosting.com) */}
+        {/* 5. LIVETIMING (COMPONENTE PROPIO - SIN IFRAME) */}
         {pestanaActiva === 'livetiming' && (
-          <div className="space-y-6 max-w-6xl mx-auto">
-            <div>
-              <h2 className="font-wrc text-4xl text-amber-400 tracking-wide">LIVE TIMING OFICIAL</h2>
-              <p className="text-neutral-300 text-sm font-wrc">SIGUE EN TIEMPO REAL LAS CLASIFICACIONES Y TIEMPOS DE NUESTRAS COMPETENCIAS.</p>
-            </div>
-            <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl h-[70vh]">
-              <iframe
-                src="https://br.assettohosting.com:10314/live"
-                className="w-full h-full border-0"
-                title="Live Timing Assetto Hosting"
-              />
-            </div>
-          </div>
+          <LiveTiming />
         )}
 
         {/* 6. EVENTOS (INSCRIPCIÓN Y LISTA) */}
@@ -1216,7 +1205,7 @@ export default function App() {
                       onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
                       placeholder="EJ: 17"
                       required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none font-wrc"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-2 text-sm text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
                   </div>
                   <div>
