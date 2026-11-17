@@ -19,38 +19,49 @@ export default function LiveTiming() {
           'Accept': 'application/json'
         };
         
-        // 1. Servidor
-        const resServidor = await fetch(`${API_BASE}/server`, { headers });
-        const dataServidor = resServidor.ok ? await resServidor.json() : null;
-
-        // 2. Jugadores
-        const resJugadores = await fetch(`${API_BASE}/players`, { headers });
-        const dataJugadores = resJugadores.ok ? await resJugadores.json() : null;
-        
-        if (!montado) return;
-
-        // Procesamos los jugadores de forma ultra segura para que nunca rompa
-        let lista = [];
-        if (Array.isArray(dataJugadores)) {
-          lista = dataJugadores;
-        } else if (dataJugadores && Array.isArray(dataJugadores.data)) {
-          lista = dataJugadores.data;
-        } else if (dataJugadores && Array.isArray(dataJugadores.players)) {
-          lista = dataJugadores.players;
-        } else if (dataJugadores && typeof dataJugadores === 'object') {
-          // Si viene como objeto con keys de IDs de jugadores
-          lista = Object.values(dataJugadores);
+        // Petición de servidor segura
+        try {
+          const resServidor = await fetch(`${API_BASE}/server`, { headers });
+          if (resServidor.ok) {
+            const dataServidor = await resServidor.json();
+            if (montado) setServidor(dataServidor || {});
+          }
+        } catch (e) {
+          console.warn("No se pudo obtener /server", e);
         }
 
-        setServidor(dataServidor || {});
-        setJugadores(lista);
-        setErrorLog("");
+        // Petición de jugadores segura
+        try {
+          const resJugadores = await fetch(`${API_BASE}/players`, { headers });
+          if (resJugadores.ok) {
+            const dataJugadores = await resJugadores.json();
+            if (montado) {
+              let lista = [];
+              if (Array.isArray(dataJugadores)) {
+                lista = dataJugadores;
+              } else if (dataJugadores?.data && Array.isArray(dataJugadores.data)) {
+                lista = dataJugadores.data;
+              } else if (dataJugadores?.players && Array.isArray(dataJugadores.players)) {
+                lista = dataJugadores.players;
+              } else if (dataJugadores && typeof dataJugadores === 'object') {
+                lista = Object.values(dataJugadores);
+              }
+              setJugadores(lista);
+            }
+          }
+        } catch (e) {
+          console.warn("No se pudo obtener /players", e);
+        }
+
+        if (montado) {
+          setErrorLog("");
+          setCargando(false);
+        }
       } catch (err) {
-        if (!montado) return;
-        console.error("Error de telemetría:", err);
-        setErrorLog(err.message || "Error desconocido");
-      } finally {
-        if (montado) setCargando(false);
+        if (montado) {
+          setErrorLog(err.message || "Error de conexión");
+          setCargando(false);
+        }
       }
     }
 
@@ -89,7 +100,7 @@ export default function LiveTiming() {
           </div>
           <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
             <span className="text-neutral-400 block text-[10px]">JUGADORES</span>
-            <span className="text-amber-400 text-sm">{servidor?.players ?? (Array.isArray(jugadores) ? jugadores.length : 0)} CONECTADOS</span>
+            <span className="text-amber-400 text-sm">{Array.isArray(jugadores) ? jugadores.length : 0} CONECTADOS</span>
           </div>
           <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
             <span className="text-neutral-400 block text-[10px]">ESTADO RED</span>
