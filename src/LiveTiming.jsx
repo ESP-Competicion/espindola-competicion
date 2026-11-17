@@ -3,7 +3,6 @@ import { useState, useEffect, Component } from 'react';
 const API_BASE = "https://br.assettohosting.com:10314/api/v1";
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
-// PROTECCIÓN CONTRA CRASHEOS
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -28,7 +27,6 @@ class ErrorBoundary extends Component {
   }
 }
 
-// EXTRACTOR SEGURO DE TEXTO PARA EVITAR [object Object]
 const extraerTexto = (valor, porDefecto = '---') => {
   if (valor === null || valor === undefined || valor === '') return porDefecto;
   if (typeof valor === 'string' || typeof valor === 'number') return String(valor);
@@ -38,7 +36,6 @@ const extraerTexto = (valor, porDefecto = '---') => {
   return porDefecto;
 };
 
-// FORMATEADOR DE MILISEGUNDOS A TIEMPO DE VUELTA (MM:SS.mmm)
 const formatearTiempo = (ms) => {
   if (!ms || ms <= 0 || typeof ms !== 'number') {
     if (typeof ms === 'string' && ms.includes(':')) return ms;
@@ -50,7 +47,6 @@ const formatearTiempo = (ms) => {
   return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
 };
 
-// FORMATEADOR DE PARCIALES / SECTORES (SS.mmm)
 const formatearSector = (ms) => {
   if (!ms || ms <= 0 || typeof ms !== 'number') {
     if (typeof ms === 'string' && ms.includes('.')) return ms;
@@ -61,7 +57,6 @@ const formatearSector = (ms) => {
   return `${segundos}.${String(milesimas).padStart(3, '0')}`;
 };
 
-// FORMATEADOR DE DIFERENCIAS (+0.000)
 const formatearDiferencia = (ms) => {
   if (!ms || ms <= 0 || typeof ms !== 'number') return "---";
   return `+${(ms / 1000).toFixed(3)}`;
@@ -125,7 +120,6 @@ function ContenidoLiveTiming() {
   const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'PISTA EN ESPERA');
   const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
 
-  // Detectamos dinámicamente cuántos sectores tiene la pista (por defecto 3: S1, S2, S3)
   const cantidadSectores = Math.max(
     3,
     servidor?.track?.sectors || 0,
@@ -133,14 +127,12 @@ function ContenidoLiveTiming() {
   );
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
-  // Ordenamos los pilotos por mejor tiempo válido
   const jugadoresOrdenados = [...jugadores].sort((a, b) => {
     const tiempoA = typeof a?.bestLap === 'number' && a.bestLap > 0 ? a.bestLap : Infinity;
     const tiempoB = typeof b?.bestLap === 'number' && b.bestLap > 0 ? b.bestLap : Infinity;
     return tiempoA - tiempoB;
   });
 
-  // Calculamos el mejor tiempo absoluto de la sesión para GAP y DELTA
   const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 && typeof jugadoresOrdenados[0]?.bestLap === 'number' && jugadoresOrdenados[0].bestLap > 0
     ? jugadoresOrdenados[0].bestLap
     : null;
@@ -231,7 +223,6 @@ function ContenidoLiveTiming() {
                   const tiempoMs = typeof j?.bestLap === 'number' && j.bestLap > 0 ? j.bestLap : null;
                   const tiempoFormateado = formatearTiempo(tiempoMs);
 
-                  // Cálculo de GAP (respecto al 1º)
                   let gapTexto = "---";
                   if (index === 0 && tiempoMs) {
                     gapTexto = "LÍDER";
@@ -239,7 +230,6 @@ function ContenidoLiveTiming() {
                     gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
                   }
 
-                  // Cálculo de DELTA (respecto al auto de adelante)
                   let deltaTexto = "---";
                   if (index > 0 && tiempoMs) {
                     const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap;
@@ -248,10 +238,7 @@ function ContenidoLiveTiming() {
                     }
                   }
 
-                  // Parciales dinámicos
                   const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
-
-                  // Estilo destacado para el Top 3
                   const esPrimero = index === 0;
                   const colorPos = esPrimero
                     ? "bg-amber-400 text-black font-black"
@@ -266,51 +253,42 @@ function ContenidoLiveTiming() {
                       key={j?.id || j?.connectionId || index} 
                       className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}
                     >
-                      {/* POSICIÓN */}
                       <td className="py-3.5 px-4 text-center">
                         <span className={`inline-block w-7 h-7 leading-7 rounded-lg text-xs ${colorPos}`}>
                           {index + 1}
                         </span>
                       </td>
 
-                      {/* PILOTO */}
                       <td className="py-3.5 px-4 font-bold text-white tracking-wide">
                         {nombrePiloto}
                       </td>
 
-                      {/* AUTO */}
                       <td className="py-3.5 px-4 text-neutral-300 text-xs">
                         {modeloAuto}
                       </td>
 
-                      {/* BEST */}
                       <td className="py-3.5 px-4 text-right font-mono text-amber-300 font-bold">
                         {tiempoFormateado}
                       </td>
 
-                      {/* GAP */}
                       <td className={`py-3.5 px-4 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
                         {gapTexto}
                       </td>
 
-                      {/* DELTA */}
                       <td className="py-3.5 px-4 text-right font-mono text-xs text-neutral-400">
                         {deltaTexto}
                       </td>
 
-                      {/* VUELTAS */}
                       <td className="py-3.5 px-4 text-center text-white font-bold">
                         {vueltas}
                       </td>
 
-                      {/* PARCIALES DINÁMICOS (S1, S2, S3...) */}
                       {arraySectores.map((sIdx) => (
                         <td key={`cell-s-${index}-${sIdx}`} className="py-3.5 px-3 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
                           {formatearSector(sectoresPiloto[sIdx])}
                         </td>
                       ))}
 
-                      {/* MEJOR TIEMPO (COLUMNA FINAL DESTACADA) */}
                       <td className="py-3.5 px-5 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
                         {tiempoFormateado}
                       </td>
@@ -321,6 +299,71 @@ function ContenidoLiveTiming() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* SECCIÓN INFERIOR: MAPA DE PISTA Y FEED DE SESIÓN */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* MAPA DEL CIRCUITO / TRAMO (OCUPA 2 COLUMNAS) */}
+        <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[320px]">
+          <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA DEL CIRCUITO / TRAMO EN VIVO</h3>
+            </div>
+            <span className="text-[10px] bg-neutral-900 text-neutral-400 px-3 py-1 rounded-full border border-white/10">
+              {nombrePista}
+            </span>
+          </div>
+
+          {/* CONTENEDOR VISUAL DEL MAPA */}
+          <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-6 relative overflow-hidden group">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:20px_20px]"></div>
+            
+            {/* Aquí podés integrar la imagen SVG del circuito o el canvas del trackmap */}
+            <div className="text-center z-10 space-y-2">
+              <div className="inline-block p-4 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
+                <svg className="w-8 h-8 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round9" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+              </div>
+              <p className="text-xs text-neutral-300 tracking-wider font-bold">
+                TELEMETRÍA DE POSICIÓN GPS LISTA
+              </p>
+              <p className="text-[11px] text-neutral-500 max-w-sm mx-auto">
+                Los vehículos activos en pista se proyectarán en tiempo real sobre el trazado del circuito apenas el servidor reactive el flujo UDP.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FEED DE SESIÓN / REGISTRO DE EVENTOS */}
+        <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+              <h3 className="text-amber-400 text-sm tracking-wider font-black">FEED DE SESIÓN</h3>
+              <span className="text-[10px] bg-neutral-900 text-emerald-400 px-2.5 py-0.5 rounded border border-emerald-500/30">ACTIVO</span>
+            </div>
+            
+            <div className="space-y-3 text-xs text-neutral-400">
+              <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                <span>Estado del Servidor</span>
+                <span className="text-emerald-400 font-bold">ONLINE</span>
+              </div>
+              <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                <span>Plugin sTracker / API</span>
+                <span className="text-amber-400 font-bold">ESPERANDO UDP</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-white/10 text-center">
+            <p className="text-[10px] text-neutral-500 tracking-wider">
+              ESPÍNDOLA COMPETICIÓN • SISTEMA DE GESTIÓN Y TELEMETRÍA
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   );
