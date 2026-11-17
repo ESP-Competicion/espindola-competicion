@@ -3,36 +3,69 @@ import { useState, useEffect, Component } from 'react';
 const API_BASE = "https://br.assettohosting.com:10314/api/v1";
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
-// CAZA-ERRORES PARA EVITAR PANTALLA NEGRA
+// PROTECCIÓN CONTRA CRASHEOS
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
-
   componentDidCatch(error, errorInfo) {
-    console.error("Error atrapado en LiveTiming:", error, errorInfo);
+    console.error("Error en LiveTiming:", error, errorInfo);
   }
-
   render() {
     if (this.state.hasError) {
       return (
         <div className="bg-red-950/80 border-2 border-red-500 text-white p-8 rounded-3xl max-w-4xl mx-auto my-10 font-wrc">
-          <h2 className="text-3xl text-red-400 font-black mb-2">⚠️ ERROR DETECTADO EN EL COMPONENTE</h2>
-          <p className="text-sm text-neutral-300 mb-4">El componente intentó renderizar algo inválido. Este es el detalle técnico:</p>
-          <pre className="bg-black/80 p-4 rounded-xl text-xs text-red-300 overflow-auto border border-red-500/40">
-            {this.state.error && this.state.error.toString()}
-          </pre>
+          <h2 className="text-3xl text-red-400 font-black mb-2">⚠️ ERROR EN EL COMPONENTE</h2>
+          <pre className="text-xs text-red-300 overflow-auto">{this.state.error?.toString()}</pre>
         </div>
       );
     }
     return this.props.children;
   }
 }
+
+// EXTRACTOR SEGURO DE TEXTO PARA EVITAR [object Object]
+const extraerTexto = (valor, porDefecto = '---') => {
+  if (valor === null || valor === undefined || valor === '') return porDefecto;
+  if (typeof valor === 'string' || typeof valor === 'number') return String(valor);
+  if (typeof valor === 'object') {
+    return valor.name || valor.type || valor.model || valor.title || porDefecto;
+  }
+  return porDefecto;
+};
+
+// FORMATEADOR DE MILISEGUNDOS A TIEMPO DE VUELTA (MM:SS.mmm)
+const formatearTiempo = (ms) => {
+  if (!ms || ms <= 0 || typeof ms !== 'number') {
+    if (typeof ms === 'string' && ms.includes(':')) return ms;
+    return "--:--.---";
+  }
+  const minutos = Math.floor(ms / 60000);
+  const segundos = Math.floor((ms % 60000) / 1000);
+  const milesimas = Math.floor(ms % 1000);
+  return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
+};
+
+// FORMATEADOR DE PARCIALES / SECTORES (SS.mmm)
+const formatearSector = (ms) => {
+  if (!ms || ms <= 0 || typeof ms !== 'number') {
+    if (typeof ms === 'string' && ms.includes('.')) return ms;
+    return "--.---";
+  }
+  const segundos = Math.floor(ms / 1000);
+  const milesimas = Math.floor(ms % 1000);
+  return `${segundos}.${String(milesimas).padStart(3, '0')}`;
+};
+
+// FORMATEADOR DE DIFERENCIAS (+0.000)
+const formatearDiferencia = (ms) => {
+  if (!ms || ms <= 0 || typeof ms !== 'number') return "---";
+  return `+${(ms / 1000).toFixed(3)}`;
+};
 
 function ContenidoLiveTiming() {
   const [servidor, setServidor] = useState(null);
@@ -89,79 +122,201 @@ function ContenidoLiveTiming() {
     };
   }, []);
 
+  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'PISTA EN ESPERA');
+  const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
+
+  // Detectamos dinámicamente cuántos sectores tiene la pista (por defecto 3: S1, S2, S3)
+  const cantidadSectores = Math.max(
+    3,
+    servidor?.track?.sectors || 0,
+    ...jugadores.map(j => (Array.isArray(j?.sectors) ? j.sectors.length : 0))
+  );
+  const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
+
+  // Ordenamos los pilotos por mejor tiempo válido
+  const jugadoresOrdenados = [...jugadores].sort((a, b) => {
+    const tiempoA = typeof a?.bestLap === 'number' && a.bestLap > 0 ? a.bestLap : Infinity;
+    const tiempoB = typeof b?.bestLap === 'number' && b.bestLap > 0 ? b.bestLap : Infinity;
+    return tiempoA - tiempoB;
+  });
+
+  // Calculamos el mejor tiempo absoluto de la sesión para GAP y DELTA
+  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 && typeof jugadoresOrdenados[0]?.bestLap === 'number' && jugadoresOrdenados[0].bestLap > 0
+    ? jugadoresOrdenados[0].bestLap
+    : null;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto py-4 font-wrc text-white uppercase">
-      {/* PANEL SUPERIOR */}
-      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/30 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+    <div className="space-y-6 max-w-[1550px] mx-auto py-4 font-wrc text-white uppercase">
+      
+      {/* CABECERA TELEMETRÍA */}
+      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
-            <span className="text-xs text-emerald-400 tracking-widest">TELEMETRÍA EN VIVO • ESPÍNDOLA COMPETICIÓN</span>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
+            <span className="text-xs text-amber-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
           <h2 className="text-2xl md:text-3xl text-white font-black tracking-wide">
-            {String(servidor?.name || "SERVIDOR OFICIAL - MONOMARCA SAVEIRO")}
+            {extraerTexto(servidor?.name, "SERVIDOR OFICIAL")}
           </h2>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs w-full lg:w-auto">
-          <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
-            <span className="text-neutral-400 block text-[10px]">PISTA</span>
-            <span className="text-amber-400 text-sm truncate block">{String(servidor?.track?.name || '---')}</span>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">CIRCUITO / TRAMO</span>
+            <span className="text-amber-400 text-sm truncate block max-w-[180px]" title={nombrePista}>{nombrePista}</span>
           </div>
-          <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
-            <span className="text-neutral-400 block text-[10px]">ESTADO</span>
-            <span className="text-white text-sm">{String(servidor?.session || 'PRACTICE')}</span>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">SESIÓN</span>
+            <span className="text-white text-sm">{estadoSesion}</span>
           </div>
-          <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
-            <span className="text-neutral-400 block text-[10px]">JUGADORES</span>
-            <span className="text-amber-400 text-sm">{Array.isArray(jugadores) ? jugadores.length : 0} CONECTADOS</span>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">PILOTOS EN PISTA</span>
+            <span className="text-amber-400 text-sm">{jugadoresOrdenados.length} / {servidor?.slots || 20}</span>
           </div>
-          <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
-            <span className="text-neutral-400 block text-[10px]">RED</span>
-            <span className="text-emerald-400 text-sm">ONLINE</span>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">RÉCORD DE SESIÓN</span>
+            <span className="text-emerald-400 text-sm font-mono">{formatearTiempo(mejorTiempoAbsoluto)}</span>
           </div>
         </div>
       </div>
 
-      {/* TABLA DE POSICIONES */}
-      <div className="bg-neutral-900/80 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
-        <div className="bg-black/60 px-6 py-4 border-b border-white/10 flex justify-between items-center">
-          <h3 className="text-amber-400 text-lg tracking-wider font-black">CLASIFICACIÓN EN TIEMPO REAL</h3>
-          <span className="text-xs text-neutral-400">ACTUALIZACIÓN AUTOMÁTICA</span>
+      {/* TABLA PRINCIPAL DE TIEMPOS */}
+      <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+        <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex flex-wrap justify-between items-center gap-2">
+          <div className="flex items-center gap-3">
+            <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
+            <h3 className="text-white text-lg tracking-wider font-black">TABLA DE POSICIONES Y PARCIALES</h3>
+          </div>
+          <span className="text-xs text-neutral-400">SECTORES DETECTADOS: {cantidadSectores}</span>
         </div>
 
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="border-b border-white/10 text-neutral-400 text-xs tracking-wider bg-neutral-950/50">
-                <th className="py-3.5 px-5">POS</th>
-                <th className="py-3.5 px-5">PILOTO</th>
-                <th className="py-3.5 px-5">AUTO</th>
-                <th className="py-3.5 px-5 text-center">VUELTAS</th>
-                <th className="py-3.5 px-5 text-right">MEJOR TIEMPO</th>
+              <tr className="border-b border-white/15 text-amber-400 text-xs tracking-wider bg-black/70">
+                <th className="py-4 px-4 text-center w-14">POS</th>
+                <th className="py-4 px-4">PILOTO</th>
+                <th className="py-4 px-4">AUTO</th>
+                <th className="py-4 px-4 text-right">BEST</th>
+                <th className="py-4 px-4 text-right">GAP</th>
+                <th className="py-4 px-4 text-right">DELTA</th>
+                <th className="py-4 px-4 text-center">VUELTAS</th>
+                {arraySectores.map((idx) => (
+                  <th key={`header-s-${idx}`} className="py-4 px-3 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
+                    S{idx + 1}
+                  </th>
+                ))}
+                <th className="py-4 px-5 text-right border-l border-white/10 text-emerald-400">MEJOR TIEMPO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-sm">
+            
+            <tbody className="divide-y divide-white/10 text-sm">
               {cargando ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-16 text-neutral-400">SINCRONIZANDO DATOS...</td>
+                  <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
+                    SINCRONIZANDO TELEMETRÍA CON EL SERVIDOR...
+                  </td>
                 </tr>
-              ) : !Array.isArray(jugadores) || jugadores.length === 0 ? (
+              ) : jugadoresOrdenados.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-16 text-neutral-400">NO HAY PILOTOS CONECTADOS EN PISTA.</td>
+                  <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
+                    NO HAY PILOTOS REGISTRADOS EN PISTA EN ESTE MOMENTO.
+                  </td>
                 </tr>
               ) : (
-                jugadores.map((j, index) => (
-                  <tr key={j?.id || index} className="hover:bg-white/5 transition">
-                    <td className="py-3.5 px-5 font-black text-amber-400">#{index + 1}</td>
-                    <td className="py-3.5 px-5 font-bold text-white">
-                      {String(j?.name || j?.driverName || "PILOTO")}
-                    </td>
-                    <td className="py-3.5 px-5 text-neutral-300 text-xs">{String(j?.car || "---")}</td>
-                    <td className="py-3.5 px-5 text-center text-white">{Number(j?.laps || 0)}</td>
-                    <td className="py-3.5 px-5 text-right font-mono text-amber-300 font-bold">{String(j?.bestLap || "--:--.---")}</td>
-                  </tr>
-                ))
+                jugadoresOrdenados.map((j, index) => {
+                  const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName, "PILOTO");
+                  const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "---");
+                  const vueltas = j?.laps ?? j?.completedLaps ?? 0;
+                  const tiempoMs = typeof j?.bestLap === 'number' && j.bestLap > 0 ? j.bestLap : null;
+                  const tiempoFormateado = formatearTiempo(tiempoMs);
+
+                  // Cálculo de GAP (respecto al 1º)
+                  let gapTexto = "---";
+                  if (index === 0 && tiempoMs) {
+                    gapTexto = "LÍDER";
+                  } else if (tiempoMs && mejorTiempoAbsoluto) {
+                    gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
+                  }
+
+                  // Cálculo de DELTA (respecto al auto de adelante)
+                  let deltaTexto = "---";
+                  if (index > 0 && tiempoMs) {
+                    const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap;
+                    if (typeof tiempoAdelante === 'number' && tiempoAdelante > 0) {
+                      deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
+                    }
+                  }
+
+                  // Parciales dinámicos
+                  const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
+
+                  // Estilo destacado para el Top 3
+                  const esPrimero = index === 0;
+                  const colorPos = esPrimero
+                    ? "bg-amber-400 text-black font-black"
+                    : index === 1
+                    ? "bg-neutral-300 text-black font-black"
+                    : index === 2
+                    ? "bg-amber-700 text-white font-black"
+                    : "text-neutral-300 font-bold";
+
+                  return (
+                    <tr 
+                      key={j?.id || j?.connectionId || index} 
+                      className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}
+                    >
+                      {/* POSICIÓN */}
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`inline-block w-7 h-7 leading-7 rounded-lg text-xs ${colorPos}`}>
+                          {index + 1}
+                        </span>
+                      </td>
+
+                      {/* PILOTO */}
+                      <td className="py-3.5 px-4 font-bold text-white tracking-wide">
+                        {nombrePiloto}
+                      </td>
+
+                      {/* AUTO */}
+                      <td className="py-3.5 px-4 text-neutral-300 text-xs">
+                        {modeloAuto}
+                      </td>
+
+                      {/* BEST */}
+                      <td className="py-3.5 px-4 text-right font-mono text-amber-300 font-bold">
+                        {tiempoFormateado}
+                      </td>
+
+                      {/* GAP */}
+                      <td className={`py-3.5 px-4 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
+                        {gapTexto}
+                      </td>
+
+                      {/* DELTA */}
+                      <td className="py-3.5 px-4 text-right font-mono text-xs text-neutral-400">
+                        {deltaTexto}
+                      </td>
+
+                      {/* VUELTAS */}
+                      <td className="py-3.5 px-4 text-center text-white font-bold">
+                        {vueltas}
+                      </td>
+
+                      {/* PARCIALES DINÁMICOS (S1, S2, S3...) */}
+                      {arraySectores.map((sIdx) => (
+                        <td key={`cell-s-${index}-${sIdx}`} className="py-3.5 px-3 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
+                          {formatearSector(sectoresPiloto[sIdx])}
+                        </td>
+                      ))}
+
+                      {/* MEJOR TIEMPO (COLUMNA FINAL DESTACADA) */}
+                      <td className="py-3.5 px-5 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
+                        {tiempoFormateado}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
