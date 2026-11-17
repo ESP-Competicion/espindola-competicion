@@ -138,10 +138,10 @@ function ContenidoLiveTiming() {
     : null;
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto py-4 font-wrc text-white uppercase">
+    <div className="w-full px-4 md:px-8 py-4 font-wrc text-white uppercase space-y-6">
       
-      {/* CABECERA TELEMETRÍA */}
-      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      {/* CABECERA TELEMETRÍA (OCUPA TODO EL ANCHO) */}
+      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 w-full">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
             <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
@@ -172,11 +172,11 @@ function ContenidoLiveTiming() {
         </div>
       </div>
 
-      {/* GRILLA PRINCIPAL: TABLA A LA IZQUIERDA (2 COLUMNAS) + MAPA Y FEED A LA DERECHA (1 COLUMNA) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* DISTRIBUCIÓN PRINCIPAL: TABLA A LA IZQUIERDA (FLEXIBLE) + MAPA GRANDE A LA DERECHA */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
         
-        {/* TABLA DE POSICIONES Y PARCIALES (OCUPA 2 COLUMNAS) */}
-        <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+        {/* TABLA DE POSICIONES Y PARCIALES (OCUPA 8 DE 12 COLUMNAS) */}
+        <div className="xl:col-span-8 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex flex-wrap justify-between items-center gap-2">
             <div className="flex items-center gap-3">
               <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
@@ -185,23 +185,23 @@ function ContenidoLiveTiming() {
             <span className="text-xs text-neutral-400">SECTORES: {cantidadSectores}</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="w-full">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="border-b border-white/15 text-amber-400 text-xs tracking-wider bg-black/70">
-                  <th className="py-4 px-3 text-center w-12">POS</th>
-                  <th className="py-4 px-4">PILOTO</th>
-                  <th className="py-4 px-4">AUTO</th>
-                  <th className="py-4 px-3 text-right">BEST</th>
-                  <th className="py-4 px-3 text-right">GAP</th>
-                  <th className="py-4 px-3 text-right">DELTA</th>
-                  <th className="py-4 px-3 text-center">VUELTAS</th>
+                  <th className="py-3.5 px-3 text-center w-12">POS</th>
+                  <th className="py-3.5 px-4">PILOTO</th>
+                  <th className="py-3.5 px-4">AUTO</th>
+                  <th className="py-3.5 px-3 text-right">BEST</th>
+                  <th className="py-3.5 px-3 text-right">GAP</th>
+                  <th className="py-3.5 px-3 text-right">DELTA</th>
+                  <th className="py-3.5 px-3 text-center">VUELTAS</th>
                   {arraySectores.map((idx) => (
-                    <th key={`header-s-${idx}`} className="py-4 px-2 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
+                    <th key={`header-s-${idx}`} className="py-3.5 px-2 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
                       S{idx + 1}
                     </th>
                   ))}
-                  <th className="py-4 px-4 text-right border-l border-white/10 text-emerald-400">MEJOR</th>
+                  <th className="py-3.5 px-4 text-right border-l border-white/10 text-emerald-400">MEJOR</th>
                 </tr>
               </thead>
               
@@ -256,43 +256,43 @@ function ContenidoLiveTiming() {
                         key={j?.id || j?.connectionId || index} 
                         className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}
                       >
-                        <td className="py-3.5 px-3 text-center">
+                        <td className="py-3 px-3 text-center">
                           <span className={`inline-block w-6 h-6 leading-6 rounded-md text-xs ${colorPos}`}>
                             {index + 1}
                           </span>
                         </td>
 
-                        <td className="py-3.5 px-4 font-bold text-white tracking-wide">
+                        <td className="py-3 px-4 font-bold text-white tracking-wide">
                           {nombrePiloto}
                         </td>
 
-                        <td className="py-3.5 px-4 text-neutral-300 text-xs">
+                        <td className="py-3 px-4 text-neutral-300 text-xs">
                           {modeloAuto}
                         </td>
 
-                        <td className="py-3.5 px-3 text-right font-mono text-amber-300 font-bold">
+                        <td className="py-3 px-3 text-right font-mono text-amber-300 font-bold">
                           {tiempoFormateado}
                         </td>
 
-                        <td className={`py-3.5 px-3 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
+                        <td className={`py-3 px-3 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
                           {gapTexto}
                         </td>
 
-                        <td className="py-3.5 px-3 text-right font-mono text-xs text-neutral-400">
+                        <td className="py-3 px-3 text-right font-mono text-xs text-neutral-400">
                           {deltaTexto}
                         </td>
 
-                        <td className="py-3.5 px-3 text-center text-white font-bold">
+                        <td className="py-3 px-3 text-center text-white font-bold">
                           {vueltas}
                         </td>
 
                         {arraySectores.map((sIdx) => (
-                          <td key={`cell-s-${index}-${sIdx}`} className="py-3.5 px-2 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
+                          <td key={`cell-s-${index}-${sIdx}`} className="py-3 px-2 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
                             {formatearSector(sectoresPiloto[sIdx])}
                           </td>
                         ))}
 
-                        <td className="py-3.5 px-4 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
+                        <td className="py-3 px-4 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
                           {tiempoFormateado}
                         </td>
                       </tr>
@@ -304,35 +304,35 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: MAPA Y FEED DE SESIÓN (OCUPA 1 COLUMNA FIJA) */}
-        <div className="space-y-6 flex flex-col">
+        {/* COLUMNA DERECHA: MAPA GRANDE Y FEED (OCUPA 4 DE 12 COLUMNAS) */}
+        <div className="xl:col-span-4 space-y-6 flex flex-col">
           
-          {/* MAPA DEL CIRCUITO / TRAMO */}
-          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[340px]">
+          {/* MAPA DEL CIRCUITO / TRAMO (AHORA BIEN GRANDE) */}
+          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA EN VIVO</h3>
               </div>
-              <span className="text-[10px] bg-neutral-900 text-neutral-400 px-2.5 py-0.5 rounded border border-white/10 truncate max-w-[130px]" title={nombrePista}>
+              <span className="text-[10px] bg-neutral-900 text-neutral-400 px-2.5 py-0.5 rounded border border-white/10 truncate max-w-[140px]" title={nombrePista}>
                 {nombrePista}
               </span>
             </div>
 
-            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-6 relative overflow-hidden">
+            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-8 relative overflow-hidden">
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:16px_16px]"></div>
               
-              <div className="text-center z-10 space-y-2">
-                <div className="inline-block p-3.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
-                  <svg className="w-7 h-7 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <div className="text-center z-10 space-y-3">
+                <div className="inline-block p-4 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
+                  <svg className="w-9 h-9 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                   </svg>
                 </div>
                 <p className="text-xs text-neutral-300 tracking-wider font-bold">
                   TELEMETRÍA GPS ACTIVA
                 </p>
-                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
-                  El trazado y la posición de los vehículos se visualizarán aquí al restablecerse el enlace UDP del servidor.
+                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
+                  El trazado del circuito y la ubicación en tiempo real de los vehículos se renderizarán a gran escala aquí al restablecerse el enlace UDP.
                 </p>
               </div>
             </div>
