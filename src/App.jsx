@@ -62,110 +62,12 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  // CONFIGURACIÓN SOCIAL E HISTORIA COMPLETA
+  // CONFIGURACIÓN SOCIAL E HISTORIA COMPLETA (HISTORIA LIMPIA PARA INGRESAR MANUAL)
   const [config, setConfig] = useState({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: `HISTORIA DE ESPINDOLA COMPETICIÓN
-
-UNA HISTORIA DE PASIÓN, EVOLUCIÓN Y COMPETITIVIDAD
-
-Una historia familiar que comenzó en los caminos del rally Misionero y terminó convirtiéndose en un proyecto internacional de automovilismo virtual.
-
-ANTES DEL SIMRACING
-Los orígenes de una pasión
-
-La historia de Espindola Competición comenzó mucho antes de llegar al automovilismo virtual.
-
-En los caminos del rally argentino, José “Polaco” Espindola construyó una identidad deportiva basada en la pasión por los motores, la competencia y los desafíos de cada carrera.
-
-Años más tarde, ese legado familiar sería el punto de partida de un nuevo proyecto, trasladando los mismos valores al mundo del simracing.
-
-2017
-El nacimiento de Espindola Competición Virtual
-
-Leonardo Espindola decidió continuar el legado familiar fundando Espindola Competición Virtual.
-
-Todo comenzó en rFactor, como un grupo de amigos que se reunían por diversión para compartir carreras y disfrutar del automovilismo.
-
-Con el tiempo, aquella iniciativa comenzó a crecer. Las ganas de competir, mejorar y conseguir nuevos objetivos transformaron ese grupo en un equipo con identidad propia y aspiraciones profesionales.
-
-EVOLUCIÓN
-De rFactor a los grandes simuladores
-
-El crecimiento del equipo estuvo acompañado por la evolución del simracing.
-
-Desde sus primeros pasos en rFactor, Espindola Competición fue expandiéndose hacia diferentes plataformas como Automobilista, Richard Burns Rally (RBR) y Assetto Corsa.
-
-En cada simulador encontró nuevos desafíos y oportunidades, consiguiendo victorias y campeonatos en todos ellos.
-
-Lo que comenzó como un proyecto entre amigos terminó convirtiéndose en una estructura competitiva, reconocida por su trayectoria y sus resultados.
-
-EXPANSIÓN INTERNACIONAL
-Un equipo sin fronteras
-
-El crecimiento deportivo también permitió expandir las fronteras del equipo.
-
-Con el paso de los años se incorporaron pilotos de diferentes nacionalidades, llevando los colores de Espindola Competición a campeonatos de Argentina y Europa.
-
-Hoy contamos con representantes en distintas disciplinas y categorías, formando una estructura internacional donde el talento, el compromiso y la competitividad son parte de nuestra identidad.
-
-2023
-Dos disciplinas, una misma identidad
-
-En 2023, el crecimiento del proyecto dio lugar a una nueva organización deportiva: Espindola Competición se dividió en dos estructuras especializadas, Rally y Pista.
-
-Esta decisión permitió desarrollar ambas disciplinas de manera independiente, con pilotos, objetivos y preparaciones específicas para cada categoría.
-
-También marcó el comienzo de una etapa muy importante: la incorporación de pilotos con experiencia en el automovilismo profesional.
-
-ESPINDOLA COMPETICIÓN PISTA
-El equipo comenzó a reunir pilotos provenientes del automovilismo real, fortaleciendo el vínculo entre las competencias virtuales y las pistas.
-
-Entre ellos se destacan:
-- Luciano “Chule” Martínez, Campeón del Turismo Pista Clase 1.
-- Alejandro Felice, Actual piloto del Turismo Pista.
-
-La presencia de pilotos profesionales dentro de nuestra estructura representa un orgullo y demuestra el crecimiento que alcanzó el proyecto.
-
-ESPINDOLA COMPETICIÓN RALLY
-En la disciplina de rally también logramos incorporar pilotos de gran trayectoria internacional.
-
-Uno de los nombres más destacados es el del peruano José Abelardo “Abito” Caparó, piloto que llegó a competir en el Campeonato Mundial de Rally (WRC), dentro de la categoría Junior WRC.
-
-Su incorporación representa un paso muy importante para el equipo y refuerza nuestra presencia internacional en el mundo del rally.
-
-2025
-Un año histórico: campeones argentinos
-
-El 2025 quedó marcado como uno de los años más importantes en la historia de Espindola Competición.
-
-Logramos consagrarnos campeones argentinos del Campeonato Argentino Virtual en tres categorías diferentes:
-- RC5 — Leo Espindola
-- RC3 — Lucas Hutter
-- COPA YARIS — Lázaro Campos
-
-Tres títulos nacionales que reflejan el trabajo, la dedicación y el nivel competitivo de nuestros pilotos.
-
-Un logro colectivo que reafirmó nuestro protagonismo dentro del automovilismo virtual argentino.
-
-ACTUALIDAD
-60 campeonatos y una historia que continúa
-
-Desde nuestros comienzos hasta la actualidad, Espindola Competición ha conseguido alcanzar un total de 60 campeonatos, conquistados en competencias de Argentina y Europa.
-
-Una trayectoria construida a través de diferentes simuladores, disciplinas y categorías, con pilotos que han representado nuestros colores dentro y fuera del país.
-
-Hoy seguimos creciendo como una estructura internacional, con presencia en Rally y Pista, nuevos talentos y grandes objetivos por delante.
-
-Aquello que comenzó como un grupo de amigos en rFactor se convirtió en un equipo con identidad, historia y reconocimiento deportivo.
-
-60 CAMPEONATOS. MÚLTIPLES DISCIPLINAS. UNA MISMA PASIÓN.
-
-La historia continúa y todavía quedan muchos kilómetros por recorrer.
-
-“No importa cuántos kilómetros tenga el tramo; lo importante es dejar una huella en cada uno de ellos.”`
+    historia_texto: ''
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
@@ -277,7 +179,7 @@ La historia continúa y todavía quedan muchos kilómetros por recorrer.
 
   async function cargarConfiguracion() {
     const { data } = await supabase.from('configuracion_equipo').select('*').eq('id', 1).single();
-    if (data && data.historia_texto && data.historia_texto.length > 50) {
+    if (data && data.historia_texto) {
       setConfig(prev => ({ ...prev, ...data }));
     }
   }
@@ -804,7 +706,7 @@ La historia continúa y todavía quedan muchos kilómetros por recorrer.
                 {esAdmin && !editandoConfig && (
                   <button
                     onClick={() => setEditandoConfig(true)}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-5 py-2.5 rounded-xl transition shadow cursor-pointer font-black"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-5 py-2.5 rounded-xl transition cursor-pointer font-black"
                   >
                     ✏️ EDITAR HISTORIA
                   </button>
@@ -813,7 +715,7 @@ La historia continúa y todavía quedan muchos kilómetros por recorrer.
 
               {!editandoConfig ? (
                 <div className="text-neutral-200 text-sm md:text-base leading-relaxed font-wrc whitespace-pre-line space-y-6">
-                  {config.historia_texto}
+                  {config.historia_texto || "HISTORIA NO DEFINIDA. PUEDES AGREGARLA DESDE EL PANEL DE ADMINISTRACIÓN."}
                 </div>
               ) : (
                 <form onSubmit={handleGuardarConfig} className="space-y-4">
@@ -1110,7 +1012,7 @@ La historia continúa y todavía quedan muchos kilómetros por recorrer.
           </div>
         )}
 
-        {/* 5. LIVETIMING */}
+        {/* 5. LIVETIMING (CORREGIDO CON assettohosting.com) */}
         {pestanaActiva === 'livetiming' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             <div>
@@ -1119,7 +1021,7 @@ La historia continúa y todavía quedan muchos kilómetros por recorrer.
             </div>
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl h-[70vh]">
               <iframe
-                src="https://espindolacompeticion.assettocloud.com/live-timing"
+                src="https://espindolacompeticion.assettohosting.com/live-timing"
                 className="w-full h-full border-0"
                 title="Live Timing Assetto Hosting"
               />
