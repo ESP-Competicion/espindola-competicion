@@ -20,16 +20,13 @@ export default function LiveTiming() {
         };
         
         const resServidor = await fetch(`${API_BASE}/server`, { headers });
-        if (!resServidor.ok) throw new Error(`Error servidor: ${resServidor.status}`);
-        const dataServidor = await resServidor.json();
+        const dataServidor = resServidor.ok ? await resServidor.json() : null;
 
         const resJugadores = await fetch(`${API_BASE}/players`, { headers });
-        if (!resJugadores.ok) throw new Error(`Error jugadores: ${resJugadores.status}`);
-        const dataJugadores = await resJugadores.json();
+        const dataJugadores = resJugadores.ok ? await resJugadores.json() : null;
         
         if (!montado) return;
 
-        // Validaciones seguras para evitar que explote si la estructura varía
         let lista = [];
         if (Array.isArray(dataJugadores)) {
           lista = dataJugadores;
@@ -45,7 +42,7 @@ export default function LiveTiming() {
       } catch (err) {
         if (!montado) return;
         console.error("Error de telemetría:", err);
-        setErrorLog(err.message);
+        setErrorLog(err.message || "Error desconocido");
       } finally {
         if (montado) setCargando(false);
       }
@@ -63,7 +60,7 @@ export default function LiveTiming() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-4 font-wrc text-white uppercase">
       
-      {/* 1. PANEL SUPERIOR: ESTADO DEL SERVIDOR Y PISTA */}
+      {/* 1. PANEL SUPERIOR */}
       <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/30 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -90,18 +87,18 @@ export default function LiveTiming() {
           </div>
           <div className="bg-neutral-950 px-4 py-3 rounded-2xl border border-neutral-800">
             <span className="text-neutral-400 block text-[10px]">EN PISTA</span>
-            <span className="text-emerald-400 text-sm">{jugadores.length} PILOTOS</span>
+            <span className="text-emerald-400 text-sm">{Array.isArray(jugadores) ? jugadores.length : 0} PILOTOS</span>
           </div>
         </div>
       </div>
 
       {errorLog && (
         <div className="bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-2xl text-xs">
-          <strong>⚠️ ERROR DE API:</strong> {errorLog}
+          <strong>⚠️ AVISO DE RED:</strong> {errorLog}
         </div>
       )}
 
-      {/* 2. GRILLA PRINCIPAL: TABLA DE TIEMPOS PROPIA + MAPA DE PISTA */}
+      {/* 2. GRILLA PRINCIPAL */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* TABLA DE POSICIONES */}
@@ -127,7 +124,7 @@ export default function LiveTiming() {
                   <tr>
                     <td colSpan="5" className="text-center py-16 text-neutral-400">SINCRONIZANDO DATOS DEL SERVIDOR...</td>
                   </tr>
-                ) : jugadores.length === 0 ? (
+                ) : !Array.isArray(jugadores) || jugadores.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="text-center py-16 text-neutral-400">NO HAY PILOTOS REGISTRADOS EN PISTA.</td>
                   </tr>
