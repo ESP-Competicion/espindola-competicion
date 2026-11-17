@@ -1021,7 +1021,7 @@ export default function App() {
             </div>
             <div className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl h-[70vh]">
               <iframe
-                src="https://espindolacompeticion.assettohosting.com/live-timing"
+                src="https://br.assettohosting.com:10314/live"
                 className="w-full h-full border-0"
                 title="Live Timing Assetto Hosting"
               />
