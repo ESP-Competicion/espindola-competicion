@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const API_BASE = "https://br.assettohosting.com:10314/api/v1";
+const API_BASE = "/api-assetto";;
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN;
 
 export default function LiveTiming() {
