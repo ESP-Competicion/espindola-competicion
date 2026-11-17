@@ -138,7 +138,7 @@ function ContenidoLiveTiming() {
     : null;
 
   return (
-    <div className="space-y-6 max-w-[1550px] mx-auto py-4 font-wrc text-white uppercase">
+    <div className="space-y-6 max-w-[1600px] mx-auto py-4 font-wrc text-white uppercase">
       
       {/* CABECERA TELEMETRÍA */}
       <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -172,196 +172,199 @@ function ContenidoLiveTiming() {
         </div>
       </div>
 
-      {/* TABLA PRINCIPAL DE TIEMPOS */}
-      <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
-        <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex flex-wrap justify-between items-center gap-2">
-          <div className="flex items-center gap-3">
-            <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
-            <h3 className="text-white text-lg tracking-wider font-black">TABLA DE POSICIONES Y PARCIALES</h3>
-          </div>
-          <span className="text-xs text-neutral-400">SECTORES DETECTADOS: {cantidadSectores}</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse whitespace-nowrap">
-            <thead>
-              <tr className="border-b border-white/15 text-amber-400 text-xs tracking-wider bg-black/70">
-                <th className="py-4 px-4 text-center w-14">POS</th>
-                <th className="py-4 px-4">PILOTO</th>
-                <th className="py-4 px-4">AUTO</th>
-                <th className="py-4 px-4 text-right">BEST</th>
-                <th className="py-4 px-4 text-right">GAP</th>
-                <th className="py-4 px-4 text-right">DELTA</th>
-                <th className="py-4 px-4 text-center">VUELTAS</th>
-                {arraySectores.map((idx) => (
-                  <th key={`header-s-${idx}`} className="py-4 px-3 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
-                    S{idx + 1}
-                  </th>
-                ))}
-                <th className="py-4 px-5 text-right border-l border-white/10 text-emerald-400">MEJOR TIEMPO</th>
-              </tr>
-            </thead>
-            
-            <tbody className="divide-y divide-white/10 text-sm">
-              {cargando ? (
-                <tr>
-                  <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
-                    SINCRONIZANDO TELEMETRÍA CON EL SERVIDOR...
-                  </td>
-                </tr>
-              ) : jugadoresOrdenados.length === 0 ? (
-                <tr>
-                  <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
-                    NO HAY PILOTOS REGISTRADOS EN PISTA EN ESTE MOMENTO.
-                  </td>
-                </tr>
-              ) : (
-                jugadoresOrdenados.map((j, index) => {
-                  const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName, "PILOTO");
-                  const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "---");
-                  const vueltas = j?.laps ?? j?.completedLaps ?? 0;
-                  const tiempoMs = typeof j?.bestLap === 'number' && j.bestLap > 0 ? j.bestLap : null;
-                  const tiempoFormateado = formatearTiempo(tiempoMs);
-
-                  let gapTexto = "---";
-                  if (index === 0 && tiempoMs) {
-                    gapTexto = "LÍDER";
-                  } else if (tiempoMs && mejorTiempoAbsoluto) {
-                    gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
-                  }
-
-                  let deltaTexto = "---";
-                  if (index > 0 && tiempoMs) {
-                    const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap;
-                    if (typeof tiempoAdelante === 'number' && tiempoAdelante > 0) {
-                      deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
-                    }
-                  }
-
-                  const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
-                  const esPrimero = index === 0;
-                  const colorPos = esPrimero
-                    ? "bg-amber-400 text-black font-black"
-                    : index === 1
-                    ? "bg-neutral-300 text-black font-black"
-                    : index === 2
-                    ? "bg-amber-700 text-white font-black"
-                    : "text-neutral-300 font-bold";
-
-                  return (
-                    <tr 
-                      key={j?.id || j?.connectionId || index} 
-                      className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}
-                    >
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-block w-7 h-7 leading-7 rounded-lg text-xs ${colorPos}`}>
-                          {index + 1}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-bold text-white tracking-wide">
-                        {nombrePiloto}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-neutral-300 text-xs">
-                        {modeloAuto}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right font-mono text-amber-300 font-bold">
-                        {tiempoFormateado}
-                      </td>
-
-                      <td className={`py-3.5 px-4 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
-                        {gapTexto}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right font-mono text-xs text-neutral-400">
-                        {deltaTexto}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center text-white font-bold">
-                        {vueltas}
-                      </td>
-
-                      {arraySectores.map((sIdx) => (
-                        <td key={`cell-s-${index}-${sIdx}`} className="py-3.5 px-3 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
-                          {formatearSector(sectoresPiloto[sIdx])}
-                        </td>
-                      ))}
-
-                      <td className="py-3.5 px-5 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
-                        {tiempoFormateado}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* SECCIÓN INFERIOR: MAPA DE PISTA Y FEED DE SESIÓN */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* GRILLA PRINCIPAL: TABLA A LA IZQUIERDA (2 COLUMNAS) + MAPA Y FEED A LA DERECHA (1 COLUMNA) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* MAPA DEL CIRCUITO / TRAMO (OCUPA 2 COLUMNAS) */}
-        <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[320px]">
-          <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA DEL CIRCUITO / TRAMO EN VIVO</h3>
+        {/* TABLA DE POSICIONES Y PARCIALES (OCUPA 2 COLUMNAS) */}
+        <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+          <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex flex-wrap justify-between items-center gap-2">
+            <div className="flex items-center gap-3">
+              <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
+              <h3 className="text-white text-lg tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
             </div>
-            <span className="text-[10px] bg-neutral-900 text-neutral-400 px-3 py-1 rounded-full border border-white/10">
-              {nombrePista}
-            </span>
+            <span className="text-xs text-neutral-400">SECTORES: {cantidadSectores}</span>
           </div>
 
-          {/* CONTENEDOR VISUAL DEL MAPA */}
-          <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-6 relative overflow-hidden group">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:20px_20px]"></div>
-            
-            {/* Aquí podés integrar la imagen SVG del circuito o el canvas del trackmap */}
-            <div className="text-center z-10 space-y-2">
-              <div className="inline-block p-4 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
-                <svg className="w-8 h-8 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round9" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                </svg>
-              </div>
-              <p className="text-xs text-neutral-300 tracking-wider font-bold">
-                TELEMETRÍA DE POSICIÓN GPS LISTA
-              </p>
-              <p className="text-[11px] text-neutral-500 max-w-sm mx-auto">
-                Los vehículos activos en pista se proyectarán en tiempo real sobre el trazado del circuito apenas el servidor reactive el flujo UDP.
-              </p>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr className="border-b border-white/15 text-amber-400 text-xs tracking-wider bg-black/70">
+                  <th className="py-4 px-3 text-center w-12">POS</th>
+                  <th className="py-4 px-4">PILOTO</th>
+                  <th className="py-4 px-4">AUTO</th>
+                  <th className="py-4 px-3 text-right">BEST</th>
+                  <th className="py-4 px-3 text-right">GAP</th>
+                  <th className="py-4 px-3 text-right">DELTA</th>
+                  <th className="py-4 px-3 text-center">VUELTAS</th>
+                  {arraySectores.map((idx) => (
+                    <th key={`header-s-${idx}`} className="py-4 px-2 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
+                      S{idx + 1}
+                    </th>
+                  ))}
+                  <th className="py-4 px-4 text-right border-l border-white/10 text-emerald-400">MEJOR</th>
+                </tr>
+              </thead>
+              
+              <tbody className="divide-y divide-white/10 text-sm">
+                {cargando ? (
+                  <tr>
+                    <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
+                      SINCRONIZANDO TELEMETRÍA...
+                    </td>
+                  </tr>
+                ) : jugadoresOrdenados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
+                      NO HAY PILOTOS REGISTRADOS EN PISTA.
+                    </td>
+                  </tr>
+                ) : (
+                  jugadoresOrdenados.map((j, index) => {
+                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName, "PILOTO");
+                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "---");
+                    const vueltas = j?.laps ?? j?.completedLaps ?? 0;
+                    const tiempoMs = typeof j?.bestLap === 'number' && j.bestLap > 0 ? j.bestLap : null;
+                    const tiempoFormateado = formatearTiempo(tiempoMs);
+
+                    let gapTexto = "---";
+                    if (index === 0 && tiempoMs) {
+                      gapTexto = "LÍDER";
+                    } else if (tiempoMs && mejorTiempoAbsoluto) {
+                      gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
+                    }
+
+                    let deltaTexto = "---";
+                    if (index > 0 && tiempoMs) {
+                      const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap;
+                      if (typeof tiempoAdelante === 'number' && tiempoAdelante > 0) {
+                        deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
+                      }
+                    }
+
+                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
+                    const esPrimero = index === 0;
+                    const colorPos = esPrimero
+                      ? "bg-amber-400 text-black font-black"
+                      : index === 1
+                      ? "bg-neutral-300 text-black font-black"
+                      : index === 2
+                      ? "bg-amber-700 text-white font-black"
+                      : "text-neutral-300 font-bold";
+
+                    return (
+                      <tr 
+                        key={j?.id || j?.connectionId || index} 
+                        className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}
+                      >
+                        <td className="py-3.5 px-3 text-center">
+                          <span className={`inline-block w-6 h-6 leading-6 rounded-md text-xs ${colorPos}`}>
+                            {index + 1}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 font-bold text-white tracking-wide">
+                          {nombrePiloto}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-neutral-300 text-xs">
+                          {modeloAuto}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-right font-mono text-amber-300 font-bold">
+                          {tiempoFormateado}
+                        </td>
+
+                        <td className={`py-3.5 px-3 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
+                          {gapTexto}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-right font-mono text-xs text-neutral-400">
+                          {deltaTexto}
+                        </td>
+
+                        <td className="py-3.5 px-3 text-center text-white font-bold">
+                          {vueltas}
+                        </td>
+
+                        {arraySectores.map((sIdx) => (
+                          <td key={`cell-s-${index}-${sIdx}`} className="py-3.5 px-2 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
+                            {formatearSector(sectoresPiloto[sIdx])}
+                          </td>
+                        ))}
+
+                        <td className="py-3.5 px-4 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
+                          {tiempoFormateado}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* FEED DE SESIÓN / REGISTRO DE EVENTOS */}
-        <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
-          <div>
+        {/* COLUMNA DERECHA: MAPA Y FEED DE SESIÓN (OCUPA 1 COLUMNA FIJA) */}
+        <div className="space-y-6 flex flex-col">
+          
+          {/* MAPA DEL CIRCUITO / TRAMO */}
+          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[340px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
-              <h3 className="text-amber-400 text-sm tracking-wider font-black">FEED DE SESIÓN</h3>
-              <span className="text-[10px] bg-neutral-900 text-emerald-400 px-2.5 py-0.5 rounded border border-emerald-500/30">ACTIVO</span>
-            </div>
-            
-            <div className="space-y-3 text-xs text-neutral-400">
-              <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
-                <span>Estado del Servidor</span>
-                <span className="text-emerald-400 font-bold">ONLINE</span>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA EN VIVO</h3>
               </div>
-              <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
-                <span>Plugin sTracker / API</span>
-                <span className="text-amber-400 font-bold">ESPERANDO UDP</span>
+              <span className="text-[10px] bg-neutral-900 text-neutral-400 px-2.5 py-0.5 rounded border border-white/10 truncate max-w-[130px]" title={nombrePista}>
+                {nombrePista}
+              </span>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-6 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              
+              <div className="text-center z-10 space-y-2">
+                <div className="inline-block p-3.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
+                  <svg className="w-7 h-7 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                  </svg>
+                </div>
+                <p className="text-xs text-neutral-300 tracking-wider font-bold">
+                  TELEMETRÍA GPS ACTIVA
+                </p>
+                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
+                  El trazado y la posición de los vehículos se visualizarán aquí al restablecerse el enlace UDP del servidor.
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-white/10 text-center">
-            <p className="text-[10px] text-neutral-500 tracking-wider">
-              ESPÍNDOLA COMPETICIÓN • SISTEMA DE GESTIÓN Y TELEMETRÍA
-            </p>
+          {/* FEED DE SESIÓN */}
+          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+                <h3 className="text-amber-400 text-sm tracking-wider font-black">FEED DE SESIÓN</h3>
+                <span className="text-[10px] bg-neutral-900 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">ONLINE</span>
+              </div>
+              
+              <div className="space-y-2.5 text-xs text-neutral-400">
+                <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                  <span>Estado Servidor</span>
+                  <span className="text-emerald-400 font-bold">ONLINE</span>
+                </div>
+                <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                  <span>Transmisión UDP</span>
+                  <span className="text-amber-400 font-bold">EN ESPERA</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-white/10 text-center">
+              <p className="text-[10px] text-neutral-500 tracking-wider">
+                ESPÍNDOLA COMPETICIÓN
+              </p>
+            </div>
           </div>
+
         </div>
 
       </div>
