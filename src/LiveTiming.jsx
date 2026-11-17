@@ -17,7 +17,7 @@ export default function LiveTiming() {
           'Accept': 'application/json'
         };
         
-        // Datos del servidor y pista
+        // Datos de la sesión y pista
         const resServidor = await fetch(`${API_BASE}/server`, { headers });
         if (!resServidor.ok) throw new Error(`Error servidor: ${resServidor.status}`);
         const dataServidor = await resServidor.json();
@@ -43,7 +43,7 @@ export default function LiveTiming() {
     }
 
     obtenerTelemetria();
-    const intervalo = setInterval(obtenerTelemetria, 2500); // Refresco en vivo cada 2.5s
+    const intervalo = setInterval(obtenerTelemetria, 3000); // Refresco en vivo cada 3s
     return () => clearInterval(intervalo);
   }, []);
 
@@ -88,7 +88,7 @@ export default function LiveTiming() {
         </div>
       )}
 
-      {/* 2. GRILLA PRINCIPAL: TABLA DE TIEMPOS + MAPA DE PISTA */}
+      {/* 2. GRILLA PRINCIPAL: TABLA DE TIEMPOS PROPIA + MAPA DE PISTA */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* TABLA DE POSICIONES (Ocupa 2 columnas) */}
