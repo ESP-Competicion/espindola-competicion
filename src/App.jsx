@@ -134,81 +134,6 @@ export default function App() {
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
 
   useEffect(() => {
-    const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
-    const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
-
-    let ultimaSesionCache = null;
-    let datosUltimosJugadores = [];
-
-    const intervaloGlobal = setInterval(async () => {
-      try {
-        const headers = { 'Authorization': `Bearer ${TOKEN_ST}`, 'Accept': 'application/json' };
-        
-        const resServidor = await fetch(`${API_BASE_ST}/server`, { headers }).catch(() => null);
-        if (!resServidor || !resServidor.ok) return;
-        const datosServ = await resServidor.json();
-        
-        const tipoSesionActual = String(
-          datosServ?.session?.type || 
-          datosServ?.session?.name || 
-          datosServ?.session || 
-          'PRACTICE'
-        ).toUpperCase();
-        
-        const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
-
-        const resJugadores = await fetch(`${API_BASE_ST}/players`, { headers }).catch(() => null);
-        if (!resJugadores || !resJugadores.ok) return;
-        const dataJ = await resJugadores.json();
-
-        let lista = [];
-        if (Array.isArray(dataJ)) lista = dataJ;
-        else if (dataJ?.data && Array.isArray(dataJ.data)) lista = dataJ.data;
-        else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
-        else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
-
-        if (!ultimaSesionCache) {
-          ultimaSesionCache = tipoSesionActual;
-          if (lista.length > 0) datosUltimosJugadores = lista;
-          return;
-        }
-
-        if (ultimaSesionCache !== tipoSesionActual) {
-          if (datosUltimosJugadores.length > 0) {
-            const datosProcesados = datosUltimosJugadores.map((j, idx) => ({
-              pos: idx + 1,
-              nombre: j?.name || 'PILOTO',
-              auto: j?.car?.name || 'AUTO',
-              bestLapMs: Number(j?.bestLapMs) || 0,
-              lastLapMs: Number(j?.lastLapMs) || 0,
-              vueltas: Number(j?.laps) || 0,
-              sectores: obtenerSectoresJugador(j),
-              posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
-            }));
-
-            await supabase.from('resultados_sesiones').insert([{
-              sesion_tipo: ultimaSesionCache,
-              pista: pistaNombre,
-              datos_json: datosProcesados
-            }]);
-          }
-
-          ultimaSesionCache = tipoSesionActual;
-          datosUltimosJugadores = [];
-        }
-
-        if (lista.length > 0) {
-          datosUltimosJugadores = lista;
-        }
-      } catch (err) {
-        console.error("Error en autoguardado global:", err);
-      }
-    }, 5000);
-
-    return () => clearInterval(intervaloGlobal);
-  }, []);
-
-  useEffect(() => {
     const intervaloFondo = setInterval(() => {
       setFondoActual((prev) => (prev + 1) % fotosRally.length);
     }, 9000);
@@ -804,6 +729,7 @@ export default function App() {
           </div>
         )}
 
+        {/* AQUÍ PASAMOS esAdmin CORRECTAMENTE AL COMPONENTE */}
         {pestanaActiva === 'resultados' && (
           <ResultadosRallyServer esAdmin={esAdmin} />
         )}
