@@ -164,22 +164,20 @@ function ContenidoLiveTiming() {
           </div>
           <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
             <span className="text-neutral-400 block text-[9px]">RÉCORD DE SESIÓN</span>
-            <span className="text-emerald-400 text-xs font-mono">{formatearTiempo(mejorTiempoAbsoluto)}</span>
+            <span className="text-purple-400 text-xs font-mono font-black">{formatearTiempo(mejorTiempoAbsoluto)}</span>
           </div>
         </div>
       </div>
 
-      {/* CONTENEDOR PRINCIPAL: TABLA + FEED */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start w-full">
-        
-        {/* TABLA DE POSICIONES Y PARCIALES */}
-        <div className="xl:col-span-9 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
+      {/* CONTENEDOR PRINCIPAL: TABLA A ANCHO COMPLETO */}
+      <div className="w-full">
+        <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl w-full">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-2.5 border-b border-amber-500/30 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">EN VIVO</span>
               <h3 className="text-white text-xs tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
             </div>
-            <span className="text-[11px] text-amber-400 font-bold truncate max-w-[280px]" title={nombrePista}>
+            <span className="text-[11px] text-amber-400 font-bold truncate max-w-[350px]" title={nombrePista}>
               🏁 {nombrePista}
             </span>
           </div>
@@ -200,7 +198,7 @@ function ContenidoLiveTiming() {
                       S{idx + 1}
                     </th>
                   ))}
-                  <th className="py-2.5 px-3 text-right border-l border-white/10 text-emerald-400">MEJOR</th>
+                  <th className="py-2.5 px-3 text-right border-l border-white/10 text-purple-400">MEJOR</th>
                 </tr>
               </thead>
               
@@ -280,7 +278,7 @@ function ContenidoLiveTiming() {
                           );
                         })}
 
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-purple-400 border-l border-white/10 bg-purple-950/20">
                           {formatearTiempo(mejorLapMs)}
                         </td>
                       </tr>
@@ -291,36 +289,6 @@ function ContenidoLiveTiming() {
             </table>
           </div>
         </div>
-
-        {/* COLUMNA DERECHA: FEED DE SESIÓN */}
-        <div className="xl:col-span-3 space-y-4 flex flex-col">
-          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl p-4 shadow-xl flex flex-col justify-between text-xs">
-            <div>
-              <div className="flex justify-between items-center border-b border-white/10 pb-2.5 mb-3">
-                <h3 className="text-amber-400 text-xs tracking-wider font-black">FEED DE SESIÓN</h3>
-                <span className="text-[9px] bg-neutral-900 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">ONLINE</span>
-              </div>
-              
-              <div className="space-y-2 text-[11px] text-neutral-400">
-                <div className="bg-neutral-900/80 p-2.5 rounded-xl border border-neutral-800 flex items-center justify-between">
-                  <span>Estado Servidor</span>
-                  <span className="text-emerald-400 font-bold">ONLINE</span>
-                </div>
-                <div className="bg-neutral-900/80 p-2.5 rounded-xl border border-neutral-800 flex items-center justify-between">
-                  <span>Conexión sTracker</span>
-                  <span className="text-emerald-400 font-bold">CONECTADO</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-2.5 border-t border-white/10 text-center">
-              <p className="text-[9px] text-neutral-500 tracking-wider">
-                ESPÍNDOLA COMPETICIÓN
-              </p>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );
