@@ -2,130 +2,152 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
 export default function ResultadosRallyServer() {
-  // Pestaña principal: 'server' o 'rally'
-  const [vistaPrincipal, setVistaPrincipal] = useState('rally');
-
-  // Sub-pestañas de Rally: 'categoria', 'tramo1', 'tramo2', 'tramo3', 'tramo4', 'general'
-  const [subVistaRally, setSubVistaRally] = useState('tramo1');
-  
-  // Filtro de categoría seleccionada (ej: 'TODAS', 'RALLY4', 'RALLY2', 'RC5')
+  const [vistaPrincipal, setVistaPrincipal] = useState('rally'); // 'server' o 'rally'
+  const [subVistaRally, setSubVistaRally] = useState('tramo1'); // 'tramo1', 'tramo2', 'tramo3', 'tramo4', 'general'
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('TODAS');
-  const [categoriasDisponibles, setCategoriasDisponibles] = useState(['TODAS', 'RALLY4', 'RALLY2', 'RC5']);
-
-  // Datos del servidor (sesiones guardadas automáticas)
+  
   const [sesionesServidor, setSesionesServidor] = useState([]);
   const [sesionActivaId, setSesionActivaId] = useState(null);
-
-  // Datos simulados o cargados de los tramos de rally
-  // Cada elemento: { id, piloto, auto, categoria, t1, t2, t3, t4, segundosT1, segundosT2, segundosT3, segundosT4 }
-  const [pilotosRally, setPilotosRally] = useState([
-    { id: 1, piloto: 'LEO ESPINDOLA', auto: 'VW SAVEIRO G4', categoria: 'RALLY4', t1: '02:05.12', t2: '02:06.86', t3: '02:04.10', t4: '02:03.50', s1: 125.12, s2: 126.86, s3: 124.10, s4: 123.50 },
-    { id: 2, piloto: 'PEDRIINHO LANINHA', auto: 'PEUGEOT 208 RALLY4', categoria: 'RALLY4', t1: '02:06.86', t2: '02:05.00', t3: '02:05.20', t4: '02:04.00', s1: 126.86, s2: 125.00, s3: 125.20, s4: 124.00 },
-    { id: 3, piloto: 'MATEUS SILVA', auto: 'SKODA FABIA R5', categoria: 'RALLY2', t1: '02:01.50', t2: '02:02.10', t3: '02:00.80', t4: '01:59.90', s1: 121.50, s2: 122.10, s3: 120.80, s4: 119.90 },
-    { id: 4, piloto: 'LUCAS HUTTER', auto: 'FORD FIESTA RC5', categoria: 'RC5', t1: '02:15.00', t2: '02:14.50', t3: '02:13.20', t4: '02:12.80', s1: 135.00, s2: 134.50, s3: 133.20, s4: 132.80 },
-  ]);
 
   useEffect(() => {
     cargarSesionesServidor();
   }, []);
 
   async function cargarSesionesServidor() {
-    const { data } = await supabase.from('resultados_sesiones').select('*').order('created_at', { ascending: false });
-    if (data && data.length > 0) {
+    const { data } = await supabase.from('resultados_sesiones').select('*').order('created_at', { ascending: true });
+    if (data) {
       setSesionesServidor(data);
-      setSesionActivaId(data[0].id);
+      if (data.length > 0 && !sesionActivaId) {
+        setSesionActivaId(data[0].id);
+      }
     }
   }
 
-  // Función utilitaria para formatear segundos totales a formato mm:ss.ms
-  function formatearSegundos(segundosTotales) {
-    if (!segundosTotales || isNaN(segundosTotales)) return "+00.00";
-    const mins = Math.floor(segundosTotales / 60);
-    const secs = (segundosTotales % 60).toFixed(2);
+  function formatearMilisegundos(ms) {
+    if (!ms || isNaN(ms) || ms === 0) return "00:00.000";
+    const totalSeconds = ms / 1000;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = (totalSeconds % 60).toFixed(3);
     const secsFormatted = secs < 10 ? `0${secs}` : secs;
-    if (mins > 0) {
-      return `${mins}:${secsFormatted}`;
-    }
-    return `00:${secsFormatted}`;
+    return `${mins}:${secsFormatted}`;
   }
 
-  // Filtrar pilotos por categoría seleccionada
-  const pilotosFiltrados = pilotosRally.filter(p => {
-    if (categoriaSeleccionada === 'TODAS') return true;
-    return p.categoria === categoriaSeleccionada;
+  function convertirMsASegundos(ms) {
+    return (Number(ms) || 0) / 1000;
+  }
+
+  // Extraer categorías únicas de las sesiones guardadas
+  const categoriasDisponibles = ['TODAS'];
+  sesionesServidor.forEach(s => {
+    if (s.datos_json && Array.isArray(s.datos_json)) {
+      s.datos_json.forEach(j => {
+        const cat = j.categoria || j.carClass || 'GENERAL';
+        if (!categoriasDisponibles.includes(cat.toUpperCase())) {
+          categoriasDisponibles.push(cat.toUpperCase());
+        }
+      });
+    }
   });
 
-  // Procesar datos para la vista izquierda (Tiempo Tramo actual)
+  // Mapear las sesiones como Tramos de Rally (Tramo 1 = Sesión 1, Tramo 2 = Sesión 2, etc.)
+  function obtenerSesionPorTramo(keyTramo) {
+    if (keyTramo === 'tramo1') return sesionesServidor[0] || null;
+    if (keyTramo === 'tramo2') return sesionesServidor[1] || null;
+    if (keyTramo === 'tramo3') return sesionesServidor[2] || null;
+    if (keyTramo === 'tramo4') return sesionesServidor[3] || null;
+    return sesionesServidor[3] || sesionesServidor[0] || null; // Para 'general' toma el último o referencia
+  }
+
+  // Datos para la columna izquierda (Tiempo del Tramo actual seleccionado)
   function obtenerDatosTramoActual() {
-    let keySec = 's1';
-    let keyStr = 't1';
-    if (subVistaRally === 'tramo1') { keySec = 's1'; keyStr = 't1'; }
-    if (subVistaRally === 'tramo2') { keySec = 's2'; keyStr = 't2'; }
-    if (subVistaRally === 'tramo3') { keySec = 's3'; keyStr = 't3'; }
-    if (subVistaRally === 'tramo4') { keySec = 's4'; keyStr = 't4'; }
+    const sesion = obtenerSesionPorTramo(subVistaRally === 'general' ? 'tramo4' : subVistaRally);
+    if (!sesion || !sesion.datos_json) return [];
 
-    // Ordenar de menor a mayor tiempo en el tramo
-    const ordenados = [...pilotosFiltrados].sort((a, b) => a[keySec] - b[keySec]);
-
-    return ordenados.map((p, idx) => {
-      const tiempoActual = p[keySec];
-      const tiempoLider = ordenados[0][keySec];
-      const difLider = idx === 0 ? 0 : tiempoActual - tiempoLider;
-      
-      let difAnterior = 0;
-      if (idx > 0) {
-        difAnterior = tiempoActual - ordenados[idx - 1][keySec];
-      }
-
+    let lista = sesion.datos_json.map((j, idx) => {
+      const cat = (j.categoria || j.carClass || 'GENERAL').toUpperCase();
+      const mejorMs = j.bestLapMs || j.tiempoMs || 0;
       return {
         pos: idx + 1,
-        piloto: p.piloto,
-        auto: p.auto,
-        tiempo: p[keyStr],
+        piloto: j.nombre || j.driver || 'PILOTO',
+        auto: j.auto || j.car || 'AUTO',
+        categoria: cat,
+        tiempoMs: mejorMs,
+        tiempoStr: formatearMilisegundos(mejorMs),
+        segundos: convertirMsASegundos(mejorMs)
+      };
+    });
+
+    // Filtrar por categoría
+    if (categoriaSeleccionada !== 'TODAS') {
+      lista = lista.filter(p => p.categoria === categoriaSeleccionada);
+    }
+
+    // Ordenar por menor tiempo
+    lista.sort((a, b) => a.segundos - b.segundos);
+
+    return lista.map((p, idx) => {
+      const liderSeg = lista[0]?.segundos || 0;
+      const difLider = idx === 0 ? 0 : p.segundos - liderSeg;
+      const difAnt = idx === 0 ? 0 : p.segundos - lista[idx - 1].segundos;
+
+      return {
+        ...p,
+        pos: idx + 1,
         difLider: idx === 0 ? '0.0' : `+${difLider.toFixed(2)}`,
-        difAnterior: idx === 0 ? '-' : `+${difAnterior.toFixed(2)}`
+        difAnterior: idx === 0 ? '-' : `+${difAnt.toFixed(2)}`
       };
     });
   }
 
-  // Procesar datos para la vista derecha (Clasificación General Acumulada hasta el tramo actual)
+  // Datos para la columna derecha (Clasificación General Acumulada sumando los tramos)
   function obtenerClasificacionGeneral() {
-    // Determinar hasta qué tramo sumar
-    let tramosACalcular = 4;
-    if (subVistaRally === 'tramo1') tramosACalcular = 1;
-    if (subVistaRally === 'tramo2') tramosACalcular = 2;
-    if (subVistaRally === 'tramo3') tramosACalcular = 3;
-    if (subVistaRally === 'tramo4' || subVistaRally === 'general') tramosACalcular = 4;
+    let cantTramos = 4;
+    if (subVistaRally === 'tramo1') cantTramos = 1;
+    if (subVistaRally === 'tramo2') cantTramos = 2;
+    if (subVistaRally === 'tramo3') cantTramos = 3;
+    if (subVistaRally === 'tramo4' || subVistaRally === 'general') cantTramos = sesionesServidor.length > 0 ? sesionesServidor.length : 1;
 
-    const conSuma = pilotosFiltrados.map(p => {
-      let sumaTotal = 0;
-      if (tramosACalcular >= 1) sumaTotal += p.s1;
-      if (tramosACalcular >= 2) sumaTotal += p.s2;
-      if (tramosACalcular >= 3) sumaTotal += p.s3;
-      if (tramosACalcular >= 4) sumaTotal += p.s4;
-      return { ...p, sumaTotal };
-    });
+    // Recopilar acumulados por piloto de las sesiones disponibles hasta el tramo actual
+    const acumulados = {};
 
-    // Ordenar por menor tiempo acumulado
-    const ordenadosGen = conSuma.sort((a, b) => a.sumaTotal - b.sumaTotal);
+    for (let i = 0; i < Math.min(cantTramos, sesionesServidor.length); i++) {
+      const ses = sesionesServidor[i];
+      if (ses && ses.datos_json && Array.isArray(ses.datos_json)) {
+        ses.datos_json.forEach(j => {
+          const nombre = (j.nombre || j.driver || 'PILOTO').toUpperCase();
+          const auto = j.auto || j.car || 'AUTO';
+          const cat = (j.categoria || j.carClass || 'GENERAL').toUpperCase();
+          const ms = j.bestLapMs || j.tiempoMs || 0;
 
-    return ordenadosGen.map((p, idx) => {
-      const tiempoTotalSeg = p.sumaTotal;
-      const liderSeg = ordenadosGen[0].sumaTotal;
-      const difLider = idx === 0 ? 0 : tiempoTotalSeg - liderSeg;
-
-      let difAnterior = 0;
-      if (idx > 0) {
-        difAnterior = tiempoTotalSeg - ordenadosGen[idx - 1].sumaTotal;
+          if (!acumulados[nombre]) {
+            acumulados[nombre] = { piloto: nombre, auto, categoria: cat, totalMs: 0 };
+          }
+          acumulados[nombre].totalMs += ms;
+        });
       }
+    }
+
+    let listaGen = Object.values(acumulados);
+
+    if (categoriaSeleccionada !== 'TODAS') {
+      listaGen = listaGen.filter(p => p.categoria === categoriaSeleccionada);
+    }
+
+    listaGen.sort((a, b) => a.totalMs - b.totalMs);
+
+    return listaGen.map((p, idx) => {
+      const totalSeg = convertirMsASegundos(p.totalMs);
+      const liderSeg = listaGen.length > 0 ? convertirMsASegundos(listaGen[0].totalMs) : 0;
+      const difLider = idx === 0 ? 0 : totalSeg - liderSeg;
+      const difAnt = idx === 0 ? 0 : totalSeg - convertirMsASegundos(listaGen[idx - 1].totalMs);
 
       return {
         pos: idx + 1,
         piloto: p.piloto,
         auto: p.auto,
-        tiempoTotal: formatearSegundos(tiempoTotalSeg),
+        tiempoTotal: formatearMilisegundos(p.totalMs),
         difLider: idx === 0 ? '0.0' : `+${difLider.toFixed(2)}`,
-        difAnterior: idx === 0 ? '-' : `+${difAnterior.toFixed(2)}`
+        difAnterior: idx === 0 ? '-' : `+${difAnt.toFixed(2)}`
       };
     });
   }
@@ -137,7 +159,7 @@ export default function ResultadosRallyServer() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-wrc text-white uppercase p-4">
       
-      {/* 1. BOTONES SUPERIORES PRINCIPALES: RESULTADOS SERVER vs RESULTADOS RALLY */}
+      {/* BOTONES SUPERIORES PRINCIPALES */}
       <div className="flex justify-center items-center gap-4 bg-neutral-900/60 p-2 rounded-2xl border border-white/10 backdrop-blur-md">
         <button
           onClick={() => setVistaPrincipal('server')}
@@ -161,12 +183,11 @@ export default function ResultadosRallyServer() {
         </button>
       </div>
 
-      {/* 2. VISTA 1: RESULTADOS AUTOMÁTICOS DEL SERVIDOR */}
+      {/* VISTA 1: RESULTADOS AUTOMÁTICOS DEL SERVIDOR */}
       {vistaPrincipal === 'server' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-neutral-950/90 border border-white/10 rounded-2xl p-5 shadow-2xl">
-          {/* Selector de sesiones archivadas */}
           <div className="space-y-3 bg-neutral-900/50 p-4 rounded-xl border border-white/5">
-            <h3 className="text-xs text-amber-400 font-bold">SESIONES ARCHIVADAS ({sesionesServidor.length})</h3>
+            <h3 className="text-xs text-amber-400 font-bold">SESIONES GUARDADAS ({sesionesServidor.length})</h3>
             <div className="space-y-2 max-h-[350px] overflow-y-auto">
               {sesionesServidor.map(s => (
                 <div
@@ -186,7 +207,6 @@ export default function ResultadosRallyServer() {
             </div>
           </div>
 
-          {/* Detalle de la sesión seleccionada */}
           <div className="md:col-span-2 bg-neutral-900/40 p-4 rounded-xl border border-white/5 flex flex-col justify-between">
             {sesionActualObj ? (
               <div className="space-y-4">
@@ -213,10 +233,10 @@ export default function ResultadosRallyServer() {
                       {sesionActualObj.datos_json?.map((j, idx) => (
                         <tr key={idx} className="hover:bg-white/5">
                           <td className="py-2 px-2 text-amber-400 font-bold">#{j.pos || idx + 1}</td>
-                          <td className="py-2 px-2 font-bold text-white">{j.nombre}</td>
-                          <td className="py-2 px-2 text-neutral-300">{j.auto || 'SAVEIRO G4'}</td>
-                          <td className="py-2 px-2 text-center">{j.vueltas || '-'}</td>
-                          <td className="py-2 px-2 text-right text-amber-300">{j.mejorTiempo || '1:31.382'}</td>
+                          <td className="py-2 px-2 font-bold text-white">{j.nombre || j.driver}</td>
+                          <td className="py-2 px-2 text-neutral-300">{j.auto || j.car || 'AUTO'}</td>
+                          <td className="py-2 px-2 text-center">{j.vueltas || j.laps || '-'}</td>
+                          <td className="py-2 px-2 text-right text-amber-300">{formatearMilisegundos(j.bestLapMs || j.tiempoMs)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -225,21 +245,19 @@ export default function ResultadosRallyServer() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-neutral-500 text-xs">
-                SELECCIONÁ UNA SESIÓN DE LA IZQUIERDA
+                NO HAY SESIONES REGISTRADAS POR EL SERVIDOR TODAVÍA
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 3. VISTA 2: RESULTADOS RALLY (DOBLE COLUMNA CON NAVEGACIÓN) */}
+      {/* VISTA 2: RESULTADOS RALLY CON DOBLE COLUMNA Y DATOS REALES */}
       {vistaPrincipal === 'rally' && (
         <div className="bg-neutral-950/90 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
-          
-          {/* CABECERA / SUB-MENÚ DE RALLY */}
           <div className="bg-neutral-900/90 p-3 border-b border-white/10 flex flex-wrap justify-between items-center gap-2">
             
-            {/* Botón de Categorías / Filtro */}
+            {/* FILTRO POR CATEGORÍA */}
             <div className="flex items-center gap-2">
               <select
                 value={categoriaSeleccionada}
@@ -254,7 +272,7 @@ export default function ResultadosRallyServer() {
               </select>
             </div>
 
-            {/* Sub-pestañas: Tramo 1, Tramo 2, Tramo 3, Tramo 4, Tiempo General */}
+            {/* SELECCIÓN DE TRAMOS */}
             <div className="flex flex-wrap items-center gap-1.5 bg-neutral-950/70 p-1 rounded-xl border border-white/5">
               {['tramo1', 'tramo2', 'tramo3', 'tramo4', 'general'].map((tramoKey) => {
                 const labels = { tramo1: 'TRAMO 1', tramo2: 'TRAMO 2', tramo3: 'TRAMO 3', tramo4: 'TRAMO 4', general: 'TIEMPO GENERAL' };
@@ -276,10 +294,9 @@ export default function ResultadosRallyServer() {
             </div>
           </div>
 
-          {/* CUERPO PRINCIPAL: DOBLE COLUMNA (TIEMPO TRAMO vs CLASIFICACIÓN GENERAL) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/10">
             
-            {/* COLUMNA IZQUIERDA: TIEMPO TRAMO SELECCIONADO */}
+            {/* COLUMNA IZQUIERDA: TIEMPO DEL TRAMO */}
             <div className="p-4 space-y-3 bg-neutral-900/20">
               <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
                 <h4 className="text-amber-400 text-xs font-black">
@@ -300,18 +317,26 @@ export default function ResultadosRallyServer() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 font-mono">
-                    {datosTramo.map((dt, idx) => (
-                      <tr key={idx} className="hover:bg-white/5">
-                        <td className="py-2.5 px-1 text-center font-bold text-amber-400">#{dt.pos}</td>
-                        <td className="py-2 px-2">
-                          <p className="font-bold text-white">{dt.piloto}</p>
-                          <span className="text-[9px] text-neutral-400">{dt.auto}</span>
+                    {datosTramo.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-neutral-500 text-xs">
+                          NO HAY DATOS EN ESTE TRAMO
                         </td>
-                        <td className="py-2 px-2 text-center text-white font-bold">{dt.tiempo}</td>
-                        <td className="py-2 px-2 text-right text-amber-300">{dt.difLider}</td>
-                        <td className="py-2 px-2 text-right text-neutral-400">{dt.difAnterior}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      datosTramo.map((dt, idx) => (
+                        <tr key={idx} className="hover:bg-white/5">
+                          <td className="py-2.5 px-1 text-center font-bold text-amber-400">#{dt.pos}</td>
+                          <td className="py-2 px-2">
+                            <p className="font-bold text-white">{dt.piloto}</p>
+                            <span className="text-[9px] text-neutral-400">{dt.auto}</span>
+                          </td>
+                          <td className="py-2 px-2 text-center text-white font-bold">{dt.tiempoStr}</td>
+                          <td className="py-2 px-2 text-right text-amber-300">{dt.difLider}</td>
+                          <td className="py-2 px-2 text-right text-neutral-400">{dt.difAnterior}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -340,21 +365,29 @@ export default function ResultadosRallyServer() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 font-mono">
-                    {datosGeneral.map((dg, idx) => {
-                      const esPodio = idx < 3;
-                      return (
-                        <tr key={idx} className={`hover:bg-white/5 ${esPodio ? 'bg-amber-500/5' : ''}`}>
-                          <td className="py-2.5 px-1 text-center font-black text-amber-400">#{dg.pos}</td>
-                          <td className="py-2 px-2">
-                            <p className="font-bold text-white">{dg.piloto}</p>
-                            <span className="text-[9px] text-neutral-400">{dg.auto}</span>
-                          </td>
-                          <td className="py-2 px-2 text-center text-amber-400 font-bold">{dg.tiempoTotal}</td>
-                          <td className="py-2 px-2 text-right text-amber-300">{dg.difLider}</td>
-                          <td className="py-2 px-2 text-right text-neutral-400">{dg.difAnterior}</td>
-                        </tr>
-                      );
-                    })}
+                    {datosGeneral.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-neutral-500 text-xs">
+                          NO HAY TIEMPOS ACUMULADOS
+                        </td>
+                      </tr>
+                    ) : (
+                      datosGeneral.map((dg, idx) => {
+                        const esPodio = idx < 3;
+                        return (
+                          <tr key={idx} className={`hover:bg-white/5 ${esPodio ? 'bg-amber-500/5' : ''}`}>
+                            <td className="py-2.5 px-1 text-center font-black text-amber-400">#{dg.pos}</td>
+                            <td className="py-2 px-2">
+                              <p className="font-bold text-white">{dg.piloto}</p>
+                              <span className="text-[9px] text-neutral-400">{dg.auto}</span>
+                            </td>
+                            <td className="py-2 px-2 text-center text-amber-400 font-bold">{dg.tiempoTotal}</td>
+                            <td className="py-2 px-2 text-right text-amber-300">{dg.difLider}</td>
+                            <td className="py-2 px-2 text-right text-neutral-400">{dg.difAnterior}</td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
