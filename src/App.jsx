@@ -54,7 +54,6 @@ export default function App() {
   const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
   const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
   const [mostrarCambiarPasswordModal, setMostrarCambiarPasswordModal] = useState(false);
-  // Mantener 'inicio' por defecto para que no salte directo a resultados
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
   const [esAdmin, setEsAdmin] = useState(false);
 
