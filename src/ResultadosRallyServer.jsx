@@ -66,17 +66,24 @@ export default function ResultadosRallyServer({ esAdmin }) {
         return;
       }
 
-      const datosProcesados = lista.map((j, idx) => ({
-        pos: idx + 1,
-        nombre: j?.name || 'PILOTO',
-        auto: j?.car?.name || 'AUTO',
-        categoria: j?.carClass || j?.categoria || 'GENERAL',
-        bestLapMs: Number(j?.bestLapMs) || 0,
-        lastLapMs: Number(j?.lastLapMs) || 0,
-        vueltas: Number(j?.laps) || 0,
-        sectores: j?.lastLap?.sectors || [0,0,0],
-        posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
-      }));
+      const datosProcesados = lista.map((j, idx) => {
+        const nombrePiloto = j?.name || j?.driver || j?.nombre || 'PILOTO';
+        const nombreAuto = typeof j?.car === 'object' ? (j?.car?.name || j?.car?.model) : (j?.car || j?.auto || 'AUTO');
+        const categoriaAuto = j?.carClass || j?.categoria || 'GENERAL';
+        const mejorTiempoMs = Number(j?.bestLapMs || j?.bestLap || j?.tiempoMs || 0);
+
+        return {
+          pos: idx + 1,
+          nombre: nombrePiloto,
+          auto: nombreAuto,
+          categoria: categoriaAuto,
+          bestLapMs: mejorTiempoMs,
+          lastLapMs: Number(j?.lastLapMs || 0),
+          vueltas: Number(j?.laps || j?.lapCount || 0),
+          sectores: j?.lastLap?.sectors || [0,0,0],
+          posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+        };
+      });
 
       const { error } = await supabase.from('resultados_sesiones').insert([{
         sesion_tipo: tipoSesionActual,
@@ -140,11 +147,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
     let lista = sesion.datos_json.map((j, idx) => {
       const cat = (j.categoria || j.carClass || 'GENERAL').toUpperCase();
-      const mejorMs = j.bestLapMs || j.tiempoMs || 0;
+      const mejorMs = Number(j.bestLapMs || j.bestLap || j.tiempoMs || j.lastLapMs || 0);
+      const nombrePiloto = j.nombre || j.driver || j.name || 'PILOTO';
+      const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
+
       return {
         pos: idx + 1,
-        piloto: j.nombre || j.driver || 'PILOTO',
-        auto: j.auto || j.car || 'AUTO',
+        piloto: nombrePiloto,
+        auto: nombreAuto,
         categoria: cat,
         tiempoMs: mejorMs,
         tiempoStr: formatearMilisegundos(mejorMs),
@@ -156,7 +166,11 @@ export default function ResultadosRallyServer({ esAdmin }) {
       lista = lista.filter(p => p.categoria === categoriaSeleccionada);
     }
 
-    lista.sort((a, b) => a.segundos - b.segundos);
+    lista.sort((a, b) => {
+      if (a.segundos === 0) return 1;
+      if (b.segundos === 0) return -1;
+      return a.segundos - b.segundos;
+    });
 
     return lista.map((p, idx) => {
       const liderSeg = lista[0]?.segundos || 0;
@@ -186,10 +200,10 @@ export default function ResultadosRallyServer({ esAdmin }) {
       const ses = sesionesServidor[i];
       if (ses && ses.datos_json && Array.isArray(ses.datos_json)) {
         ses.datos_json.forEach(j => {
-          const nombre = (j.nombre || j.driver || 'PILOTO').toUpperCase();
-          const auto = j.auto || j.car || 'AUTO';
+          const nombre = (j.nombre || j.driver || j.name || 'PILOTO').toUpperCase();
+          const auto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
           const cat = (j.categoria || j.carClass || 'GENERAL').toUpperCase();
-          const ms = j.bestLapMs || j.tiempoMs || 0;
+          const ms = Number(j.bestLapMs || j.bestLap || j.tiempoMs || j.lastLapMs || 0);
 
           if (!acumulados[nombre]) {
             acumulados[nombre] = { piloto: nombre, auto, categoria: cat, totalMs: 0 };
