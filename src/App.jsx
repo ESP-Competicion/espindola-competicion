@@ -611,7 +611,9 @@ export default function App() {
   const restoPilotos = hallFama.slice(3);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black flex flex-col justify-between uppercase text-xs md:text-sm">
+    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black flex flex-col justify-between uppercase text-xs md:text-sm"
+         style={{ zoom: '0.8' }} // <--- ZOOM GLOBAL AL 80% APLICADO EN TODAS LAS SECCIONES
+    >
       
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
@@ -1813,7 +1815,7 @@ export default function App() {
       )}
 
       {fotoAmpliada && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setFotoAmpliada(null)}>
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setFotoAmpliada5(null)}>
           <img src={fotoAmpliada} alt="Ampliación" className="max-w-full max-h-[90vh] object-contain rounded-xl border border-white/20 shadow-2xl" />
         </div>
       )}
