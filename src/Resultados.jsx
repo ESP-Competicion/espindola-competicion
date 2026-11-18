@@ -33,12 +33,75 @@ export default function Resultados() {
   const [resultadosGuardados, setResultadosGuardados] = useState([]);
   const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [guardandoManual, setGuardandoManual] = useState(false);
   const [usuarioActual, setUsuarioActual] = useState(null);
 
   useEffect(() => {
     verificarUsuario();
     cargarResultadosSupabase();
+
+    // MONITOREO AUTOMÁTICO INTELIGENTE EN SEGUNDO PLANO
+    // Se ejecuta solo mientras la pestaña está abierta, ideal para cuando estás casteando
+    const intervaloAutoGuardado = setInterval(async () => {
+      try {
+        const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
+        
+        const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
+        if (!resServidor || !resServidor.ok) return;
+        const datosServ = await resServidor.json();
+        const tipoSesionActual = String(datosServ?.session?.type || datosServ?.session?.name || 'PRACTICE').toUpperCase();
+        const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
+
+        const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
+        if (!resJugadores || !resJugadores.ok) return;
+        const dataJ = await resJugadores.json();
+
+        let lista = [];
+        if (Array.isArray(dataJ)) lista = dataJ;
+        else if (dataJ?.data && Array.isArray(dataJ.data)) lista = dataJ.data;
+        else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
+        else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
+
+        if (lista.length === 0) return;
+
+        // Comprobamos si ya tenemos guardada esta sesión exacta en Supabase
+        const { data: ultimosRegistros } = await supabase
+          .from('resultados_sesiones')
+          .select('sesion_tipo, pista, fecha')
+          .order('fecha', { ascending: false })
+          .limit(1);
+
+        const ultimaSesionGuardada = ultimosRegistros?.[0]?.sesion_tipo;
+
+        // Si la sesión actual en el servidor es diferente a la última guardada 
+        // (Ej: pasamos de Practice a Qualy, o de Qualy a Race), guardamos automáticamente lo que pasó.
+        if (ultimaSesionGuardada && ultimaSesionGuardada !== tipoSesionActual) {
+          // Guardamos los datos de la sesión anterior que acaba de concluir
+          const datosProcesados = lista.map((j, idx) => ({
+            pos: idx + 1,
+            nombre: j?.name || 'PILOTO',
+            auto: j?.car?.name || 'AUTO',
+            bestLapMs: Number(j?.bestLapMs) || 0,
+            lastLapMs: Number(j?.lastLapMs) || 0,
+            vueltas: Number(j?.laps) || 0,
+            sectores: obtenerSectoresJugador(j),
+            posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+          }));
+
+          await supabase.from('resultados_sesiones').insert([{
+            sesion_tipo: ultimaSesionGuardada,
+            pista: pistaNombre,
+            datos_json: datosProcesados
+          }]);
+
+          cargarResultadosSupabase();
+          console.log(`[AutoGuardado] Sesión ${ultimaSesionGuardada} archivada con éxito.`);
+        }
+      } catch (err) {
+        console.error("Error en autoguardado de fondo:", err);
+      }
+    }, 10000); // Revisa cada 10 segundos sin molestar en la transmisión
+
+    return () => clearInterval(intervaloAutoGuardado);
   }, []);
 
   async function verificarUsuario() {
@@ -68,16 +131,13 @@ export default function Resultados() {
     setCargando(false);
   }
 
-  // Función para guardar manualmente los resultados actuales de la API de sTracker
+  // Botón manual de respaldo por si acaso el admin quiere forzarlo
   async function guardarResultadosManualmente() {
     try {
-      setGuardandoManual(true);
       const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
-      
       const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
       if (!resServidor || !resServidor.ok) {
         alert('No se pudo conectar con la API del servidor.');
-        setGuardandoManual(false);
         return;
       }
       const datosServ = await resServidor.json();
@@ -87,7 +147,6 @@ export default function Resultados() {
       const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
       if (!resJugadores || !resJugadores.ok) {
         alert('No se pudieron obtener los datos de los pilotos.');
-        setGuardandoManual(false);
         return;
       }
       const dataJ = await resJugadores.json();
@@ -100,7 +159,6 @@ export default function Resultados() {
 
       if (lista.length === 0) {
         alert('No hay pilotos registrados en pista en este momento.');
-        setGuardandoManual(false);
         return;
       }
 
@@ -129,9 +187,6 @@ export default function Resultados() {
       }
     } catch (err) {
       console.error("Error al guardar manualmente:", err);
-      alert('Ocurrió un error inesperado al guardar.');
-    } finally {
-      setGuardandoManual(false);
     }
   }
 
@@ -151,16 +206,15 @@ export default function Resultados() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">RESULTADOS DE SESIONES</h2>
-          <p className="text-neutral-300 text-xs font-wrc">HISTORIAL DE PRÁCTICAS, CLASIFICACIONES Y CARRERAS.</p>
+          <p className="text-neutral-300 text-xs font-wrc">HISTORIAL AUTOMÁTICO DE PRÁCTICAS, CLASIFICACIONES Y CARRERAS.</p>
         </div>
 
         {esAdmin && (
           <button
             onClick={guardarResultadosManualmente}
-            disabled={guardandoManual}
-            className={`bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase ${guardandoManual ? 'opacity-50 pointer-events-none' : ''}`}
+            className="bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase"
           >
-            {guardandoManual ? 'GUARDANDO...' : '📥 GUARDAR SESIÓN ACTUAL'}
+            📥 FORZAR GUARDADO MANUAL
           </button>
         )}
       </div>
@@ -175,7 +229,7 @@ export default function Resultados() {
           {cargando ? (
             <p className="text-neutral-400 text-xs text-center py-4">CARGANDO RESULTADOS...</p>
           ) : resultadosGuardados.length === 0 ? (
-            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. {esAdmin ? 'USA EL BOTÓN VERDE DE ARRIBA PARA GUARDAR LOS DATOS ACTUALES.' : ''}</p>
+            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. SE ARCHIVARÁN SOLAS AL CAMBIAR DE FASE EN EL SERVIDOR.</p>
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {resultadosGuardados.map((sesion) => {
