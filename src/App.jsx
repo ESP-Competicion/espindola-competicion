@@ -48,7 +48,7 @@ const obtenerBanderaPais = (pais) => {
   );
 };
 
-// Función auxiliar para extraer sectores de manera robusta
+// Función auxiliar para extraer sectores
 const obtenerSectoresJugador = (j) => {
   if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
     return j.lastLap.sectors.map(s => Number(s) || 0);
@@ -173,10 +173,7 @@ export default function App() {
           return;
         }
 
-        // Si el servidor cambia de fase (Ej: Practice -> Qualifying)
         if (ultimaSesionCache !== tipoSesionActual) {
-          console.log(`[Global AutoGuardado] Cambio detectado: ${ultimaSesionCache} ➔ ${tipoSesionActual}`);
-
           if (datosUltimosJugadores.length > 0) {
             const datosProcesados = datosUltimosJugadores.map((j, idx) => ({
               pos: idx + 1,
@@ -189,15 +186,11 @@ export default function App() {
               posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
             }));
 
-            const { error } = await supabase.from('resultados_sesiones').insert([{
+            await supabase.from('resultados_sesiones').insert([{
               sesion_tipo: ultimaSesionCache,
               pista: pistaNombre,
               datos_json: datosProcesados
             }]);
-
-            if (!error) {
-              console.log(`[Global AutoGuardado] ¡Sesión ${ultimaSesionCache} guardada con éxito en Supabase!`);
-            }
           }
 
           ultimaSesionCache = tipoSesionActual;
@@ -531,7 +524,7 @@ export default function App() {
     }]);
 
     if (error) {
-      alert('Error al registrar participación (quizás ya estás anotado): ' + error.message);
+      alert('Error al registrar participación: ' + error.message);
     } else {
       alert('¡Te has anotado exitosamente a la competencia!');
       setFormAsistencia({ categoria: '', modelo_auto: '' });
@@ -558,7 +551,7 @@ export default function App() {
     }]);
 
     if (error) {
-      alert('Error al inscribirte (quizás ya estás anotado): ' + error.message);
+      alert('Error al inscribirte: ' + error.message);
     } else {
       alert('¡Inscripción realizada con éxito!');
       setFormAsistenciaEvento({ categoria: '', modelo_auto: '' });
@@ -689,6 +682,12 @@ export default function App() {
                 RESULTADOS
               </button>
               <button
+                onClick={() => { setPestanaActiva('campeonato'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'campeonato' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
+              >
+                CAMPEONATO 🏆
+              </button>
+              <button
                 onClick={() => { setPestanaActiva('calendario'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
                 className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'calendario' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
@@ -796,6 +795,21 @@ export default function App() {
 
         {pestanaActiva === 'resultados' && (
           <Resultados />
+        )}
+
+        {pestanaActiva === 'campeonato' && (
+          <div className="space-y-6 max-w-4xl mx-auto font-wrc text-white uppercase">
+            <div>
+              <h2 className="text-3xl text-amber-400 tracking-wide">CAMPEONATO OFICIAL - MONOMARCA SAVEIRO</h2>
+              <p className="text-neutral-300 text-xs">TABLA DE POSICIONES Y LAS 5 FECHAS OFICIALES DEL TORNEO.</p>
+            </div>
+            
+            <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl text-center py-12 space-y-3">
+              <span className="text-3xl">🏆</span>
+              <p className="text-amber-400 text-sm font-black">MÓDULO DE CAMPEONATO LISTO</p>
+              <p className="text-neutral-400 text-xs max-w-md mx-auto">Próximamente configuraremos aquí el gestor de las 5 fechas de la Saveiro y la suma automática de puntos oficiales.</p>
+            </div>
+          </div>
         )}
 
         {pestanaActiva === 'historia' && (
