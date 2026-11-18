@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
-export default function ResultadosRallyServer() {
+export default function ResultadosRallyServer({ esAdmin }) {
   const [vistaPrincipal, setVistaPrincipal] = useState('rally'); // 'server' o 'rally'
   const [subVistaRally, setSubVistaRally] = useState('tramo1'); // 'tramo1', 'tramo2', 'tramo3', 'tramo4', 'general'
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('TODAS');
   
   const [sesionesServidor, setSesionesServidor] = useState([]);
   const [sesionActivaId, setSesionActivaId] = useState(null);
+  const [guardandoManual, setGuardandoManual] = useState(false);
 
   useEffect(() => {
     cargarSesionesServidor();
@@ -20,6 +21,80 @@ export default function ResultadosRallyServer() {
       if (data.length > 0 && !sesionActivaId) {
         setSesionActivaId(data[0].id);
       }
+    }
+  }
+
+  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL DE LA SESIÓN ACTUAL DEL SERVIDOR
+  async function forzarGuardadoManual() {
+    try {
+      setGuardandoManual(true);
+      const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
+      const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
+      const headers = { 'Authorization': `Bearer ${TOKEN_ST}`, 'Accept': 'application/json' };
+
+      const resServidor = await fetch(`${API_BASE_ST}/server`, { headers }).catch(() => null);
+      if (!resServidor || !resServidor.ok) {
+        alert('Error: No se pudo conectar con la API del servidor de Assetto Hosting.');
+        return;
+      }
+      const datosServ = await resServidor.json();
+
+      const tipoSesionActual = String(
+        datosServ?.session?.type || 
+        datosServ?.session?.name || 
+        datosServ?.session || 
+        'PRACTICE'
+      ).toUpperCase();
+
+      const pistaNombre = datosServ?.track?.name || datosServ?.track || 'TRAMO DE RALLY';
+
+      const resJugadores = await fetch(`${API_BASE_ST}/players`, { headers }).catch(() => null);
+      if (!resJugadores || !resJugadores.ok) {
+        alert('Error: No se pudieron obtener los jugadores actuales de la pista.');
+        return;
+      }
+      const dataJ = await resJugadores.json();
+
+      let lista = [];
+      if (Array.isArray(dataJ)) lista = dataJ;
+      else if (dataJ?.data && Array.isArray(dataJ.data)) lista = dataJ.data;
+      else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
+      else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
+
+      if (lista.length === 0) {
+        alert('Atención: No hay pilotos activos en este momento en el servidor para guardar.');
+        return;
+      }
+
+      const datosProcesados = lista.map((j, idx) => ({
+        pos: idx + 1,
+        nombre: j?.name || 'PILOTO',
+        auto: j?.car?.name || 'AUTO',
+        categoria: j?.carClass || j?.categoria || 'GENERAL',
+        bestLapMs: Number(j?.bestLapMs) || 0,
+        lastLapMs: Number(j?.lastLapMs) || 0,
+        vueltas: Number(j?.laps) || 0,
+        sectores: j?.lastLap?.sectors || [0,0,0],
+        posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+      }));
+
+      const { error } = await supabase.from('resultados_sesiones').insert([{
+        sesion_tipo: tipoSesionActual,
+        pista: pistaNombre,
+        datos_json: datosProcesados
+      }]);
+
+      if (error) {
+        alert('Error al guardar en Supabase: ' + error.message);
+      } else {
+        alert('¡Sesión y tiempos guardados exitosamente en la base de datos!');
+        cargarSesionesServidor();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Ocurrió un error inesperado al forzar el guardado.');
+    } finally {
+      setGuardandoManual(false);
     }
   }
 
@@ -55,7 +130,7 @@ export default function ResultadosRallyServer() {
     if (keyTramo === 'tramo2') return sesionesServidor[1] || null;
     if (keyTramo === 'tramo3') return sesionesServidor[2] || null;
     if (keyTramo === 'tramo4') return sesionesServidor[3] || null;
-    return sesionesServidor[3] || sesionesServidor[0] || null; // Para 'general' toma el último o referencia
+    return sesionesServidor[3] || sesionesServidor[0] || null;
   }
 
   // Datos para la columna izquierda (Tiempo del Tramo actual seleccionado)
@@ -77,12 +152,10 @@ export default function ResultadosRallyServer() {
       };
     });
 
-    // Filtrar por categoría
     if (categoriaSeleccionada !== 'TODAS') {
       lista = lista.filter(p => p.categoria === categoriaSeleccionada);
     }
 
-    // Ordenar por menor tiempo
     lista.sort((a, b) => a.segundos - b.segundos);
 
     return lista.map((p, idx) => {
@@ -107,7 +180,6 @@ export default function ResultadosRallyServer() {
     if (subVistaRally === 'tramo3') cantTramos = 3;
     if (subVistaRally === 'tramo4' || subVistaRally === 'general') cantTramos = sesionesServidor.length > 0 ? sesionesServidor.length : 1;
 
-    // Recopilar acumulados por piloto de las sesiones disponibles hasta el tramo actual
     const acumulados = {};
 
     for (let i = 0; i < Math.min(cantTramos, sesionesServidor.length); i++) {
@@ -160,27 +232,40 @@ export default function ResultadosRallyServer() {
     <div className="max-w-6xl mx-auto space-y-6 font-wrc text-white uppercase p-4">
       
       {/* BOTONES SUPERIORES PRINCIPALES */}
-      <div className="flex justify-center items-center gap-4 bg-neutral-900/60 p-2 rounded-2xl border border-white/10 backdrop-blur-md">
-        <button
-          onClick={() => setVistaPrincipal('server')}
-          className={`px-8 py-3 rounded-xl font-black text-sm tracking-wider transition cursor-pointer ${
-            vistaPrincipal === 'server'
-              ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
-              : 'bg-neutral-950/80 text-neutral-400 hover:text-white border border-white/5'
-          }`}
-        >
-          RESULTADOS SERVER
-        </button>
-        <button
-          onClick={() => setVistaPrincipal('rally')}
-          className={`px-8 py-3 rounded-xl font-black text-sm tracking-wider transition cursor-pointer ${
-            vistaPrincipal === 'rally'
-              ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
-              : 'bg-neutral-950/80 text-neutral-400 hover:text-white border border-white/5'
-          }`}
-        >
-          RESULTADOS RALLY
-        </button>
+      <div className="flex flex-wrap justify-between items-center gap-4 bg-neutral-900/60 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setVistaPrincipal('server')}
+            className={`px-6 py-2.5 rounded-xl font-black text-xs tracking-wider transition cursor-pointer ${
+              vistaPrincipal === 'server'
+                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                : 'bg-neutral-950/80 text-neutral-400 hover:text-white border border-white/5'
+            }`}
+          >
+            RESULTADOS SERVER
+          </button>
+          <button
+            onClick={() => setVistaPrincipal('rally')}
+            className={`px-6 py-2.5 rounded-xl font-black text-xs tracking-wider transition cursor-pointer ${
+              vistaPrincipal === 'rally'
+                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                : 'bg-neutral-950/80 text-neutral-400 hover:text-white border border-white/5'
+            }`}
+          >
+            RESULTADOS RALLY
+          </button>
+        </div>
+
+        {/* BOTÓN DE FORZAR GUARDADO MANUAL (SOLO ADMIN) */}
+        {esAdmin && (
+          <button
+            onClick={forzarGuardadoManual}
+            disabled={guardandoManual}
+            className="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {guardandoManual ? 'GUARDANDO SESIÓN...' : '⚡ FORZAR GUARDADO DE SESIÓN'}
+          </button>
+        )}
       </div>
 
       {/* VISTA 1: RESULTADOS AUTOMÁTICOS DEL SERVIDOR */}
