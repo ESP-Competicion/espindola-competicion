@@ -36,35 +36,23 @@ const extraerTexto = (valor, porDefecto = '---') => {
   return porDefecto;
 };
 
-const formatearTiempo = (tiempo) => {
-  if (!tiempo || tiempo === 0 || tiempo === "0" || tiempo === "---") return "--:--.---";
-  if (typeof tiempo === 'string' && (tiempo.includes(':') || tiempo.includes('.'))) return tiempo;
-  
-  const ms = Number(tiempo);
-  if (!isNaN(ms) && ms > 0) {
-    const minutos = Math.floor(ms / 60000);
-    const segundos = Math.floor((ms % 60000) / 1000);
-    const milesimas = Math.floor(ms % 1000);
-    return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
-  }
-  return "--:--.---";
+const formatearTiempo = (ms) => {
+  if (!ms || ms <= 0 || isNaN(ms)) return "--:--.---";
+  const minutos = Math.floor(ms / 60000);
+  const segundos = Math.floor((ms % 60000) / 1000);
+  const milesimas = Math.floor(ms % 1000);
+  return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
 };
 
-const formatearSector = (sector) => {
-  if (!sector || sector === 0) return "--.---";
-  if (typeof sector === 'string') return sector;
-  const ms = Number(sector);
-  if (!isNaN(ms) && ms > 0) {
-    const segundos = Math.floor(ms / 1000);
-    const milesimas = Math.floor(ms % 1000);
-    return `${segundos}.${String(milesimas).padStart(3, '0')}`;
-  }
-  return "--.---";
+const formatearSector = (ms) => {
+  if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
+  const segundos = Math.floor(ms / 1000);
+  const milesimas = Math.floor(ms % 1000);
+  return `${segundos}.${String(milesimas).padStart(3, '0')}`;
 };
 
-const formatearDiferencia = (dif) => {
-  const ms = Number(dif);
-  if (isNaN(ms) || ms <= 0) return "---";
+const formatearDiferencia = (ms) => {
+  if (!ms || ms <= 0 || isNaN(ms)) return "---";
   return `+${(ms / 1000).toFixed(3)}`;
 };
 
@@ -92,10 +80,6 @@ function ContenidoLiveTiming() {
         const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
         if (resJugadores && resJugadores.ok) {
           const dataJugadores = await resJugadores.json();
-          
-          // IMPRIME EL OBJETO COMPLETO EN LA CONSOLA PARA VER SUS PROPIEDADES EXACTAS
-          console.log("ESTRUCTURA REAL DE JUGADORES:", JSON.stringify(dataJugadores, null, 2));
-
           if (montado) {
             let lista = [];
             if (Array.isArray(dataJugadores)) {
@@ -133,18 +117,14 @@ function ContenidoLiveTiming() {
   const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
-  // Buscamos de forma exhaustiva cualquier propiedad numérica que represente el tiempo de vuelta
-  const obtenerMejorTiempo = (j) => {
-    return j?.bestLap || j?.bestTime || j?.lapTime || j?.timing?.bestLap || j?.stats?.best || j?.time || 0;
-  };
-
+  // Ordenamos usando bestLapMs que vimos en la consola
   const jugadoresOrdenados = [...jugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
-    const tA = obtenerMejorTiempo(a) || Infinity;
-    const tB = obtenerMejorTiempo(b) || Infinity;
+    const tA = Number(a?.bestLapMs) || Infinity;
+    const tB = Number(b?.bestLapMs) || Infinity;
     return (tA === 0 ? Infinity : tA) - (tB === 0 ? Infinity : tB);
   });
 
-  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? obtenerMejorTiempo(jugadoresOrdenados[0]) : null;
+  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? Number(jugadoresOrdenados[0]?.bestLapMs) || null : null;
 
   return (
     <div className="w-full px-4 md:px-8 py-4 font-wrc text-white uppercase space-y-6">
@@ -229,11 +209,12 @@ function ContenidoLiveTiming() {
                   </tr>
                 ) : (
                   jugadoresOrdenados.map((j, index) => {
-                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "PILOTO");
-                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "AUTO");
-                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 0;
-                    const tiempoMs = obtenerMejorTiempo(j);
+                    const nombrePiloto = extraerTexto(j?.name, "PILOTO");
+                    const modeloAuto = extraerTexto(j?.car?.name, "AUTO");
+                    const vueltas = Number(j?.laps) || 0;
+                    const tiempoMs = Number(j?.bestLapMs) || 0;
                     const tiempoFormateado = formatearTiempo(tiempoMs);
+                    const ultimoMs = Number(j?.lastLapMs) || 0;
 
                     let gapTexto = "---";
                     if (index === 0 && tiempoMs > 0) {
@@ -244,13 +225,13 @@ function ContenidoLiveTiming() {
 
                     let deltaTexto = "---";
                     if (index > 0 && tiempoMs > 0) {
-                      const tiempoAdelante = obtenerMejorTiempo(jugadoresOrdenados[index - 1]);
+                      const tiempoAdelante = Number(jugadoresOrdenados[index - 1]?.bestLapMs) || 0;
                       if (tiempoAdelante > 0) {
                         deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
                       }
                     }
 
-                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1, j?.sector2 || j?.s2, j?.sector3 || j?.s3];
+                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
                     const esPrimero = index === 0;
                     const colorPos = esPrimero
                       ? "bg-amber-400 text-black font-black"
@@ -261,7 +242,7 @@ function ContenidoLiveTiming() {
                       : "text-neutral-300 font-bold";
 
                     return (
-                      <tr key={j?.id || j?.connectionId || index} className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}>
+                      <tr key={j?.steamId || j?.carId || index} className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}>
                         <td className="py-3 px-3 text-center">
                           <span className={`inline-block w-6 h-6 leading-6 rounded-md text-xs ${colorPos}`}>{index + 1}</span>
                         </td>
@@ -277,7 +258,7 @@ function ContenidoLiveTiming() {
                           </td>
                         ))}
                         <td className="py-3 px-4 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
-                          {tiempoFormateado}
+                          {formatearTiempo(ultimoMs > 0 ? ultimoMs : tiempoMs)}
                         </td>
                       </tr>
                     );
@@ -288,7 +269,7 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: MAPA Y FEED */}
+        {/* COLUMNA DERECHA: MAPA INTERactivo CON POSICIÓN GPS */}
         <div className="xl:col-span-4 space-y-6 flex flex-col">
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
@@ -301,22 +282,44 @@ function ContenidoLiveTiming() {
               </span>
             </div>
 
-            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-8 relative overflow-hidden">
+            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-4 relative overflow-hidden min-h-[320px]">
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:16px_16px]"></div>
               
-              <div className="text-center z-10 space-y-3">
-                <div className="inline-block p-4 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
-                  <svg className="w-9 h-9 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                  </svg>
+              {/* RENDERIZADO DEL PUNTO DEL AUTO USANDO mapX y mapY */}
+              {jugadoresOrdenados.map((j, idx) => {
+                const mapX = j?.position?.mapX;
+                const mapY = j?.position?.mapY;
+                if (mapX === undefined || mapY === undefined) return null;
+
+                // Normalizamos las coordenadas aproximadas del mapa de sTracker dentro del contenedor
+                const leftPercent = Math.min(Math.max((mapX / 1000) * 100, 5), 95);
+                const topPercent = Math.min(Math.max((mapY / 600) * 100, 5), 95);
+
+                return (
+                  <div 
+                    key={`map-car-${idx}`}
+                    className="absolute z-20 flex items-center gap-1.5 transition-all duration-300"
+                    style={{ left: `${leftPercent}%`, top: `${topPercent}%` }}
+                  >
+                    <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-black shadow-[0_0_10px_#fbbf24] animate-ping absolute"></span>
+                    <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-black shadow-[0_0_10px_#fbbf24] relative z-10"></span>
+                    <span className="bg-black/80 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/40 whitespace-nowrap">
+                      {j?.name || 'PILOTO'}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {jugadoresOrdenados.length === 0 || !jugadoresOrdenados.some(j => j?.position?.mapX !== undefined) ? (
+                <div className="text-center z-10 space-y-2">
+                  <div className="inline-block p-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                    <svg className="w-7 h-7 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                    </svg>
+                  </div>
+                  <p className="text-xs text-neutral-300 tracking-wider font-bold">ESPERANDO POSICIÓN GPS...</p>
                 </div>
-                <p className="text-xs text-neutral-300 tracking-wider font-bold">
-                  TRAZADO ACTIVO
-                </p>
-                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                  Sincronizado correctamente con sTracker vía endpoint `/players`.
-                </p>
-              </div>
+              ) : null}
             </div>
           </div>
 
