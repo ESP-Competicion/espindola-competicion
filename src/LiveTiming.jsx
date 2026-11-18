@@ -46,7 +46,7 @@ const formatearTiempo = (ms) => {
 
 const formatearSector = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
-  // Si viene en segundos decimales (ej: 28.087) o en milisegundos grandes
+  // Si viene en segundos decimales directos (ej: 28.087) o en milisegundos grandes
   const valorMs = ms < 1000 ? ms * 1000 : ms;
   const segundos = Math.floor(valorMs / 1000);
   const milesimas = Math.floor(valorMs % 1000);
@@ -58,21 +58,20 @@ const formatearDiferencia = (ms) => {
   return `+${(ms / 1000).toFixed(3)}`;
 };
 
-// Función robusta para extraer los sectores desde cualquier estructura que mande el sTracker
+// Función blindada para extraer sectores desde cualquier propiedad del sTracker
 const obtenerSectoresJugador = (j) => {
-  // 1. Revisar si vienen dentro de la última vuelta (lastLap.sectors o similar)
+  // 1. Revisar si vienen en el array de la última vuelta o mejor vuelta
   if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
     return j.lastLap.sectors.map(s => Number(s) || 0);
   }
-  // 2. Revisar si vienen en la mejor vuelta
   if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
     return j.bestLap.sectors.map(s => Number(s) || 0);
   }
-  // 3. Revisar en un array general de sectors
+  // 2. Revisar array general de sectors
   if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
     return j.sectors.map(s => Number(s) || 0);
   }
-  // 4. Revisar propiedades individuales sector1, sector2, sector3 o s1, s2, s3
+  // 3. Revisar propiedades sueltas sector1, sector2, sector3
   if (j?.sector1 !== undefined || j?.sector2 !== undefined || j?.sector3 !== undefined) {
     return [Number(j?.sector1) || 0, Number(j?.sector2) || 0, Number(j?.sector3) || 0];
   }
@@ -286,7 +285,6 @@ function ContenidoLiveTiming() {
                         <td className="py-2.5 px-3 text-right font-mono text-[11px] text-neutral-400">{deltaTexto}</td>
                         <td className="py-2.5 px-3 text-center text-white font-bold">{vueltas}</td>
                         
-                        {/* SECTORES CON COLOR PÚRPURA SI ES EL MEJOR GLOBAL */}
                         {arraySectores.map((sIdx) => {
                           const valSector = Number(sectoresPiloto[sIdx]);
                           const esMejorSector = mejoresSectoresGlobales[sIdx] !== null && valSector === mejoresSectoresGlobales[sIdx];

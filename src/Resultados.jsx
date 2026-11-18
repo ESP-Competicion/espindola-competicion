@@ -14,12 +14,19 @@ const formatearTiempo = (ms) => {
 
 const formatearSector = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
-  const segundos = Math.floor(ms / 1000);
-  const milesimas = Math.floor(ms % 1000);
+  const valorMs = ms < 1000 ? ms * 1000 : ms;
+  const segundos = Math.floor(valorMs / 1000);
+  const milesimas = Math.floor(valorMs % 1000);
   return `${segundos}.${String(milesimas).padStart(3, '0')}`;
 };
 
 const obtenerSectoresJugador = (j) => {
+  if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
+    return j.lastLap.sectors.map(s => Number(s) || 0);
+  }
+  if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
+    return j.bestLap.sectors.map(s => Number(s) || 0);
+  }
   if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
     return j.sectors.map(s => Number(s) || 0);
   }
@@ -39,10 +46,10 @@ export default function Resultados() {
     verificarUsuario();
     cargarResultadosSupabase();
 
-    // MONITOREO INTELIGENTE DE CAMBIO DE SESIÓN EN VIVO
     let ultimaSesionDetectada = null;
     let ultimosDatosJugadores = [];
 
+    // Monitoreo constante en segundo plano para capturar cuando cambie de Práctica a Qualy o Carrera
     const intervaloAutoGuardado = setInterval(async () => {
       try {
         const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
@@ -63,14 +70,13 @@ export default function Resultados() {
         else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
         else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
 
-        // Si es la primera vez que lee el servidor, guardamos el estado actual
         if (!ultimaSesionDetectada) {
           ultimaSesionDetectada = tipoSesionActual;
           ultimosDatosJugadores = lista;
           return;
         }
 
-        // SI DETECTAMOS UN CAMBIO DE FASE (Ej: Pasó de Practice a Qualy, o Qualy a Race)
+        // Si cambia el tipo de sesión, guardamos automáticamente la que acaba de terminar
         if (ultimaSesionDetectada !== tipoSesionActual) {
           if (ultimosDatosJugadores.length > 0) {
             const datosProcesados = ultimosDatosJugadores.map((j, idx) => ({
@@ -84,7 +90,6 @@ export default function Resultados() {
               posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
             }));
 
-            // Guardamos automáticamente la sesión que acaba de terminar (la vieja)
             await supabase.from('resultados_sesiones').insert([{
               sesion_tipo: ultimaSesionDetectada,
               pista: pistaNombre,
@@ -92,21 +97,17 @@ export default function Resultados() {
             }]);
 
             cargarResultadosSupabase();
-            console.log(`[AutoGuardado] Sesión anterior (${ultimaSesionDetectada}) archivada con éxito.`);
           }
-
-          // Actualizamos a la nueva sesión actual
           ultimaSesionDetectada = tipoSesionActual;
         }
 
-        // Mantenemos siempre fresca la copia de los jugadores de la sesión en curso
         if (lista.length > 0) {
           ultimosDatosJugadores = lista;
         }
       } catch (err) {
-        console.error("Error en autoguardado de fondo:", err);
+        console.error("Error en autoguardado:", err);
       }
-    }, 5000); // Revisa cada 5 segundos
+    }, 4000);
 
     return () => clearInterval(intervaloAutoGuardado);
   }, []);
@@ -138,13 +139,13 @@ export default function Resultados() {
     setCargando(false);
   }
 
-  // Botón manual para guardar la sesión que está transcurriendo en este momento
+  // Botón manual de respaldo para guardar la sesión en curso en el momento que desees
   async function guardarResultadosManualmente() {
     try {
       const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
       const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
       if (!resServidor || !resServidor.ok) {
-        alert('No se pudo conectar con la API del servidor.');
+        alert('No se pudo conectar con el servidor.');
         return;
       }
       const datosServ = await resServidor.json();
@@ -153,7 +154,7 @@ export default function Resultados() {
 
       const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
       if (!resJugadores || !resJugadores.ok) {
-        alert('No se pudieron obtener los datos de los pilotos.');
+        alert('No se pudieron obtener los jugadores.');
         return;
       }
       const dataJ = await resJugadores.json();
@@ -165,7 +166,7 @@ export default function Resultados() {
       else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
 
       if (lista.length === 0) {
-        alert('No hay pilotos registrados en pista en este momento.');
+        alert('No hay pilotos registrados en pista.');
         return;
       }
 
@@ -187,7 +188,7 @@ export default function Resultados() {
       }]);
 
       if (error) {
-        alert('Error al guardar en Supabase: ' + error.message);
+        alert('Error al guardar: ' + error.message);
       } else {
         alert(`¡Resultados de ${tipoSesion} guardados exitosamente!`);
         cargarResultadosSupabase();
@@ -198,13 +199,11 @@ export default function Resultados() {
   }
 
   async function eliminarResultado(id) {
-    if (!confirm('¿Estás seguro de eliminar este registro de resultados?')) return;
+    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
     const { error } = await supabase.from('resultados_sesiones').delete().eq('id', id);
     if (!error) {
       cargarResultadosSupabase();
       setSesionSeleccionada(null);
-    } else {
-      alert('Error al eliminar: ' + error.message);
     }
   }
 
@@ -221,13 +220,12 @@ export default function Resultados() {
             onClick={guardarResultadosManualmente}
             className="bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase"
           >
-            📥 FORZAR GUARDADO SESIÓN ACTUAL
+            📥 FORZAR GUARDAR SESIÓN ACTUAL
           </button>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* LISTA DE SESIONES GUARDADAS */}
         <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl space-y-2.5">
           <h3 className="text-amber-400 text-xs font-black tracking-wider border-b border-white/10 pb-2">
             SESIONES ARCHIVADAS ({resultadosGuardados.length})
@@ -236,7 +234,7 @@ export default function Resultados() {
           {cargando ? (
             <p className="text-neutral-400 text-xs text-center py-4">CARGANDO RESULTADOS...</p>
           ) : resultadosGuardados.length === 0 ? (
-            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. SE ARCHIVARÁN SOLAS AL CAMBIAR DE FASE EN EL SERVIDOR.</p>
+            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA.</p>
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {resultadosGuardados.map((sesion) => {
@@ -263,7 +261,6 @@ export default function Resultados() {
           )}
         </div>
 
-        {/* DETALLE DE LA SESIÓN SELECCIONADA */}
         <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
           {!sesionSeleccionada ? (
             <div className="p-10 text-center text-neutral-400 text-xs">
@@ -302,7 +299,7 @@ export default function Resultados() {
                     <tr className="border-b border-white/15 text-amber-400 tracking-wider bg-black/70">
                       <th className="py-2.5 px-3 text-center w-10">POS</th>
                       {sesionSeleccionada.sesion_tipo.toUpperCase().includes('RACE') && (
-                        <th className="py-2.5 px-2 text-center" title="Posiciones ganadas / perdidas respecto a la largada">+/-</th>
+                        <th className="py-2.5 px-2 text-center" title="Posiciones ganadas / perdidas">+/-</th>
                       )}
                       <th className="py-2.5 px-3">PILOTO</th>
                       <th className="py-2.5 px-3">AUTO</th>
