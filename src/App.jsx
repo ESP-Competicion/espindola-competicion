@@ -5,7 +5,7 @@ import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
 import LiveTiming from './LiveTiming';
-import Resultados from './Resultados'; // NUEVO COMPONENTE DE RESULTADOS
+import Resultados from './Resultados';
 
 const fotosRally = [
   '/fondo.jpg'
@@ -54,6 +54,7 @@ export default function App() {
   const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
   const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
   const [mostrarCambiarPasswordModal, setMostrarCambiarPasswordModal] = useState(false);
+  // Mantener 'inicio' por defecto para que no salte directo a resultados
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
   const [esAdmin, setEsAdmin] = useState(false);
 
@@ -693,7 +694,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 0. RESULTADOS (NUEVO) */}
         {pestanaActiva === 'resultados' && (
           <Resultados />
         )}
@@ -1606,7 +1606,7 @@ export default function App() {
                     onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value.toUpperCase() })}
                     placeholder="EJ: PEUGEOT 208 RALLY4"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
                   />
                 </div>
                 <button
