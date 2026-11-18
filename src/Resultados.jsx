@@ -33,34 +33,22 @@ export default function Resultados() {
   const [resultadosGuardados, setResultadosGuardados] = useState([]);
   const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [sesionAnteriorEnVivo, setSesionAnteriorEnVivo] = useState(null);
+  const [guardandoManual, setGuardandoManual] = useState(false);
+  const [usuarioActual, setUsuarioActual] = useState(null);
 
   useEffect(() => {
+    verificarUsuario();
     cargarResultadosSupabase();
+  }, []);
 
-    // Verificador en tiempo real para autoguardar cuando cambie la sesión en el servidor
-    const intervaloMonitoreo = setInterval(async () => {
-      try {
-        const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
-        const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
-        if (!resServidor || !resServidor.ok) return;
-        const dataServ = await resServidor.json();
-        const tipoSesionActual = String(dataServ?.session?.type || dataServ?.session?.name || 'PRACTICE').toUpperCase();
+  async function verificarUsuario() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setUsuarioActual(session.user);
+    }
+  }
 
-        if (sesionAnteriorEnVivo && sesionAnteriorEnVivo !== tipoSesionActual) {
-          // El servidor cambió de sesión (Ej: Práctica -> Qualy o Qualy -> Carrera)
-          // Guardamos automáticamente los resultados de la sesión que acaba de terminar
-          await capturarYGuardarSesion(sesionAnteriorEnVivo, dataServ);
-          cargarResultadosSupabase();
-        }
-        setSesionAnteriorEnVivo(tipoSesionActual);
-      } catch (err) {
-        console.error("Error monitoreando sesión:", err);
-      }
-    }, 5000);
-
-    return () => clearInterval(intervaloMonitoreo);
-  }, [sesionAnteriorEnVivo]);
+  const esAdmin = usuarioActual?.email === 'leosimracingok@gmail.com';
 
   async function cargarResultadosSupabase() {
     setCargando(true);
@@ -80,11 +68,28 @@ export default function Resultados() {
     setCargando(false);
   }
 
-  async function capturarYGuardarSesion(tipoSesion, datosServ) {
+  // Función para guardar manualmente los resultados actuales de la API de sTracker
+  async function guardarResultadosManualmente() {
     try {
+      setGuardandoManual(true);
       const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
+      
+      const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
+      if (!resServidor || !resServidor.ok) {
+        alert('No se pudo conectar con la API del servidor.');
+        setGuardandoManual(false);
+        return;
+      }
+      const datosServ = await resServidor.json();
+      const tipoSesion = String(datosServ?.session?.type || datosServ?.session?.name || 'PRACTICE').toUpperCase();
+      const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
+
       const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
-      if (!resJugadores || !resJugadores.ok) return;
+      if (!resJugadores || !resJugadores.ok) {
+        alert('No se pudieron obtener los datos de los pilotos.');
+        setGuardandoManual(false);
+        return;
+      }
       const dataJ = await resJugadores.json();
 
       let lista = [];
@@ -93,9 +98,11 @@ export default function Resultados() {
       else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
       else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
 
-      if (lista.length === 0) return;
-
-      const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
+      if (lista.length === 0) {
+        alert('No hay pilotos registrados en pista en este momento.');
+        setGuardandoManual(false);
+        return;
+      }
 
       const datosProcesados = lista.map((j, idx) => ({
         pos: idx + 1,
@@ -108,23 +115,54 @@ export default function Resultados() {
         posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
       }));
 
-      await supabase.from('resultados_sesiones').insert([{
+      const { error } = await supabase.from('resultados_sesiones').insert([{
         sesion_tipo: tipoSesion,
         pista: pistaNombre,
         datos_json: datosProcesados
       }]);
 
-      console.log(`¡Resultados de ${tipoSesion} guardados automáticamente!`);
+      if (error) {
+        alert('Error al guardar en Supabase: ' + error.message);
+      } else {
+        alert(`¡Resultados de ${tipoSesion} guardados exitosamente!`);
+        cargarResultadosSupabase();
+      }
     } catch (err) {
-      console.error("Error al autoguardar sesión:", err);
+      console.error("Error al guardar manualmente:", err);
+      alert('Ocurrió un error inesperado al guardar.');
+    } finally {
+      setGuardandoManual(false);
+    }
+  }
+
+  async function eliminarResultado(id) {
+    if (!confirm('¿Estás seguro de eliminar este registro de resultados?')) return;
+    const { error } = await supabase.from('resultados_sesiones').delete().eq('id', id);
+    if (!error) {
+      cargarResultadosSupabase();
+      setSesionSeleccionada(null);
+    } else {
+      alert('Error al eliminar: ' + error.message);
     }
   }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-wrc text-white uppercase">
-      <div>
-        <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">RESULTADOS DE SESIONES</h2>
-        <p className="text-neutral-300 text-xs font-wrc">HISTORIAL AUTOMÁTICO DE PRÁCTICAS, CLASIFICACIONES Y CARRERAS.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">RESULTADOS DE SESIONES</h2>
+          <p className="text-neutral-300 text-xs font-wrc">HISTORIAL DE PRÁCTICAS, CLASIFICACIONES Y CARRERAS.</p>
+        </div>
+
+        {esAdmin && (
+          <button
+            onClick={guardarResultadosManualmente}
+            disabled={guardandoManual}
+            className={`bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase ${guardandoManual ? 'opacity-50 pointer-events-none' : ''}`}
+          >
+            {guardandoManual ? 'GUARDANDO...' : '📥 GUARDAR SESIÓN ACTUAL'}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -137,7 +175,7 @@ export default function Resultados() {
           {cargando ? (
             <p className="text-neutral-400 text-xs text-center py-4">CARGANDO RESULTADOS...</p>
           ) : resultadosGuardados.length === 0 ? (
-            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. SE GUARDARÁN AUTOMÁTICAMENTE AL CAMBIAR DE SESIÓN EN EL SERVIDOR.</p>
+            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. {esAdmin ? 'USA EL BOTÓN VERDE DE ARRIBA PARA GUARDAR LOS DATOS ACTUALES.' : ''}</p>
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {resultadosGuardados.map((sesion) => {
@@ -181,9 +219,20 @@ export default function Resultados() {
                     🏁 {sesionSeleccionada.pista}
                   </h3>
                 </div>
-                <span className="text-[10px] text-neutral-400">
-                  {new Date(sesionSeleccionada.fecha).toLocaleString()}
-                </span>
+                
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-neutral-400">
+                    {new Date(sesionSeleccionada.fecha).toLocaleString()}
+                  </span>
+                  {esAdmin && (
+                    <button
+                      onClick={() => eliminarResultado(sesionSeleccionada.id)}
+                      className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-2.5 py-1 rounded text-[10px] border border-red-500/30 cursor-pointer"
+                    >
+                      🗑️ ELIMINAR
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -207,7 +256,7 @@ export default function Resultados() {
                     {sesionSeleccionada.datos_json.map((piloto, idx) => {
                       const posActual = piloto.pos || idx + 1;
                       const posLargada = piloto.posicionLargada || posActual;
-                      const diferenciaPos = posLargada - posActual; // Positivo = ganó posiciones, Negativo = perdió
+                      const diferenciaPos = posLargada - posActual;
 
                       return (
                         <tr key={idx} className="hover:bg-white/5 transition">
