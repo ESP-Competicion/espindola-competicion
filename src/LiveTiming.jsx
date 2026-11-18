@@ -46,14 +46,35 @@ const formatearTiempo = (ms) => {
 
 const formatearSector = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
-  const segundos = Math.floor(ms / 1000);
-  const milesimas = Math.floor(ms % 1000);
+  const valorMs = ms < 1000 ? ms * 1000 : ms;
+  const segundos = Math.floor(valorMs / 1000);
+  const milesimas = Math.floor(valorMs % 1000);
   return `${segundos}.${String(milesimas).padStart(3, '0')}`;
 };
 
 const formatearDiferencia = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "---";
   return `+${(ms / 1000).toFixed(3)}`;
+};
+
+const obtenerSectoresJugador = (j) => {
+  if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
+    return j.lastLap.sectors.map(s => Number(s) || 0);
+  }
+  if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
+    return j.bestLap.sectors.map(s => Number(s) || 0);
+  }
+  if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
+    return j.sectors.map(s => Number(s) || 0);
+  }
+  const s1 = Number(j?.s1 ?? j?.sector1 ?? j?.lastLap?.s1 ?? j?.lastLap?.sector1 ?? 0);
+  const s2 = Number(j?.s2 ?? j?.sector2 ?? j?.lastLap?.s2 ?? j?.lastLap?.sector2 ?? 0);
+  const s3 = Number(j?.s3 ?? j?.sector3 ?? j?.lastLap?.s3 ?? j?.lastLap?.sector3 ?? 0);
+
+  if (s1 > 0 || s2 > 0 || s3 > 0) {
+    return [s1, s2, s3];
+  }
+  return [0, 0, 0];
 };
 
 function ContenidoLiveTiming() {
@@ -74,12 +95,15 @@ function ContenidoLiveTiming() {
         const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
         if (resServidor && resServidor.ok) {
           const dataServidor = await resServidor.json();
+          console.log("DATOS COMPLETOS DE SERVER:", dataServidor);
           if (montado && dataServidor) setServidor(dataServidor);
         }
 
         const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
         if (resJugadores && resJugadores.ok) {
           const dataJugadores = await resJugadores.json();
+          console.log("DATOS COMPLETOS DE PLAYERS:", dataJugadores);
+          
           if (montado) {
             let lista = [];
             if (Array.isArray(dataJugadores)) {
@@ -125,6 +149,18 @@ function ContenidoLiveTiming() {
 
   const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? Number(jugadoresOrdenados[0]?.bestLapMs) || null : null;
 
+  const mejoresSectoresGlobales = arraySectores.map(sIdx => {
+    let mejor = Infinity;
+    jugadoresOrdenados.forEach(j => {
+      const sectoresPiloto = obtenerSectoresJugador(j);
+      const val = Number(sectoresPiloto[sIdx]);
+      if (val > 0 && val < mejor) {
+        mejor = val;
+      }
+    });
+    return mejor === Infinity ? null : mejor;
+  });
+
   return (
     <div className="w-full px-3 md:px-6 py-3 font-wrc text-white uppercase space-y-4 max-w-[1400px] mx-auto text-xs">
       
@@ -162,7 +198,7 @@ function ContenidoLiveTiming() {
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-2.5 border-b border-amber-500/30 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">EN VIVO</span>
-              <h3 className="text-white text-xs tracking-wider font-black">CLASIFICACIÓN Y TIEMPOS</h3>
+              <h3 className="text-white text-xs tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
             </div>
             <span className="text-[11px] text-amber-400 font-bold truncate max-w-[350px]">
               🏁 {nombrePista}
@@ -176,24 +212,29 @@ function ContenidoLiveTiming() {
                   <th className="py-2.5 px-3 text-center w-10">POS</th>
                   <th className="py-2.5 px-3">PILOTO</th>
                   <th className="py-2.5 px-3">AUTO</th>
-                  <th className="py-2.5 px-3 text-right">LAST LAP</th>
+                  <th className="py-2.5 px-3 text-right">LAST</th>
                   <th className="py-2.5 px-3 text-right">GAP</th>
                   <th className="py-2.5 px-3 text-right">DELTA</th>
                   <th className="py-2.5 px-3 text-center">VUELTAS</th>
-                  <th className="py-2.5 px-3 text-right border-l border-white/10 text-purple-400">MEJOR TIEMPO</th>
+                  {arraySectores.map((idx) => (
+                    <th key={`header-s-${idx}`} className="py-2.5 px-2 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
+                      S{idx + 1}
+                    </th>
+                  ))}
+                  <th className="py-2.5 px-3 text-right border-l border-white/10 text-purple-400">MEJOR</th>
                 </tr>
               </thead>
               
               <tbody className="divide-y divide-white/10">
                 {cargando ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-10 text-neutral-400 text-xs">
+                    <td colSpan={8 + cantidadSectores} className="text-center py-10 text-neutral-400 text-xs">
                       SINCRONIZANDO TELEMETRÍA...
                     </td>
                   </tr>
                 ) : jugadoresOrdenados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-10 text-neutral-400 text-xs">
+                    <td colSpan={8 + cantidadSectores} className="text-center py-10 text-neutral-400 text-xs">
                       ESPERANDO DATOS EN PISTA...
                     </td>
                   </tr>
@@ -221,6 +262,7 @@ function ContenidoLiveTiming() {
                       }
                     }
 
+                    const sectoresPiloto = obtenerSectoresJugador(j);
                     const esPrimero = index === 0;
                     const colorPos = esPrimero
                       ? "bg-amber-400 text-black font-black"
@@ -241,6 +283,23 @@ function ContenidoLiveTiming() {
                         <td className={`py-2.5 px-3 text-right font-mono text-[11px] ${index === 0 && mejorLapMs > 0 ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>{gapTexto}</td>
                         <td className="py-2.5 px-3 text-right font-mono text-[11px] text-neutral-400">{deltaTexto}</td>
                         <td className="py-2.5 px-3 text-center text-white font-bold">{vueltas}</td>
+                        
+                        {arraySectores.map((sIdx) => {
+                          const valSector = Number(sectoresPiloto[sIdx]);
+                          const esMejorSector = mejoresSectoresGlobales[sIdx] !== null && valSector === mejoresSectoresGlobales[sIdx];
+                          
+                          return (
+                            <td 
+                              key={`cell-s-${index}-${sIdx}`} 
+                              className={`py-2.5 px-2 text-center font-mono text-[11px] border-l border-white/5 ${
+                                esMejorSector ? 'bg-purple-600/30 text-purple-300 font-black border-purple-500/50' : 'text-neutral-300 bg-white/[0.01]'
+                              }`}
+                            >
+                              {formatearSector(valSector)}
+                            </td>
+                          );
+                        })}
+
                         <td className="py-2.5 px-3 text-right font-mono font-black text-purple-400 border-l border-white/10 bg-purple-950/20">
                           {formatearTiempo(mejorLapMs)}
                         </td>
