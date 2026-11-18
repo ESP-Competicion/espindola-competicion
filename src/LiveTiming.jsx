@@ -46,8 +46,10 @@ const formatearTiempo = (ms) => {
 
 const formatearSector = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
-  const segundos = Math.floor(ms / 1000);
-  const milesimas = Math.floor(ms % 1000);
+  // Si viene en segundos decimales (ej: 28.087) o en milisegundos grandes
+  const valorMs = ms < 1000 ? ms * 1000 : ms;
+  const segundos = Math.floor(valorMs / 1000);
+  const milesimas = Math.floor(valorMs % 1000);
   return `${segundos}.${String(milesimas).padStart(3, '0')}`;
 };
 
@@ -56,22 +58,26 @@ const formatearDiferencia = (ms) => {
   return `+${(ms / 1000).toFixed(3)}`;
 };
 
-// Función auxiliar robusta para extraer los sectores del jugador en cualquier formato que mande la API
+// Función robusta para extraer los sectores desde cualquier estructura que mande el sTracker
 const obtenerSectoresJugador = (j) => {
-  // 1. Intentar array directo en sectors
+  // 1. Revisar si vienen dentro de la última vuelta (lastLap.sectors o similar)
+  if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
+    return j.lastLap.sectors.map(s => Number(s) || 0);
+  }
+  // 2. Revisar si vienen en la mejor vuelta
+  if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
+    return j.bestLap.sectors.map(s => Number(s) || 0);
+  }
+  // 3. Revisar en un array general de sectors
   if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
     return j.sectors.map(s => Number(s) || 0);
   }
-  // 2. Intentar propiedades individuales sector1, sector2, sector3
+  // 4. Revisar propiedades individuales sector1, sector2, sector3 o s1, s2, s3
   if (j?.sector1 !== undefined || j?.sector2 !== undefined || j?.sector3 !== undefined) {
     return [Number(j?.sector1) || 0, Number(j?.sector2) || 0, Number(j?.sector3) || 0];
   }
-  // 3. Intentar dentro de la última vuelta o mejor vuelta registrada
-  if (j?.lastLap && Array.isArray(j.lastLap.sectors)) {
-    return j.lastLap.sectors.map(s => Number(s) || 0);
-  }
-  if (j?.bestLap && Array.isArray(j.bestLap.sectors)) {
-    return j.bestLap.sectors.map(s => Number(s) || 0);
+  if (j?.s1 !== undefined || j?.s2 !== undefined || j?.s3 !== undefined) {
+    return [Number(j?.s1) || 0, Number(j?.s2) || 0, Number(j?.s3) || 0];
   }
   return [0, 0, 0];
 };
@@ -145,7 +151,6 @@ function ContenidoLiveTiming() {
 
   const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? Number(jugadoresOrdenados[0]?.bestLapMs) || null : null;
 
-  // Calcular mejores tiempos por sector en toda la sesión para colorear en Púrpura dinámico
   const mejoresSectoresGlobales = arraySectores.map(sIdx => {
     let mejor = Infinity;
     jugadoresOrdenados.forEach(j => {
@@ -161,15 +166,15 @@ function ContenidoLiveTiming() {
   return (
     <div className="w-full px-3 md:px-6 py-3 font-wrc text-white uppercase space-y-4 max-w-[1400px] mx-auto text-xs">
       
-      {/* CABECERA COMPACTA (NOMBRE EN UN SOLO RENGLÓN) */}
+      {/* CABECERA COMPACTA */}
       <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-2xl px-4 py-3 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 w-full">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
             <span className="text-[9px] text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
-          <h2 className="text-xs md:text-sm text-white font-black tracking-wide truncate max-w-[700px]" title={extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL - MONOMARCA SAVEIRO")}>
-            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL - MONOMARCA SAVEIRO")}
+          <h2 className="text-xs md:text-sm text-white font-black tracking-wide truncate max-w-[700px]" title={extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}>
+            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
           </h2>
         </div>
 
@@ -189,7 +194,7 @@ function ContenidoLiveTiming() {
         </div>
       </div>
 
-      {/* CONTENEDOR PRINCIPAL: TABLA A ANCHO COMPLETO */}
+      {/* CONTENEDOR PRINCIPAL: TABLA DE TIEMPOS */}
       <div className="w-full">
         <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl w-full">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-2.5 border-b border-amber-500/30 flex justify-between items-center">
