@@ -160,11 +160,11 @@ function ContenidoLiveTiming() {
         </div>
       </div>
 
-      {/* TABLA PROPIA + MAPA */}
+      {/* CONTENEDOR PRINCIPAL: TABLA COMPLETA + FEED DE SESIÓN */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
         
-        {/* TABLA DE POSICIONES (8 COLUMNAS) */}
-        <div className="xl:col-span-8 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+        {/* TABLA DE POSICIONES Y PARCIALES (ANCHO COMPLETO / 9 COLUMNAS) */}
+        <div className="xl:col-span-9 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
@@ -268,71 +268,8 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: MAPA EN VIVO CON TRAZADO Y PUNTO GPS */}
-        <div className="xl:col-span-4 space-y-6 flex flex-col">
-          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
-            <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA EN VIVO</h3>
-              </div>
-              <span className="text-[10px] bg-neutral-900 text-neutral-400 px-2.5 py-0.5 rounded border border-white/10 truncate max-w-[140px]">
-                {nombrePista}
-              </span>
-            </div>
-
-            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-4 relative overflow-hidden min-h-[320px]">
-              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:16px_16px]"></div>
-              
-              {/* TRAZADO VECTORIAL DE FONDO (CIRCUITO) */}
-              <svg className="absolute inset-0 w-full h-full p-6 opacity-40 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path 
-                  d="M 15 80 Q 15 20, 50 20 Q 85 20, 85 50 Q 85 85, 50 85 Q 25 85, 20 60" 
-                  fill="none" 
-                  stroke="#fbbf24" 
-                  strokeWidth="3" 
-                  strokeLinecap="round"
-                  className="drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]"
-                />
-              </svg>
-
-              {/* RENDERIZADO DEL PUNTO DEL AUTO USANDO mapX y mapY */}
-              {jugadoresOrdenados.map((j, idx) => {
-                const mapX = j?.position?.mapX;
-                const mapY = j?.position?.mapY;
-                if (mapX === undefined || mapY === undefined) return null;
-
-                const leftPercent = Math.min(Math.max((mapX / 1000) * 100, 10), 90);
-                const topPercent = Math.min(Math.max((mapY / 600) * 100, 10), 90);
-
-                return (
-                  <div 
-                    key={`map-car-${idx}`}
-                    className="absolute z-20 flex items-center gap-1.5 transition-all duration-300"
-                    style={{ left: `${leftPercent}%`, top: `${topPercent}%` }}
-                  >
-                    <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-black shadow-[0_0_10px_#fbbf24] animate-ping absolute"></span>
-                    <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-black shadow-[0_0_10px_#fbbf24] relative z-10"></span>
-                    <span className="bg-black/90 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/40 whitespace-nowrap">
-                      {j?.name || 'PILOTO'}
-                    </span>
-                  </div>
-                );
-              })}
-
-              {jugadoresOrdenados.length === 0 || !jugadoresOrdenados.some(j => j?.position?.mapX !== undefined) ? (
-                <div className="text-center z-10 space-y-2">
-                  <div className="inline-block p-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                    <svg className="w-7 h-7 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                    </svg>
-                  </div>
-                  <p className="text-xs text-neutral-300 tracking-wider font-bold">ESPERANDO POSICIÓN GPS...</p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
+        {/* COLUMNA DERECHA: FEED DE SESIÓN Y ESTADO */}
+        <div className="xl:col-span-3 space-y-6 flex flex-col">
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
@@ -352,7 +289,7 @@ function ContenidoLiveTiming() {
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-white/10 text-center">
+            <div className="mt-8 pt-3 border-t border-white/10 text-center">
               <p className="text-[10px] text-neutral-500 tracking-wider">
                 ESPÍNDOLA COMPETICIÓN
               </p>
