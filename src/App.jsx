@@ -805,7 +805,7 @@ export default function App() {
         )}
 
         {pestanaActiva === 'resultados' && (
-          <ResultadosRallyServer />
+          <ResultadosRallyServer esAdmin={esAdmin} />
         )}
 
         {pestanaActiva === 'campeonato' && (
