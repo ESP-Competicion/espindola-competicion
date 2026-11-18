@@ -6,6 +6,7 @@ import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
 import LiveTiming from './LiveTiming';
 import Resultados from './Resultados';
+import Campeonatos from './Campeonatos';
 
 const fotosRally = [
   '/fondo.jpg'
@@ -685,7 +686,7 @@ export default function App() {
                 onClick={() => { setPestanaActiva('campeonato'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
                 className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'campeonato' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
-                CAMPEONATO 🏆
+                CAMPEONATOS 🏆
               </button>
               <button
                 onClick={() => { setPestanaActiva('calendario'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
@@ -798,18 +799,7 @@ export default function App() {
         )}
 
         {pestanaActiva === 'campeonato' && (
-          <div className="space-y-6 max-w-4xl mx-auto font-wrc text-white uppercase">
-            <div>
-              <h2 className="text-3xl text-amber-400 tracking-wide">CAMPEONATO OFICIAL - MONOMARCA SAVEIRO</h2>
-              <p className="text-neutral-300 text-xs">TABLA DE POSICIONES Y LAS 5 FECHAS OFICIALES DEL TORNEO.</p>
-            </div>
-            
-            <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl text-center py-12 space-y-3">
-              <span className="text-3xl">🏆</span>
-              <p className="text-amber-400 text-sm font-black">MÓDULO DE CAMPEONATO LISTO</p>
-              <p className="text-neutral-400 text-xs max-w-md mx-auto">Próximamente configuraremos aquí el gestor de las 5 fechas de la Saveiro y la suma automática de puntos oficiales.</p>
-            </div>
-          </div>
+          <Campeonatos esAdmin={esAdmin} />
         )}
 
         {pestanaActiva === 'historia' && (
