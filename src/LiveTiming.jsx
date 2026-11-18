@@ -1,4 +1,8 @@
-import { Component } from 'react';
+import { useState, useEffect, Component } from 'react';
+
+// URL base de la API y sTracker de tu servidor
+const API_BASE = "https://br.assettohosting.com:10314/api/v1";
+const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -24,9 +28,147 @@ class ErrorBoundary extends Component {
   }
 }
 
+const extraerTexto = (valor, porDefecto = '---') => {
+  if (valor === null || valor === undefined || valor === '') return porDefecto;
+  if (typeof valor === 'string' || typeof valor === 'number') return String(valor);
+  if (typeof valor === 'object') {
+    return valor.name || valor.type || valor.model || valor.title || porDefecto;
+  }
+  return porDefecto;
+};
+
+const formatearTiempo = (tiempo) => {
+  if (!tiempo || tiempo === 0 || tiempo === "0" || tiempo === "---") return "--:--.---";
+  if (typeof tiempo === 'string' && (tiempo.includes(':') || tiempo.includes('.'))) return tiempo;
+  
+  const ms = Number(tiempo);
+  if (!isNaN(ms) && ms > 0) {
+    const minutos = Math.floor(ms / 60000);
+    const segundos = Math.floor((ms % 60000) / 1000);
+    const milesimas = Math.floor(ms % 1000);
+    return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
+  }
+  return "--:--.---";
+};
+
+const formatearSector = (sector) => {
+  if (!sector || sector === 0) return "--.---";
+  if (typeof sector === 'string') return sector;
+  const ms = Number(sector);
+  if (!isNaN(ms) && ms > 0) {
+    const segundos = Math.floor(ms / 1000);
+    const milesimas = Math.floor(ms % 1000);
+    return `${segundos}.${String(milesimas).padStart(3, '0')}`;
+  }
+  return "--.---";
+};
+
+const formatearDiferencia = (dif) => {
+  const ms = Number(dif);
+  if (isNaN(ms) || ms <= 0) return "---";
+  return `+${(ms / 1000).toFixed(3)}`;
+};
+
 function ContenidoLiveTiming() {
-  // Reemplazá este enlace por el link público exacto que te da AssettoHosting en el botón "Public page" o "sTracker"
-  const urlServerLive = "https://br.assettohosting.com:10314/"; 
+  const [servidor, setServidor] = useState(null);
+  const [jugadores, setJugadores] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let montado = true;
+
+    async function obtenerTelemetria() {
+      try {
+        const headers = { 
+          'Authorization': `Bearer ${TOKEN}`,
+          'Accept': 'application/json'
+        };
+        
+        // Obtenemos info general del servidor
+        const resServidor = await fetch(`${API_BASE}/server`, { headers });
+        if (resServidor.ok) {
+          const dataServidor = await resServidor.json();
+          if (montado && dataServidor) setServidor(dataServidor);
+        }
+
+        // Buscamos los datos en los endpoints posibles de sTracker / AssettoHosting
+        let listaPilotos = [];
+        const endpoints = [
+          `${API_BASE}/players`, 
+          `${API_BASE}/live`, 
+          `${API_BASE}/results/current`,
+          `https://br.assettohosting.com:10314/livetiming.json`
+        ];
+
+        for (const url of endpoints) {
+          try {
+            const res = await fetch(url, { headers: url.includes('assettohosting') ? {} : headers });
+            if (res.ok) {
+              const data = await res.json();
+              console.log(`Respuesta desde ${url}:`, data); // Para inspeccionar en F12
+
+              if (Array.isArray(data) && data.length > 0) {
+                listaPilotos = data;
+                break;
+              } else if (data?.data && Array.isArray(data.data)) {
+                listaPilotos = data.data;
+                break;
+              } else if (data?.players && Array.isArray(data.players)) {
+                listaPilotos = data.players;
+                break;
+              } else if (data?.cars && Array.isArray(data.cars)) {
+                listaPilotos = data.cars; // A veces sTracker agrupa los datos en 'cars'
+                break;
+              } else if (data && typeof data === 'object') {
+                const valores = Object.values(data);
+                if (valores.length > 0) {
+                  listaPilotos = valores;
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            // Intentar siguiente endpoint
+          }
+        }
+
+        if (montado) {
+          setJugadores(listaPilotos);
+          setCargando(false);
+        }
+      } catch (err) {
+        console.error("Error obteniendo telemetría:", err);
+        if (montado) setCargando(false);
+      }
+    }
+
+    obtenerTelemetria();
+    const intervalo = setInterval(obtenerTelemetria, 3000);
+    
+    return () => {
+      montado = false;
+      clearInterval(intervalo);
+    };
+  }, []);
+
+  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO');
+  const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
+
+  const cantidadSectores = 3;
+  const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
+
+  // Extractor seguro del mejor tiempo adaptado a la estructura de sTracker
+  const obtenerMejorTiempo = (j) => {
+    return j?.bestLap || j?.bestTime || j?.lapTime || j?.timing?.bestLap || j?.stats?.best || 0;
+  };
+
+  const jugadoresOrdenados = [...jugadores].sort((a, b) => {
+    const tA = obtenerMejorTiempo(a) || Infinity;
+    const tB = obtenerMejorTiempo(b) || Infinity;
+    return (tA === 0 ? Infinity : tA) - (tB === 0 ? Infinity : tB);
+  });
+
+  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? obtenerMejorTiempo(jugadoresOrdenados[0]) : null;
 
   return (
     <div className="w-full px-4 md:px-8 py-4 font-wrc text-white uppercase space-y-6">
@@ -39,26 +181,197 @@ function ContenidoLiveTiming() {
             <span className="text-xs text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
           <h2 className="text-2xl md:text-3xl text-white font-black tracking-wide">
-            SERVIDOR OFICIAL • MONOMARCA SAVEIRO
+            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
           </h2>
         </div>
-        <div className="bg-neutral-950/90 px-5 py-3 rounded-2xl border border-white/10 text-xs text-amber-400 font-bold">
-          ESTADO: CONECTADO EN VIVO
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs w-full lg:w-auto">
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">CIRCUITO / TRAMO</span>
+            <span className="text-amber-400 text-sm truncate block max-w-[180px]" title={nombrePista}>{nombrePista}</span>
+          </div>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">SESIÓN</span>
+            <span className="text-white text-sm">{estadoSesion}</span>
+          </div>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">PILOTOS EN PISTA</span>
+            <span className="text-amber-400 text-sm">{jugadoresOrdenados.length} / {servidor?.slots || 20}</span>
+          </div>
+          <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
+            <span className="text-neutral-400 block text-[10px]">RÉCORD DE SESIÓN</span>
+            <span className="text-emerald-400 text-sm font-mono">{formatearTiempo(mejorTiempoAbsoluto)}</span>
+          </div>
         </div>
       </div>
 
-      {/* CONTENEDOR INTEGRADO DE STRACKER / ASSETTOHOSTING */}
-      <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] p-2 md:p-4">
-        <div className="w-full h-[750px] rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800">
-          <iframe 
-            src={urlServerLive} 
-            title="Live Timing AssettoHosting"
-            className="w-full h-full border-0 filter invert-[0.9] hue-rotate-[180deg] contrast-[1.2]"
-            style={{ colorScheme: 'dark' }}
-          />
-        </div>
-      </div>
+      {/* TABLA PROPIA + MAPA A LA DERECHA */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
+        
+        {/* TABLA DE POSICIONES PROPIA (8 COLUMNAS) */}
+        <div className="xl:col-span-8 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+          <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
+              <h3 className="text-white text-lg tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
+            </div>
+            <span className="text-xs text-emerald-400 font-bold">SISTEMA PROPIO</span>
+          </div>
 
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr className="border-b border-white/15 text-amber-400 text-xs tracking-wider bg-black/70">
+                  <th className="py-3.5 px-3 text-center w-12">POS</th>
+                  <th className="py-3.5 px-4">PILOTO</th>
+                  <th className="py-3.5 px-4">AUTO</th>
+                  <th className="py-3.5 px-3 text-right">BEST</th>
+                  <th className="py-3.5 px-3 text-right">GAP</th>
+                  <th className="py-3.5 px-3 text-right">DELTA</th>
+                  <th className="py-3.5 px-3 text-center">VUELTAS</th>
+                  {arraySectores.map((idx) => (
+                    <th key={`header-s-${idx}`} className="py-3.5 px-2 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
+                      S{idx + 1}
+                    </th>
+                  ))}
+                  <th className="py-3.5 px-4 text-right border-l border-white/10 text-emerald-400">MEJOR</th>
+                </tr>
+              </thead>
+              
+              <tbody className="divide-y divide-white/10 text-sm">
+                {cargando ? (
+                  <tr>
+                    <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
+                      CARGANDO TELEMETRÍA...
+                    </td>
+                  </tr>
+                ) : jugadoresOrdenados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
+                      NO HAY PILOTOS REGISTRADOS EN ESTE MOMENTO.
+                    </td>
+                  </tr>
+                ) : (
+                  jugadoresOrdenados.map((j, index) => {
+                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "PILOTO");
+                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "AUTO");
+                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 0;
+                    const tiempoMs = obtenerMejorTiempo(j);
+                    const tiempoFormateado = formatearTiempo(tiempoMs);
+
+                    let gapTexto = "---";
+                    if (index === 0 && tiempoMs > 0) {
+                      gapTexto = "LÍDER";
+                    } else if (tiempoMs > 0 && mejorTiempoAbsoluto > 0) {
+                      gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
+                    }
+
+                    let deltaTexto = "---";
+                    if (index > 0 && tiempoMs > 0) {
+                      const tiempoAdelante = obtenerMejorTiempo(jugadoresOrdenados[index - 1]);
+                      if (tiempoAdelante > 0) {
+                        deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
+                      }
+                    }
+
+                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1, j?.sector2 || j?.s2, j?.sector3 || j?.s3];
+                    const esPrimero = index === 0;
+                    const colorPos = esPrimero
+                      ? "bg-amber-400 text-black font-black"
+                      : index === 1
+                      ? "bg-neutral-300 text-black font-black"
+                      : index === 2
+                      ? "bg-amber-700 text-white font-black"
+                      : "text-neutral-300 font-bold";
+
+                    return (
+                      <tr key={j?.id || j?.connectionId || index} className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}>
+                        <td className="py-3 px-3 text-center">
+                          <span className={`inline-block w-6 h-6 leading-6 rounded-md text-xs ${colorPos}`}>{index + 1}</span>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-white tracking-wide">{nombrePiloto}</td>
+                        <td className="py-3 px-4 text-neutral-300 text-xs">{modeloAuto}</td>
+                        <td className="py-3 px-3 text-right font-mono text-amber-300 font-bold">{tiempoFormateado}</td>
+                        <td className={`py-3 px-3 text-right font-mono text-xs ${index === 0 && tiempoMs > 0 ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>{gapTexto}</td>
+                        <td className="py-3 px-3 text-right font-mono text-xs text-neutral-400">{deltaTexto}</td>
+                        <td className="py-3 px-3 text-center text-white font-bold">{vueltas}</td>
+                        {arraySectores.map((sIdx) => (
+                          <td key={`cell-s-${index}-${sIdx}`} className="py-3 px-2 text-center font-mono text-xs text-neutral-300 bg-white/[0.01] border-l border-white/5">
+                            {formatearSector(sectoresPiloto[sIdx])}
+                          </td>
+                        ))}
+                        <td className="py-3 px-4 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
+                          {tiempoFormateado}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* COLUMNA DERECHA: MAPA Y FEED */}
+        <div className="xl:col-span-4 space-y-6 flex flex-col">
+          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <h3 className="text-amber-400 text-sm tracking-wider font-black">MAPA EN VIVO</h3>
+              </div>
+              <span className="text-[10px] bg-neutral-900 text-neutral-400 px-2.5 py-0.5 rounded border border-white/10 truncate max-w-[140px]">
+                {nombrePista}
+              </span>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-8 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              
+              <div className="text-center z-10 space-y-3">
+                <div className="inline-block p-4 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-1">
+                  <svg className="w-9 h-9 mx-auto animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                  </svg>
+                </div>
+                <p className="text-xs text-neutral-300 tracking-wider font-bold">
+                  RENDERIZADO DE TRAMO
+                </p>
+                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
+                  Gráfico vectorial propio de circuito sincronizado con coordenadas de sTracker.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+                <h3 className="text-amber-400 text-sm tracking-wider font-black">FEED DE SESIÓN</h3>
+                <span className="text-[10px] bg-neutral-900 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">ONLINE</span>
+              </div>
+              
+              <div className="space-y-2.5 text-xs text-neutral-400">
+                <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                  <span>Estado Servidor</span>
+                  <span className="text-emerald-400 font-bold">ONLINE</span>
+                </div>
+                <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                  <span>Transmisión sTracker</span>
+                  <span className="text-emerald-400 font-bold">SINCRONIZANDO</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-white/10 text-center">
+              <p className="text-[10px] text-neutral-500 tracking-wider">
+                ESPÍNDOLA COMPETICIÓN
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
