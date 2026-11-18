@@ -117,7 +117,6 @@ function ContenidoLiveTiming() {
   const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
-  // Ordenamos usando bestLapMs que vimos en la consola
   const jugadoresOrdenados = [...jugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
     const tA = Number(a?.bestLapMs) || Infinity;
     const tB = Number(b?.bestLapMs) || Infinity;
@@ -269,7 +268,7 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: MAPA INTERactivo CON POSICIÓN GPS */}
+        {/* COLUMNA DERECHA: MAPA EN VIVO CON TRAZADO Y PUNTO GPS */}
         <div className="xl:col-span-4 space-y-6 flex flex-col">
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
@@ -285,15 +284,26 @@ function ContenidoLiveTiming() {
             <div className="flex-1 flex items-center justify-center bg-neutral-900/60 rounded-2xl border border-neutral-800 p-4 relative overflow-hidden min-h-[320px]">
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:16px_16px]"></div>
               
+              {/* TRAZADO VECTORIAL DE FONDO (CIRCUITO) */}
+              <svg className="absolute inset-0 w-full h-full p-6 opacity-40 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path 
+                  d="M 15 80 Q 15 20, 50 20 Q 85 20, 85 50 Q 85 85, 50 85 Q 25 85, 20 60" 
+                  fill="none" 
+                  stroke="#fbbf24" 
+                  strokeWidth="3" 
+                  strokeLinecap="round"
+                  className="drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]"
+                />
+              </svg>
+
               {/* RENDERIZADO DEL PUNTO DEL AUTO USANDO mapX y mapY */}
               {jugadoresOrdenados.map((j, idx) => {
                 const mapX = j?.position?.mapX;
                 const mapY = j?.position?.mapY;
                 if (mapX === undefined || mapY === undefined) return null;
 
-                // Normalizamos las coordenadas aproximadas del mapa de sTracker dentro del contenedor
-                const leftPercent = Math.min(Math.max((mapX / 1000) * 100, 5), 95);
-                const topPercent = Math.min(Math.max((mapY / 600) * 100, 5), 95);
+                const leftPercent = Math.min(Math.max((mapX / 1000) * 100, 10), 90);
+                const topPercent = Math.min(Math.max((mapY / 600) * 100, 10), 90);
 
                 return (
                   <div 
@@ -303,7 +313,7 @@ function ContenidoLiveTiming() {
                   >
                     <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-black shadow-[0_0_10px_#fbbf24] animate-ping absolute"></span>
                     <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-black shadow-[0_0_10px_#fbbf24] relative z-10"></span>
-                    <span className="bg-black/80 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/40 whitespace-nowrap">
+                    <span className="bg-black/90 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/40 whitespace-nowrap">
                       {j?.name || 'PILOTO'}
                     </span>
                   </div>
