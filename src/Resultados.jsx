@@ -39,8 +39,10 @@ export default function Resultados() {
     verificarUsuario();
     cargarResultadosSupabase();
 
-    // MONITOREO AUTOMÁTICO INTELIGENTE EN SEGUNDO PLANO
-    // Se ejecuta solo mientras la pestaña está abierta, ideal para cuando estás casteando
+    // MONITOREO INTELIGENTE DE CAMBIO DE SESIÓN EN VIVO
+    let ultimaSesionDetectada = null;
+    let ultimosDatosJugadores = [];
+
     const intervaloAutoGuardado = setInterval(async () => {
       try {
         const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
@@ -61,45 +63,50 @@ export default function Resultados() {
         else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
         else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
 
-        if (lista.length === 0) return;
+        // Si es la primera vez que lee el servidor, guardamos el estado actual
+        if (!ultimaSesionDetectada) {
+          ultimaSesionDetectada = tipoSesionActual;
+          ultimosDatosJugadores = lista;
+          return;
+        }
 
-        // Comprobamos si ya tenemos guardada esta sesión exacta en Supabase
-        const { data: ultimosRegistros } = await supabase
-          .from('resultados_sesiones')
-          .select('sesion_tipo, pista, fecha')
-          .order('fecha', { ascending: false })
-          .limit(1);
+        // SI DETECTAMOS UN CAMBIO DE FASE (Ej: Pasó de Practice a Qualy, o Qualy a Race)
+        if (ultimaSesionDetectada !== tipoSesionActual) {
+          if (ultimosDatosJugadores.length > 0) {
+            const datosProcesados = ultimosDatosJugadores.map((j, idx) => ({
+              pos: idx + 1,
+              nombre: j?.name || 'PILOTO',
+              auto: j?.car?.name || 'AUTO',
+              bestLapMs: Number(j?.bestLapMs) || 0,
+              lastLapMs: Number(j?.lastLapMs) || 0,
+              vueltas: Number(j?.laps) || 0,
+              sectores: obtenerSectoresJugador(j),
+              posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+            }));
 
-        const ultimaSesionGuardada = ultimosRegistros?.[0]?.sesion_tipo;
+            // Guardamos automáticamente la sesión que acaba de terminar (la vieja)
+            await supabase.from('resultados_sesiones').insert([{
+              sesion_tipo: ultimaSesionDetectada,
+              pista: pistaNombre,
+              datos_json: datosProcesados
+            }]);
 
-        // Si la sesión actual en el servidor es diferente a la última guardada 
-        // (Ej: pasamos de Practice a Qualy, o de Qualy a Race), guardamos automáticamente lo que pasó.
-        if (ultimaSesionGuardada && ultimaSesionGuardada !== tipoSesionActual) {
-          // Guardamos los datos de la sesión anterior que acaba de concluir
-          const datosProcesados = lista.map((j, idx) => ({
-            pos: idx + 1,
-            nombre: j?.name || 'PILOTO',
-            auto: j?.car?.name || 'AUTO',
-            bestLapMs: Number(j?.bestLapMs) || 0,
-            lastLapMs: Number(j?.lastLapMs) || 0,
-            vueltas: Number(j?.laps) || 0,
-            sectores: obtenerSectoresJugador(j),
-            posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
-          }));
+            cargarResultadosSupabase();
+            console.log(`[AutoGuardado] Sesión anterior (${ultimaSesionDetectada}) archivada con éxito.`);
+          }
 
-          await supabase.from('resultados_sesiones').insert([{
-            sesion_tipo: ultimaSesionGuardada,
-            pista: pistaNombre,
-            datos_json: datosProcesados
-          }]);
+          // Actualizamos a la nueva sesión actual
+          ultimaSesionDetectada = tipoSesionActual;
+        }
 
-          cargarResultadosSupabase();
-          console.log(`[AutoGuardado] Sesión ${ultimaSesionGuardada} archivada con éxito.`);
+        // Mantenemos siempre fresca la copia de los jugadores de la sesión en curso
+        if (lista.length > 0) {
+          ultimosDatosJugadores = lista;
         }
       } catch (err) {
         console.error("Error en autoguardado de fondo:", err);
       }
-    }, 10000); // Revisa cada 10 segundos sin molestar en la transmisión
+    }, 5000); // Revisa cada 5 segundos
 
     return () => clearInterval(intervaloAutoGuardado);
   }, []);
@@ -131,7 +138,7 @@ export default function Resultados() {
     setCargando(false);
   }
 
-  // Botón manual de respaldo por si acaso el admin quiere forzarlo
+  // Botón manual para guardar la sesión que está transcurriendo en este momento
   async function guardarResultadosManualmente() {
     try {
       const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
@@ -214,7 +221,7 @@ export default function Resultados() {
             onClick={guardarResultadosManualmente}
             className="bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase"
           >
-            📥 FORZAR GUARDADO MANUAL
+            📥 FORZAR GUARDADO SESIÓN ACTUAL
           </button>
         )}
       </div>
