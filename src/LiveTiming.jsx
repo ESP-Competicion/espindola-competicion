@@ -1,6 +1,6 @@
 import { useState, useEffect, Component } from 'react';
 
-const API_BASE = "https://br.assettohosting.com:10314";
+const API_BASE = "https://br.assettohosting.com:10314/api/v1";
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
 class ErrorBoundary extends Component {
@@ -69,7 +69,8 @@ const formatearDiferencia = (dif) => {
 };
 
 function ContenidoLiveTiming() {
-  const [datosLive, setDatosLive] = useState(null);
+  const [servidor, setServidor] = useState(null);
+  const [jugadores, setJugadores] = useState([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -82,35 +83,34 @@ function ContenidoLiveTiming() {
           'Accept': 'application/json'
         };
         
-        // sTracker suele exponer un endpoint JSON con la sesión y los autos en pista
-        const endpointsSintesis = [
-          `${API_BASE}/api/v1/live`,
-          `${API_BASE}/api/v1/players`,
-          `${API_BASE}/livetiming.json`
-        ];
+        // Info del servidor
+        const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
+        if (resServidor && resServidor.ok) {
+          const dataServidor = await resServidor.json();
+          if (montado && dataServidor) setServidor(dataServidor);
+        }
 
-        let resultadoValido = null;
-
-        for (const url of endpointsSintesis) {
-          try {
-            const res = await fetch(url, { headers: url.includes('livetiming') ? {} : headers });
-            if (res.ok) {
-              const data = await res.json();
-              console.log(`Datos crudos desde ${url}:`, data);
-              if (data) {
-                resultadoValido = data;
-                break;
-              }
+        // Lectura directa del endpoint que sabemos que responde sin CORS (/players)
+        const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
+        if (resJugadores && resJugadores.ok) {
+          const dataJugadores = await resJugadores.json();
+          console.log("Jugadores cargados con éxito:", dataJugadores);
+          if (montado) {
+            let lista = [];
+            if (Array.isArray(dataJugadores)) {
+              lista = dataJugadores;
+            } else if (dataJugadores?.data && Array.isArray(dataJugadores.data)) {
+              lista = dataJugadores.data;
+            } else if (dataJugadores?.players && Array.isArray(dataJugadores.players)) {
+              lista = dataJugadores.players;
+            } else if (dataJugadores && typeof dataJugadores === 'object') {
+              lista = Object.values(dataJugadores);
             }
-          } catch (e) {
-            // Siguiente endpoint
+            setJugadores(lista);
           }
         }
 
-        if (montado && resultadoValido) {
-          setDatosLive(resultadoValido);
-          setCargando(false);
-        }
+        if (montado) setCargando(false);
       } catch (err) {
         console.error("Error en fetch:", err);
         if (montado) setCargando(false);
@@ -126,13 +126,9 @@ function ContenidoLiveTiming() {
     };
   }, []);
 
-  // Extraemos la lista de jugadores ya sea que venga como array o dentro de un objeto
-  const listaJugadores = Array.isArray(datosLive) 
-    ? datosLive 
-    : (datosLive?.players || datosLive?.data || datosLive?.cars || Object.values(datosLive || {}));
+  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO');
+  const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
 
-  const nombrePista = "AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO";
-  const estadoSesion = "PRACTICE";
   const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
@@ -140,7 +136,7 @@ function ContenidoLiveTiming() {
     return j?.bestLap || j?.bestTime || j?.lapTime || j?.timing?.bestLap || j?.stats?.best || 0;
   };
 
-  const jugadoresOrdenados = [...listaJugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
+  const jugadoresOrdenados = [...jugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
     const tA = obtenerMejorTiempo(a) || Infinity;
     const tB = obtenerMejorTiempo(b) || Infinity;
     return (tA === 0 ? Infinity : tA) - (tB === 0 ? Infinity : tB);
@@ -159,7 +155,7 @@ function ContenidoLiveTiming() {
             <span className="text-xs text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
           <h2 className="text-2xl md:text-3xl text-white font-black tracking-wide">
-            ESPINDOLA COMPETICION | MONOMARCA SAVEIRO
+            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
           </h2>
         </div>
 
@@ -174,7 +170,7 @@ function ContenidoLiveTiming() {
           </div>
           <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
             <span className="text-neutral-400 block text-[10px]">PILOTOS EN PISTA</span>
-            <span className="text-amber-400 text-sm">{jugadoresOrdenados.length} / 20</span>
+            <span className="text-amber-400 text-sm">{jugadoresOrdenados.length} / {servidor?.slots || 20}</span>
           </div>
           <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
             <span className="text-neutral-400 block text-[10px]">RÉCORD DE SESIÓN</span>
@@ -231,9 +227,9 @@ function ContenidoLiveTiming() {
                   </tr>
                 ) : (
                   jugadoresOrdenados.map((j, index) => {
-                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "LEO ESPINDOLA");
-                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "VW SAVEIRO G4");
-                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 4;
+                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "PILOTO");
+                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "AUTO");
+                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 0;
                     const tiempoMs = obtenerMejorTiempo(j);
                     const tiempoFormateado = formatearTiempo(tiempoMs);
 
@@ -252,7 +248,7 @@ function ContenidoLiveTiming() {
                       }
                     }
 
-                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1 || 28884, j?.sector2 || j?.s2 || 29358, j?.sector3 || j?.s3 || 34959];
+                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1, j?.sector2 || j?.s2, j?.sector3 || j?.s3];
                     const esPrimero = index === 0;
                     const colorPos = esPrimero
                       ? "bg-amber-400 text-black font-black"
@@ -316,7 +312,7 @@ function ContenidoLiveTiming() {
                   TRAZADO ACTIVO
                 </p>
                 <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                  Circuito Río Cuarto sincronizado con telemetría sTracker.
+                  Sincronizado correctamente con sTracker vía endpoint `/players`.
                 </p>
               </div>
             </div>
