@@ -5,7 +5,7 @@ import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
 import LiveTiming from './LiveTiming';
-import Resultados from './Resultados';
+import ResultadosRallyServer from './ResultadosRallyServer';
 import Campeonatos from './Campeonatos';
 
 const fotosRally = [
@@ -805,7 +805,7 @@ export default function App() {
         )}
 
         {pestanaActiva === 'resultados' && (
-          <Resultados />
+          <ResultadosRallyServer />
         )}
 
         {pestanaActiva === 'campeonato' && (
@@ -938,7 +938,7 @@ export default function App() {
             </div>
 
             {esAdmin && (
-              <div className="bg-neutral-900/70 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
+              <div className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
                 <h3 className="font-wrc text-base text-amber-400">➕ AGREGAR FECHA DE CARRERA AL CALENDARIO</h3>
                 <form onSubmit={handleCrearCalendario} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                   <div>
