@@ -83,18 +83,19 @@ function ContenidoLiveTiming() {
           'Accept': 'application/json'
         };
         
-        // Info del servidor
         const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
         if (resServidor && resServidor.ok) {
           const dataServidor = await resServidor.json();
           if (montado && dataServidor) setServidor(dataServidor);
         }
 
-        // Lectura directa del endpoint que sabemos que responde sin CORS (/players)
         const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
         if (resJugadores && resJugadores.ok) {
           const dataJugadores = await resJugadores.json();
-          console.log("Jugadores cargados con éxito:", dataJugadores);
+          
+          // IMPRIME EL OBJETO COMPLETO EN LA CONSOLA PARA VER SUS PROPIEDADES EXACTAS
+          console.log("ESTRUCTURA REAL DE JUGADORES:", JSON.stringify(dataJugadores, null, 2));
+
           if (montado) {
             let lista = [];
             if (Array.isArray(dataJugadores)) {
@@ -132,8 +133,9 @@ function ContenidoLiveTiming() {
   const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
+  // Buscamos de forma exhaustiva cualquier propiedad numérica que represente el tiempo de vuelta
   const obtenerMejorTiempo = (j) => {
-    return j?.bestLap || j?.bestTime || j?.lapTime || j?.timing?.bestLap || j?.stats?.best || 0;
+    return j?.bestLap || j?.bestTime || j?.lapTime || j?.timing?.bestLap || j?.stats?.best || j?.time || 0;
   };
 
   const jugadoresOrdenados = [...jugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
