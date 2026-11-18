@@ -637,7 +637,7 @@ export default function App() {
         }
       `}</style>
 
-      <header className="relative z-50 w-full max-w-[1400px] mx-auto px-4 pt-6 flex flex-wrap items-center justify-between gap-3">
+      <header className="relative z-50 w-full max-w-[1400px] mx-auto px-4 pt-4 flex flex-wrap items-center justify-between gap-3">
         
         <button 
           onClick={() => { setPestanaActiva('inicio'); setAlbumSeleccionado(null); }}
@@ -648,12 +648,12 @@ export default function App() {
             src="/logo.svg" 
             alt="Logo Espíndola Competición" 
             onError={(e) => { e.target.src = 'https://files.catbox.moe/f3xmld.png'; }}
-            className="h-8 md:h-10 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] opacity-90"
+            className="h-7 md:h-8 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] opacity-90"
           />
         </button>
 
         <div className="relative">
-          <nav className="flex items-center gap-4 md:gap-6 px-5 md:px-8 py-2.5 rounded-full bg-black/50 backdrop-blur-md border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+          <nav className="flex items-center gap-3 md:gap-5 px-4 md:px-6 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
             {[
               { id: 'historia', label: 'HISTORIA' },
               { id: 'eventos', label: `EVENTOS${esAdmin ? ' ⚙️' : ''}` },
@@ -663,7 +663,7 @@ export default function App() {
               <button
                 key={item.id}
                 onClick={() => { setPestanaActiva(item.id); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
-                className={`text-xs md:text-sm font-wrc tracking-wider transition cursor-pointer ${
+                className={`text-[11px] md:text-xs font-wrc tracking-wider transition cursor-pointer ${
                   pestanaActiva === item.id ? 'text-amber-400' : 'text-white hover:text-white/75'
                 }`}
               >
@@ -723,19 +723,19 @@ export default function App() {
 
         <div className="relative">
           {usuario ? (
-            <div className="flex items-center gap-2.5 pl-3 pr-4 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-2.5 pl-2 pr-4 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
               <button 
                 onClick={() => setMostrarPerfilModal(true)}
-                className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
+                className="flex items-center gap-2 group cursor-pointer focus:outline-none"
               >
-                <div className="w-8 h-8 rounded-full bg-neutral-900 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc text-amber-400 text-xs">
+                <div className="w-7 h-7 rounded-full bg-neutral-900 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc text-amber-400 text-[11px]">
                   {perfil?.avatar_url ? (
                     <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
                   )}
                 </div>
-                <span className="font-wrc text-xs md:text-sm tracking-wider text-white group-hover:text-amber-400 transition">
+                <span className="font-wrc text-[11px] md:text-xs tracking-wider text-white group-hover:text-amber-400 transition">
                   {(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}
                 </span>
               </button>
@@ -756,7 +756,7 @@ export default function App() {
           ) : (
             <button 
               onClick={() => setMostrarAuthModal(true)}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-sm px-5 py-2.5 rounded-full transition shadow-md shadow-amber-500/20 tracking-wider cursor-pointer font-black"
+              className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-4 py-2 rounded-full transition shadow-md shadow-amber-500/20 tracking-wider cursor-pointer font-black"
             >
               ACCEDER
             </button>
@@ -788,16 +788,16 @@ export default function App() {
 
       </header>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-4 py-12 flex-1 w-full flex flex-col justify-center">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
         
         {pestanaActiva === 'inicio' && (
-          <div className="min-h-[50vh] flex flex-col items-center justify-center">
-            <div className="max-w-2xl mx-auto text-center space-y-6 py-4">
-              <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-xs md:text-sm tracking-widest px-4 py-1.5 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-md">
+          <div className="min-h-[60vh] flex flex-col items-center justify-center">
+            <div className="max-w-lg mx-auto text-center space-y-4 py-8">
+              <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-xs tracking-widest px-3.5 py-1 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-md">
                 TEMPORADA OFICIAL 2027 • ESPÍNDOLA COMPETICIÓN {esAdmin && '• MODO ADMIN'}
               </span>
 
-              <h1 className="font-wrc text-4xl md:text-7xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)] leading-none">
+              <h1 className="font-wrc text-4xl md:text-6xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)]">
                 PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]">GLORIA</span>
               </h1>
             </div>
@@ -821,7 +821,7 @@ export default function App() {
                 {esAdmin && !editandoConfig && (
                   <button
                     onClick={() => setEditandoConfig(true)}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-4 py-2 rounded-lg transition cursor-pointer font-black"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[11px] px-4 py-2 rounded-lg transition cursor-pointer font-black"
                   >
                     ✏️ EDITAR HISTORIA
                   </button>
@@ -829,12 +829,12 @@ export default function App() {
               </div>
 
               {!editandoConfig ? (
-                <div className="text-neutral-200 text-sm md:text-base leading-relaxed font-wrc whitespace-pre-line space-y-4">
+                <div className="text-neutral-200 text-xs md:text-sm leading-relaxed font-wrc whitespace-pre-line space-y-4">
                   {config.historia_texto || "HISTORIA NO DEFINIDA. PUEDES AGREGARLA DESDE EL PANEL DE ADMINISTRACIÓN."}
                 </div>
               ) : (
                 <form onSubmit={handleGuardarConfig} className="space-y-3">
-                  <p className="text-xs text-amber-400 font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
+                  <p className="text-[11px] text-amber-400 font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
                   <textarea
                     rows={16}
                     value={config.historia_texto}
@@ -845,13 +845,13 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setEditandoConfig(false)}
-                      className="bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-2.5 rounded-xl cursor-pointer"
+                      className="bg-neutral-800 text-neutral-300 font-wrc text-[11px] px-4 py-2.5 rounded-xl cursor-pointer"
                     >
                       CANCELAR
                     </button>
                     <button
                       type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black px-5 py-2.5 rounded-xl transition shadow cursor-pointer"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[11px] font-black px-5 py-2.5 rounded-xl transition shadow cursor-pointer"
                     >
                       💾 GUARDAR CAMBIOS
                     </button>
@@ -942,7 +942,7 @@ export default function App() {
                 <h3 className="font-wrc text-base text-amber-400">➕ AGREGAR FECHA DE CARRERA AL CALENDARIO</h3>
                 <form onSubmit={handleCrearCalendario} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">TÍTULO DE LA CARRERA</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">TÍTULO DE LA CARRERA</label>
                     <input
                       type="text"
                       value={nuevoCalendario.titulo}
@@ -953,7 +953,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
                     <input
                       type="date"
                       value={nuevoCalendario.fecha}
@@ -965,7 +965,7 @@ export default function App() {
                   <div>
                     <button
                       type="submit"
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs uppercase py-2.5 rounded-lg transition shadow cursor-pointer font-black"
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs uppercase py-2 rounded-lg transition shadow cursor-pointer font-black"
                     >
                       GUARDAR FECHA
                     </button>
@@ -982,13 +982,13 @@ export default function App() {
                 calendario.map((cal) => (
                   <div key={cal.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 flex justify-between items-center shadow-md">
                     <div>
-                      <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{cal.fecha}</span>
+                      <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{cal.fecha}</span>
                       <h4 className="font-wrc text-base text-white mt-0.5">{cal.titulo}</h4>
                     </div>
                     {esAdmin && (
                       <button
                         onClick={() => handleEliminarCalendario(cal.id)}
-                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-lg text-xs border border-red-500/30 cursor-pointer font-wrc"
+                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-2.5 py-1 rounded-lg text-[11px] border border-red-500/30 cursor-pointer font-wrc"
                       >
                         🗑️ ELIMINAR
                       </button>
@@ -1015,7 +1015,7 @@ export default function App() {
                     <h3 className="font-wrc text-base text-amber-400">📁 CREAR NUEVA CARPETA DE EVENTO</h3>
                     <form onSubmit={handleCrearAlbum} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                       <div>
-                        <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">NOMBRE DEL ÁLBUM / EVENTO</label>
+                        <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">NOMBRE DEL ÁLBUM / EVENTO</label>
                         <input
                           type="text"
                           value={nuevoAlbumNombre}
@@ -1025,13 +1025,13 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FOTO DE PORTADA</label>
+                        <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FOTO DE PORTADA</label>
                         <SubirImagen currentUrl={portadaAlbumUrl} onUpload={(url) => setPortadaAlbumUrl(url)} />
                       </div>
                       <div>
                         <button
                           type="submit"
-                          className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-xs uppercase px-5 py-2.5 rounded-lg transition shadow cursor-pointer"
+                          className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-xs uppercase px-5 py-2 rounded-lg transition shadow cursor-pointer"
                         >
                           CREAR ÁLBUM
                         </button>
@@ -1047,7 +1047,7 @@ export default function App() {
                       onClick={() => { setAlbumSeleccionado(album); cargarFotosDeAlbum(album.id); }}
                       className="group relative bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:border-amber-500/50 transition duration-300"
                     >
-                      <div className="h-44 overflow-hidden relative">
+                      <div className="h-40 overflow-hidden relative">
                         <img
                           src={album.portada_url}
                           alt={album.nombre}
@@ -1060,7 +1060,7 @@ export default function App() {
                         {esAdmin && (
                           <button
                             onClick={(e) => handleEliminarAlbum(album.id, e)}
-                            className="text-red-400 hover:text-red-300 text-xs px-3 py-1.5 bg-red-500/10 rounded border border-red-500/30 cursor-pointer font-wrc"
+                            className="text-red-400 hover:text-red-300 text-[10px] px-2.5 py-1 bg-red-500/10 rounded border border-red-500/30 cursor-pointer font-wrc"
                           >
                             ELIMINAR
                           </button>
@@ -1076,7 +1076,7 @@ export default function App() {
                   <div>
                     <button
                       onClick={() => setAlbumSeleccionado(null)}
-                      className="text-xs font-wrc text-amber-400 hover:underline mb-1 inline-block cursor-pointer"
+                      className="text-[11px] font-wrc text-amber-400 hover:underline mb-1 inline-block cursor-pointer"
                     >
                       ← VOLVER A ÁLBUMES
                     </button>
@@ -1099,7 +1099,7 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
                   {fotosAlbumActual.map((foto) => (
                     <div key={foto.id} className="relative group bg-neutral-900 rounded-xl overflow-hidden border border-white/10 aspect-video">
                       <img
@@ -1111,7 +1111,7 @@ export default function App() {
                       {esAdmin && (
                         <button
                           onClick={() => handleEliminarFotoAlbum(foto.id)}
-                          className="absolute top-2 right-2 bg-red-600/85 hover:bg-red-600 text-white p-1.5 rounded-lg text-xs shadow transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                          className="absolute top-1.5 right-1.5 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded text-[10px] shadow transition opacity-0 group-hover:opacity-100 cursor-pointer"
                           title="Eliminar foto"
                         >
                           ✕
@@ -1141,7 +1141,7 @@ export default function App() {
                 <h3 className="font-wrc text-base text-amber-400">➕ CREAR NUEVO EVENTO / INSCRIPCIÓN OFICIAL</h3>
                 <form onSubmit={handleCrearEvento} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">TÍTULO DEL EVENTO</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">TÍTULO DEL EVENTO</label>
                     <input
                       type="text"
                       value={nuevoEvento.titulo}
@@ -1152,7 +1152,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
                     <input
                       type="date"
                       value={nuevoEvento.fecha}
@@ -1162,7 +1162,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">HORARIO</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">HORARIO</label>
                     <input
                       type="text"
                       value={nuevoEvento.horario}
@@ -1172,7 +1172,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CATEGORÍAS</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CATEGORÍAS</label>
                     <input
                       type="text"
                       value={nuevoEvento.categorias}
@@ -1182,7 +1182,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">MODELOS DE AUTOS</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">MODELOS DE AUTOS</label>
                     <input
                       type="text"
                       value={nuevoEvento.modelos_autos}
@@ -1192,7 +1192,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-amber-400 uppercase mb-1 font-bold">VINCULAR A CAMPEONATO (OPCIONAL)</label>
+                    <label className="block text-[11px] text-amber-400 uppercase mb-1 font-bold">VINCULAR A CAMPEONATO (OPCIONAL)</label>
                     <select
                       value={nuevoEvento.campeonato_id || ''}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value })}
@@ -1220,9 +1220,9 @@ export default function App() {
               {eventos.map((ev) => (
                 <div key={ev.id} className="bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-xl p-5 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-0.5">
-                    <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
+                    <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
                     <h3 className="font-wrc text-xl text-white">{ev.titulo}</h3>
-                    <p className="text-neutral-300 text-xs font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
+                    <p className="text-neutral-300 text-[11px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
                   </div>
 
                   <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
@@ -1232,7 +1232,7 @@ export default function App() {
                         setModoModalEvento('formulario');
                         cargarAsistentesEventoEquipo(ev.id);
                       }}
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-4 py-2.5 rounded-xl transition shadow tracking-wider cursor-pointer font-black uppercase"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-4 py-2 rounded-xl transition shadow tracking-wider cursor-pointer font-black uppercase"
                     >
                       INSCRIBIRSE
                     </button>
@@ -1243,7 +1243,7 @@ export default function App() {
                         setModoModalEvento('lista');
                         cargarAsistentesEventoEquipo(ev.id);
                       }}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs px-4 py-2.5 rounded-xl transition cursor-pointer uppercase"
+                      className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs px-3.5 py-2 rounded-xl transition cursor-pointer uppercase"
                     >
                       INSCRIPTOS
                     </button>
@@ -1251,7 +1251,7 @@ export default function App() {
                     {esAdmin && (
                       <button
                         onClick={() => handleEliminarEvento(ev.id)}
-                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3.5 py-2.5 rounded-xl text-xs border border-red-500/30 cursor-pointer"
+                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-2.5 py-2 rounded-xl text-xs border border-red-500/30 cursor-pointer"
                         title="Eliminar evento"
                       >
                         🗑️
@@ -1299,7 +1299,7 @@ export default function App() {
                 </h3>
                 <form onSubmit={handleGuardarPilotoFama} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">NOMBRE PILOTO</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">NOMBRE PILOTO</label>
                     <input
                       type="text"
                       value={nuevoPilotoFama.nombre}
@@ -1310,7 +1310,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CIUDAD / CATEGORÍA</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CIUDAD / CATEGORÍA</label>
                     <input
                       type="text"
                       value={nuevoPilotoFama.categoria}
@@ -1320,7 +1320,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CAMPEONATOS</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CAMPEONATOS</label>
                     <input
                       type="number"
                       value={nuevoPilotoFama.campeonatos}
@@ -1331,7 +1331,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">FOTO PILOTO</label>
+                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FOTO PILOTO</label>
                     <SubirImagen currentUrl={nuevoPilotoFama.foto} onUpload={(url) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: url })} />
                   </div>
                   <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2.5 pt-1">
@@ -1339,14 +1339,14 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => { setEditandoId(null); setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' }); }}
-                        className="bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-2 rounded-xl cursor-pointer"
+                        className="bg-neutral-800 text-neutral-300 font-wrc text-[11px] px-4 py-2 rounded-xl cursor-pointer"
                       >
                         CANCELAR
                       </button>
                     )}
                     <button
                       type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase px-5 py-2 rounded-xl transition shadow-lg cursor-pointer"
                     >
                       {editandoId !== null ? 'ACTUALIZAR PILOTO' : 'GUARDAR EN EL SALÓN'}
                     </button>
@@ -1360,7 +1360,7 @@ export default function App() {
                 
                 {hallFama[1] && (
                   <div className="order-2 md:order-1 relative bg-black/70 backdrop-blur-md border border-neutral-400/50 rounded-2xl p-5 text-center shadow-2xl flex flex-col items-center justify-between">
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-neutral-200 text-black font-wrc text-xs px-4 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-neutral-200 text-black font-wrc text-[11px] px-3.5 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥈</span> 2º PUESTO
                     </div>
 
@@ -1377,7 +1377,7 @@ export default function App() {
 
                     <div className="space-y-0.5 my-1">
                       <h3 className="font-wrc text-xl md:text-2xl text-white tracking-wide">{hallFama[1].nombre}</h3>
-                      <p className="text-neutral-300 text-xs font-wrc uppercase">{hallFama[1].categoria}</p>
+                      <p className="text-neutral-300 text-[11px] font-wrc uppercase">{hallFama[1].categoria}</p>
                     </div>
 
                     <div className="mt-3 bg-white/5 border border-white/15 rounded-lg px-4 py-1.5 font-wrc text-xs tracking-wider text-neutral-200">
@@ -1416,7 +1416,7 @@ export default function App() {
 
                 {hallFama[2] && (
                   <div className="order-3 relative bg-black/70 backdrop-blur-md border border-amber-700/60 rounded-2xl p-5 text-center shadow-2xl flex flex-col items-center justify-between">
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc text-xs px-4 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc text-[11px] px-3.5 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥉</span> 3º PUESTO
                     </div>
 
@@ -1433,7 +1433,7 @@ export default function App() {
 
                     <div className="space-y-0.5 my-1">
                       <h3 className="font-wrc text-xl md:text-2xl text-white tracking-wide">{hallFama[2].nombre}</h3>
-                      <p className="text-neutral-300 text-xs font-wrc uppercase">{hallFama[2].categoria}</p>
+                      <p className="text-neutral-300 text-[11px] font-wrc uppercase">{hallFama[2].categoria}</p>
                     </div>
 
                     <div className="mt-3 bg-white/5 border border-amber-700/40 rounded-lg px-4 py-1.5 font-wrc text-xs tracking-wider text-neutral-200">
@@ -1448,19 +1448,19 @@ export default function App() {
             {restoPilotos.length > 0 && (
               <div className="space-y-2.5 pt-2">
                 {restoPilotos.map((piloto) => (
-                  <div key={piloto.id} className="bg-black/55 backdrop-blur-md border border-white/10 hover:border-amber-500/40 rounded-xl p-4 flex items-center justify-between shadow-md transition">
-                    <div className="flex items-center gap-3.5">
+                  <div key={piloto.id} className="bg-black/55 backdrop-blur-md border border-white/10 hover:border-amber-500/40 rounded-xl p-3.5 flex items-center justify-between shadow-md transition">
+                    <div className="flex items-center gap-3">
                       <span className="font-wrc text-amber-400 text-lg w-7 text-center">#{piloto.puesto}</span>
-                      <div className="w-11 h-11 rounded-full overflow-hidden border border-neutral-700 bg-neutral-900">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-700 bg-neutral-900">
                         <img src={piloto.foto} alt={piloto.nombre} className="w-full h-full object-cover" />
                       </div>
                       <div>
                         <h4 className="font-wrc text-base text-white tracking-wide">{piloto.nombre}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc uppercase">{piloto.categoria}</p>
+                        <p className="text-[10px] text-neutral-400 font-wrc uppercase">{piloto.categoria}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="font-wrc text-amber-400 text-xs bg-amber-500/10 border border-amber-500/30 px-3.5 py-1.5 rounded-lg">
+                      <span className="font-wrc text-amber-400 text-xs bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-lg">
                         {piloto.campeonatos} TÍTULO(S) 🏆
                       </span>
                       {esAdmin && (
@@ -1489,7 +1489,7 @@ export default function App() {
                 <p className="text-neutral-400 col-span-full text-center py-6 font-wrc text-xs">NO HAY MIEMBROS REGISTRADOS TODAVÍA.</p>
               ) : (
                 miembros.map((m) => (
-                  <div key={m.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-lg flex items-center gap-3.5">
+                  <div key={m.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-lg flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-neutral-800 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc text-amber-400 text-base flex-shrink-0">
                       {m.avatar_url ? (
                         <img src={m.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
@@ -1499,11 +1499,11 @@ export default function App() {
                     </div>
                     <div className="space-y-0.5 overflow-hidden">
                       <h3 className="font-wrc text-base text-white truncate">{(m.nombre_piloto || 'PILOTO SIN NOMBRE').toUpperCase()}</h3>
-                      <p className="text-xs font-wrc uppercase">
+                      <p className="text-[11px] font-wrc uppercase">
                         <span className="text-amber-400">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
                       </p>
                       {m.provincia && (
-                        <p className="text-xs font-wrc uppercase">
+                        <p className="text-[11px] font-wrc uppercase">
                           <span className="text-amber-400">PROVINCIA:</span> <span className="text-white">{m.provincia.toUpperCase()}</span>
                         </p>
                       )}
@@ -1519,7 +1519,7 @@ export default function App() {
           <div className="max-w-md mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl space-y-5">
             <h2 className="font-wrc text-2xl text-amber-400">MI PERFIL DE PILOTO</h2>
             
-            <div className="flex items-center gap-3.5 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
               <div className="w-16 h-16 rounded-full bg-neutral-800 border-2 border-amber-500 overflow-hidden flex items-center justify-center font-wrc text-amber-400 text-xl flex-shrink-0">
                 {perfil?.avatar_url ? (
                   <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
@@ -1529,11 +1529,11 @@ export default function App() {
               </div>
               <div className="overflow-hidden">
                 <h3 className="font-wrc text-xl text-white truncate">{(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}</h3>
-                <p className="text-neutral-400 text-xs font-wrc uppercase truncate">{usuario.email}</p>
+                <p className="text-neutral-400 text-[11px] font-wrc uppercase truncate">{usuario.email}</p>
               </div>
             </div>
 
-            <div className="bg-black/40 border border-white/10 rounded-xl p-4 space-y-3 font-wrc text-xs">
+            <div className="bg-black/40 border border-white/10 rounded-xl p-4 space-y-2.5 font-wrc text-xs">
               <div className="flex justify-between border-b border-white/10 pb-2">
                 <span className="text-amber-400">NOMBRE DE PILOTO:</span>
                 <span className="text-white">{(perfil?.nombre_piloto || 'NO CONFIGURADO').toUpperCase()}</span>
@@ -1559,14 +1559,14 @@ export default function App() {
             <div className="space-y-2.5 pt-1">
               <button
                 onClick={() => setMostrarPerfilModal(true)}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
               >
                 EDITAR DATOS PERSONALES
               </button>
 
               <button
                 onClick={() => setMostrarCambiarPasswordModal(true)}
-                className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs uppercase py-3 rounded-xl transition cursor-pointer"
+                className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs uppercase py-2.5 rounded-xl transition cursor-pointer"
               >
                 CAMBIAR CONTRASEÑA
               </button>
@@ -1582,7 +1582,7 @@ export default function App() {
             
             <div className="flex justify-between items-center border-b border-white/10 pb-3">
               <div>
-                <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{diaSeleccionadoModal.fecha}</span>
+                <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{diaSeleccionadoModal.fecha}</span>
                 <h3 className="font-wrc text-2xl text-white">{diaSeleccionadoModal.titulo}</h3>
               </div>
               <button onClick={() => setDiaSeleccionadoModal(null)} className="text-neutral-400 hover:text-white text-lg">✕</button>
@@ -1591,19 +1591,19 @@ export default function App() {
             <div className="flex gap-2">
               <button
                 onClick={() => setModoModalCalendario('detalle')}
-                className={`flex-1 font-wrc text-xs py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'detalle' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'detalle' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
                 INFO
               </button>
               <button
                 onClick={() => setModoModalCalendario('formulario')}
-                className={`flex-1 font-wrc text-xs py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
                 PARTICIPAR 🏁
               </button>
               <button
                 onClick={() => setModoModalCalendario('lista')}
-                className={`flex-1 font-wrc text-xs py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
                 INSCRIPTOS ({asistentesEvento.length})
               </button>
@@ -1615,7 +1615,7 @@ export default function App() {
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={() => setModoModalCalendario('formulario')}
-                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
                   >
                     QUIERO PARTICIPAR
                   </button>
@@ -1626,7 +1626,7 @@ export default function App() {
             {modoModalCalendario === 'formulario' && (
               <form onSubmit={(e) => handleInscribirseCalendario(e, diaSeleccionadoModal.id)} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA A CORRER</label>
+                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA A CORRER</label>
                   <input
                     type="text"
                     value={formAsistencia.categoria}
@@ -1637,7 +1637,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
+                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
                   <input
                     type="text"
                     value={formAsistencia.modelo_auto}
@@ -1649,7 +1649,7 @@ export default function App() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
                 >
                   CONFIRMAR ASISTENCIA
                 </button>
@@ -1662,15 +1662,15 @@ export default function App() {
                   <p className="text-neutral-400 text-center py-4 text-xs font-wrc">TODAVÍA NO HAY PILOTOS CONFIRMADOS.</p>
                 ) : (
                   asistentesEvento.map((asistente) => (
-                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-xl p-3 flex justify-between items-center">
+                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-xl p-2.5 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-sm">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
-                        <p className="text-xs text-amber-400 font-wrc mt-0.5 flex items-center gap-1">
+                        <p className="text-[10px] text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-[10px] text-amber-400 font-wrc mt-0.5 flex items-center gap-1">
                           <span>PAÍS:</span> {obtenerBanderaPais(asistente.nacionalidad)}
                         </p>
                       </div>
-                      <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30">
+                      <span className="text-amber-400 text-[10px] font-wrc bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
                         CONFIRMADO ✅
                       </span>
                     </div>
@@ -1689,7 +1689,7 @@ export default function App() {
             
             <div className="flex justify-between items-center border-b border-white/10 pb-3">
               <div>
-                <span className="text-amber-400 font-wrc text-xs tracking-widest uppercase">{eventoModalActivo.fecha} • {eventoModalActivo.horario || 'POR CONFIRMAR'}</span>
+                <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{eventoModalActivo.fecha} • {eventoModalActivo.horario || 'POR CONFIRMAR'}</span>
                 <h3 className="font-wrc text-2xl text-white">{eventoModalActivo.titulo}</h3>
               </div>
               <button onClick={() => setEventoModalActivo(null)} className="text-neutral-400 hover:text-white text-lg">✕</button>
@@ -1698,13 +1698,13 @@ export default function App() {
             <div className="flex gap-2">
               <button
                 onClick={() => setModoModalEvento('formulario')}
-                className={`flex-1 font-wrc text-xs py-2 rounded-lg transition cursor-pointer uppercase ${modoModalEvento === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalEvento === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
                 INSCRIBIRME 🏁
               </button>
               <button
                 onClick={() => setModoModalEvento('lista')}
-                className={`flex-1 font-wrc text-xs py-2 rounded-lg transition cursor-pointer uppercase ${modoModalEvento === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
+                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalEvento === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
               >
                 INSCRIPTOS ({asistentesEventoEquipo.length})
               </button>
@@ -1713,7 +1713,7 @@ export default function App() {
             {modoModalEvento === 'formulario' && (
               <form onSubmit={(e) => handleInscribirseEventoEquipo(e, eventoModalActivo.id)} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA</label>
+                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA</label>
                   <input
                     type="text"
                     value={formAsistenciaEvento.categoria}
@@ -1724,7 +1724,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
+                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
                   <input
                     type="text"
                     value={formAsistenciaEvento.modelo_auto}
@@ -1736,7 +1736,7 @@ export default function App() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-3 rounded-xl transition shadow cursor-pointer"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
                 >
                   CONFIRMAR INSCRIPCIÓN
                 </button>
@@ -1749,15 +1749,15 @@ export default function App() {
                   <p className="text-neutral-400 text-center py-4 text-xs font-wrc">TODAVÍA NO HAY PILOTOS INSCRIPTOS.</p>
                 ) : (
                   asistentesEventoEquipo.map((asistente) => (
-                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-xl p-3 flex justify-between items-center">
+                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-xl p-2.5 flex justify-between items-center">
                       <div>
                         <h4 className="font-wrc text-white text-sm">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-xs text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
-                        <p className="text-xs text-amber-400 font-wrc mt-0.5 flex items-center gap-1">
+                        <p className="text-[10px] text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
+                        <p className="text-[10px] text-amber-400 font-wrc mt-0.5 flex items-center gap-1">
                           <span>PAÍS:</span> {obtenerBanderaPais(asistente.nacionalidad)}
                         </p>
                       </div>
-                      <span className="text-amber-400 text-xs font-wrc bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30">
+                      <span className="text-amber-400 text-[10px] font-wrc bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
                         INSCRIPTO ✅
                       </span>
                     </div>
@@ -1770,14 +1770,14 @@ export default function App() {
         </div>
       )}
 
-      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 mt-auto text-xs">
+      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex flex-col md:flex-row items-center justify-between gap-3 mt-8 text-xs">
         <div className="hidden md:block w-20" />
 
         <div className="flex items-center justify-center">
           <img 
             src="/sponsor.svg" 
             alt="Sponsors Espíndola Competición" 
-            className="h-5 md:h-6 w-auto object-contain opacity-90 hover:opacity-100 transition drop-shadow-md"
+            className="h-4 md:h-5 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md"
           />
         </div>
 
