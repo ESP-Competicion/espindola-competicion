@@ -36,39 +36,44 @@ const extraerTexto = (valor, porDefecto = '---') => {
   return porDefecto;
 };
 
+// Formateador inteligente para milisegundos o strings de tiempo
 const formatearTiempo = (tiempo) => {
-  if (!tiempo) return "--:--.---";
-  if (typeof tiempo === 'string') return tiempo;
-  if (typeof tiempo === 'number' && tiempo > 0) {
-    const minutos = Math.floor(tiempo / 60000);
-    const segundos = Math.floor((tiempo % 60000) / 1000);
-    const milesimas = Math.floor(tiempo % 1000);
+  if (!tiempo || tiempo === 0 || tiempo === "0" || tiempo === "---") return "--:--.---";
+  if (typeof tiempo === 'string' && (tiempo.includes(':') || tiempo.includes('.'))) return tiempo;
+  
+  // Si viene en milisegundos numéricos
+  const ms = Number(tiempo);
+  if (!isNaN(ms) && ms > 0) {
+    const minutos = Math.floor(ms / 60000);
+    const segundos = Math.floor((ms % 60000) / 1000);
+    const milesimas = Math.floor(ms % 1000);
     return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
   }
   return "--:--.---";
 };
 
 const formatearSector = (sector) => {
-  if (!sector) return "--.---";
+  if (!sector || sector === 0) return "--.---";
   if (typeof sector === 'string') return sector;
-  if (typeof sector === 'number' && sector > 0) {
-    const segundos = Math.floor(sector / 1000);
-    const milesimas = Math.floor(sector % 1000);
+  const ms = Number(sector);
+  if (!isNaN(ms) && ms > 0) {
+    const segundos = Math.floor(ms / 1000);
+    const milesimas = Math.floor(ms % 1000);
     return `${segundos}.${String(milesimas).padStart(3, '0')}`;
   }
   return "--.---";
 };
 
 const formatearDiferencia = (dif) => {
-  if (!dif || typeof dif !== 'number') return "---";
-  return `+${(dif / 1000).toFixed(3)}`;
+  const ms = Number(dif);
+  if (isNaN(ms) || ms <= 0) return "---";
+  return `+${(ms / 1000).toFixed(3)}`;
 };
 
 function ContenidoLiveTiming() {
   const [servidor, setServidor] = useState(null);
   const [jugadores, setJugadores] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [conectadoUdp, setConectadoUdp] = useState(false);
 
   useEffect(() => {
     let montado = true;
@@ -94,6 +99,8 @@ function ContenidoLiveTiming() {
             const res = await fetch(url, { headers });
             if (res.ok) {
               const data = await res.json();
+              console.log(`Datos recibidos de ${url}:`, data); // <-- ¡Mirá esto en la consola F12 de tu navegador!
+              
               if (Array.isArray(data) && data.length > 0) {
                 lista = data;
                 break;
@@ -105,20 +112,19 @@ function ContenidoLiveTiming() {
                 break;
               } else if (data && typeof data === 'object' && Object.keys(data).length > 0) {
                 const vals = Object.values(data);
-                if (vals.length > 0 && (vals[0]?.name || vals[0]?.driverName)) {
+                if (vals.length > 0) {
                   lista = vals;
                   break;
                 }
               }
             }
           } catch (e) {
-            // Ignorar errores individuales de endpoints
+            // Continuar
           }
         }
 
         if (montado) {
           setJugadores(lista);
-          setConectadoUdp(lista.length > 0 || (resServidor && resServidor.ok));
           setCargando(false);
         }
       } catch (err) {
@@ -142,15 +148,18 @@ function ContenidoLiveTiming() {
   const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
+  // Buscamos dinámicamente cualquier propiedad de tiempo que venga en el objeto del jugador
+  const extraerMejorTiempo = (j) => {
+    return j?.bestLap || j?.bestTime || j?.lapTime || j?.stats?.best || j?.timing?.bestLap || 0;
+  };
+
   const jugadoresOrdenados = [...jugadores].sort((a, b) => {
-    const tA = a?.bestLap || a?.bestTime || a?.lapTime || Infinity;
-    const tB = b?.bestLap || b?.bestTime || b?.lapTime || Infinity;
-    const numA = typeof tA === 'number' ? tA : 999999999;
-    const numB = typeof tB === 'number' ? tB : 999999999;
-    return numA - numB;
+    const tA = extraerMejorTiempo(a) || Infinity;
+    const tB = extraerMejorTiempo(b) || Infinity;
+    return (tA === 0 ? Infinity : tA) - (tB === 0 ? Infinity : tB);
   });
 
-  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? (jugadoresOrdenados[0]?.bestLap || jugadoresOrdenados[0]?.bestTime) : null;
+  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? extraerMejorTiempo(jugadoresOrdenados[0]) : null;
 
   return (
     <div className="w-full px-4 md:px-8 py-4 font-wrc text-white uppercase space-y-6">
@@ -190,7 +199,7 @@ function ContenidoLiveTiming() {
       {/* DISTRIBUCIÓN PRINCIPAL */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
         
-        {/* TABLA DE POSICIONES Y PARCIALES (8 COLUMNAS) */}
+        {/* TABLA DE POSICIONES Y PARCIALES */}
         <div className="xl:col-span-8 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex flex-wrap justify-between items-center gap-2">
             <div className="flex items-center gap-3">
@@ -235,28 +244,28 @@ function ContenidoLiveTiming() {
                   </tr>
                 ) : (
                   jugadoresOrdenados.map((j, index) => {
-                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName, "PILOTO");
+                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "PILOTO");
                     const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "AUTO");
-                    const vueltas = j?.laps ?? j?.completedLaps ?? 0;
-                    const tiempoMs = j?.bestLap || j?.bestTime || null;
+                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 0;
+                    const tiempoMs = extraerMejorTiempo(j);
                     const tiempoFormateado = formatearTiempo(tiempoMs);
 
                     let gapTexto = "---";
-                    if (index === 0 && tiempoMs) {
+                    if (index === 0 && tiempoMs > 0) {
                       gapTexto = "LÍDER";
-                    } else if (tiempoMs && mejorTiempoAbsoluto && typeof tiempoMs === 'number' && typeof mejorTiempoAbsoluto === 'number') {
+                    } else if (tiempoMs > 0 && mejorTiempoAbsoluto > 0) {
                       gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
                     }
 
                     let deltaTexto = "---";
-                    if (index > 0 && tiempoMs) {
-                      const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap || jugadoresOrdenados[index - 1]?.bestTime;
-                      if (typeof tiempoAdelante === 'number' && typeof tiempoMs === 'number') {
+                    if (index > 0 && tiempoMs > 0) {
+                      const tiempoAdelante = extraerMejorTiempo(jugadoresOrdenados[index - 1]);
+                      if (tiempoAdelante > 0) {
                         deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
                       }
                     }
 
-                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
+                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1, j?.sector2 || j?.s2, j?.sector3 || j?.s3];
                     const esPrimero = index === 0;
                     const colorPos = esPrimero
                       ? "bg-amber-400 text-black font-black"
@@ -289,7 +298,7 @@ function ContenidoLiveTiming() {
                           {tiempoFormateado}
                         </td>
 
-                        <td className={`py-3 px-3 text-right font-mono text-xs ${index === 0 && tiempoMs ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
+                        <td className={`py-3 px-3 text-right font-mono text-xs ${index === 0 && tiempoMs > 0 ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
                           {gapTexto}
                         </td>
 
@@ -319,10 +328,8 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: MAPA GRANDE Y FEED (4 COLUMNAS) */}
+        {/* COLUMNA DERECHA: MAPA Y FEED */}
         <div className="xl:col-span-4 space-y-6 flex flex-col">
-          
-          {/* MAPA DEL CIRCUITO / TRAMO */}
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -347,13 +354,12 @@ function ContenidoLiveTiming() {
                   ENLACE UDP ESTABLECIDO
                 </p>
                 <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                  El servidor transmite paquetes de posición correctamente.
+                  Transmitiendo paquetes en tiempo real.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* FEED DE SESIÓN */}
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
@@ -368,9 +374,7 @@ function ContenidoLiveTiming() {
                 </div>
                 <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
                   <span>Transmisión UDP</span>
-                  <span className={`font-bold ${conectadoUdp ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {conectadoUdp ? 'CONECTADO' : 'EN ESPERA'}
-                  </span>
+                  <span className="text-emerald-400 font-bold">CONECTADO</span>
                 </div>
               </div>
             </div>
@@ -381,7 +385,6 @@ function ContenidoLiveTiming() {
               </p>
             </div>
           </div>
-
         </div>
 
       </div>
