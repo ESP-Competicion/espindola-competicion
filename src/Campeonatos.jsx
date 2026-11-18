@@ -8,27 +8,32 @@ export default function Campeonatos({ esAdmin }) {
   const [tablaPosiciones, setTablaPosiciones] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  // Estados para el formulario de crear campeonato
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [cantidadFechas, setCantidadFechas] = useState(5);
   
-  // Escalas de puntos
   const [strPuntosQ, setStrPuntosQ] = useState('10, 8, 6, 4, 2');
   const [strPuntosF1, setStrPuntosF1] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
   const [strPuntosF2, setStrPuntosF2] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
 
-  // Estado para cargar resultados de una fecha específica (Admin)
   const [fechaSeleccionadaId, setFechaSeleccionadaId] = useState('');
   const [resultadosFecha, setResultadosFecha] = useState([]);
-  const [formCargaPiloto, setFormCargaPiloto] = useState({
-    piloto_nombre: '',
+  
+  // Estado para la edición / comisariado deportivo (sanciones y recargos)
+  const [pilotoEditando, setPilotoEditando] = useState(null);
+  const [formEdicionSancion, setFormEdicionSancion] = useState({
     pos_qualy: 1,
     pos_final1: 1,
-    pos_final2: 1
+    pos_final2: 1,
+    sancion_aplicada: ''
   });
+
+  // Estado para importar de sesiones guardadas del servidor
+  const [sesionesServidor, setSesionesServidor] = useState([]);
+  const [sesionSeleccionadaId, setSesionSeleccionadaId] = useState('');
 
   useEffect(() => {
     cargarCampeonatos();
+    cargarSesionesServidor();
   }, []);
 
   async function cargarCampeonatos() {
@@ -43,8 +48,13 @@ export default function Campeonatos({ esAdmin }) {
     setCargando(false);
   }
 
+  async function cargarSesionesServidor() {
+    const { data } = await supabase.from('resultados_sesiones').select('*').order('created_at', { ascending: false }).limit(10);
+    if (data) setSesionesServidor(data);
+  }
+
   async function seleccionarCampeonato(camp) {
-    setCampSelectSeguro(camp);
+    setCampeonatoSeleccionado(camp);
     
     if (camp.puntos_qualy && Array.isArray(camp.puntos_qualy)) {
       setStrPuntosQ(camp.puntos_qualy.join(', '));
@@ -66,10 +76,6 @@ export default function Campeonatos({ esAdmin }) {
     }
 
     calcularTablaGeneral(camp.id);
-  }
-
-  function setCampSelectSeguro(camp) {
-    setCampeonatoSeleccionado(camp);
   }
 
   async function cargarResultadosFecha(fechaId) {
@@ -142,57 +148,102 @@ export default function Campeonatos({ esAdmin }) {
     await supabase.from('campeonato_fechas').insert(fechasInsertar);
 
     setNuevoNombre('');
-    alert('¡Campeonato y escala de puntos creados con éxito!');
+    alert('¡Campeonato creado con éxito!');
     cargarCampeonatos();
   }
 
-  async function handleGuardarPuntosPiloto(e) {
-    e.preventDefault();
-    if (!fechaSeleccionadaId || !formCargaPiloto.piloto_nombre.trim()) return;
+  // Importar automáticamente desde los resultados del servidor y calcular puntos
+  async function importarResultadosServidor() {
+    if (!sesionSeleccionadaId || !fechaSeleccionadaId) {
+      alert('Selecciona una sesión guardada del servidor y una fecha del campeonato.');
+      return;
+    }
+
+    const sesionObj = sesionesServidor.find(s => s.id === sesionSeleccionadaId);
+    if (!sesionObj || !sesionObj.datos_json) return;
 
     const arrQ = campeonatoSeleccionado?.puntos_qualy || [10, 8, 6];
     const arrF1 = campeonatoSeleccionado?.puntos_final1 || [25, 18, 15];
     const arrF2 = campeonatoSeleccionado?.puntos_final2 || [25, 18, 15];
 
-    const posQ = parseInt(formCargaPiloto.pos_qualy) || 0;
-    const posF1 = parseInt(formCargaPiloto.pos_final1) || 0;
-    const posF2 = parseInt(formCargaPiloto.pos_final2) || 0;
+    // Procesar cada piloto de la sesión
+    for (const j of sesionObj.datos_json) {
+      const nombrePiloto = (j.nombre || 'PILOTO').toUpperCase();
+      const posQ = Number(j.posicionLargada || j.pos || 1);
+      const posF = Number(j.pos || 1);
+
+      const ptsQ = posQ > 0 && posQ <= arrQ.length ? arrQ[posQ - 1] : 0;
+      const ptsF1 = posF > 0 && posF1 <= arrF1.length ? arrF1[posF1 - 1] : 0;
+      const total = ptsQ + ptsF1;
+
+      // Buscar si ya existe para actualizar o insertar
+      const { data: existente } = await supabase
+        .from('campeonato_resultados_fecha')
+        .select('id')
+        .eq('fecha_id', fechaSeleccionadaId)
+        .eq('piloto_nombre', nombrePiloto)
+        .single();
+
+      if (existente) {
+        await supabase.from('campeonato_resultados_fecha').update({
+          puntos_qualy: ptsQ,
+          puntos_final1: ptsF1,
+          puntos_total: total,
+          pos_qualy_real: posQ,
+          pos_final1_real: posF
+        }).eq('id', existente.id);
+      } else {
+        await supabase.from('campeonato_resultados_fecha').insert([{
+          fecha_id: fechaSeleccionadaId,
+          piloto_nombre: nombrePiloto,
+          puntos_qualy: ptsQ,
+          puntos_final1: ptsF1,
+          puntos_final2: 0,
+          puntos_total: total,
+          pos_qualy_real: posQ,
+          pos_final1_real: posF
+        }]);
+      }
+    }
+
+    alert('¡Resultados importados y puntos calculados automáticamente desde el servidor!');
+    cargarResultadosFecha(fechaSeleccionadaId);
+    calcularTablaGeneral(campeonatoSeleccionado.id);
+  }
+
+  // Guardar corrección de Comisarios / Sanción (ej: cambiar del puesto 4 al 7)
+  async function handleGuardarCorreccion(e) {
+    e.preventDefault();
+    if (!pilotoEditando) return;
+
+    const arrQ = campeonatoSeleccionado?.puntos_qualy || [10, 8, 6];
+    const arrF1 = campeonatoSeleccionado?.puntos_final1 || [25, 18, 15];
+    const arrF2 = campeonatoSeleccionado?.puntos_final2 || [25, 18, 15];
+
+    const posQ = parseInt(formEdicionSancion.pos_qualy) || 1;
+    const posF1 = parseInt(formEdicionSancion.pos_final1) || 1;
+    const posF2 = parseInt(formEdicionSancion.pos_final2) || 1;
 
     const ptsQ = posQ > 0 && posQ <= arrQ.length ? arrQ[posQ - 1] : 0;
     const ptsF1 = posF1 > 0 && posF1 <= arrF1.length ? arrF1[posF1 - 1] : 0;
     const ptsF2 = posF2 > 0 && posF2 <= arrF2.length ? arrF2[posF2 - 1] : 0;
     const total = ptsQ + ptsF1 + ptsF2;
 
-    const nombrePiloto = formCargaPiloto.piloto_nombre.toUpperCase().trim();
+    await supabase.from('campeonato_resultados_fecha').update({
+      puntos_qualy: ptsQ,
+      puntos_final1: ptsF1,
+      puntos_final2: ptsF2,
+      puntos_total: total,
+      pos_qualy_real: posQ,
+      pos_final1_real: posF1,
+      pos_final2_real: posF2,
+      sancion_aplicada: formEdicionSancion.sancion_aplicada.toUpperCase()
+    }).eq('id', pilotoEditando.id);
 
-    const { data: existente } = await supabase
-      .from('campeonato_resultados_fecha')
-      .select('id')
-      .eq('fecha_id', fechaSeleccionadaId)
-      .eq('piloto_nombre', nombrePiloto)
-      .single();
-
-    if (existente) {
-      await supabase.from('campeonato_resultados_fecha').update({
-        puntos_qualy: ptsQ,
-        puntos_final1: ptsF1,
-        puntos_final2: ptsF2,
-        puntos_total: total
-      }).eq('id', existente.id);
-    } else {
-      await supabase.from('campeonato_resultados_fecha').insert([{
-        fecha_id: fechaSeleccionadaId,
-        piloto_nombre: nombrePiloto,
-        puntos_qualy: ptsQ,
-        puntos_final1: ptsF1,
-        puntos_final2: ptsF2,
-        puntos_total: total
-      }]);
-    }
-
-    setFormCargaPiloto({ piloto_nombre: '', pos_qualy: 1, pos_final1: 1, pos_final2: 1 });
+    setPilotoEditando(null);
     cargarResultadosFecha(fechaSeleccionadaId);
     calcularTablaGeneral(campeonatoSeleccionado.id);
+    alert('¡Sanción / Corrección aplicada y puntos recalculados con éxito!');
   }
 
   async function eliminarResultadoPiloto(id) {
@@ -215,7 +266,7 @@ export default function Campeonatos({ esAdmin }) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-neutral-900/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
         <div>
           <h2 className="text-3xl text-amber-400 tracking-wide">CAMPEONATOS OFICIALES</h2>
-          <p className="text-neutral-300 text-xs">TABLA DE POSICIONES, ESCALA DE PUNTOS Y GESTIÓN DE FECHAS.</p>
+          <p className="text-neutral-300 text-xs">AUTOMATIZACIÓN DE PUNTOS Y COMISARIADO DEPORTIVO.</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -247,7 +298,7 @@ export default function Campeonatos({ esAdmin }) {
       {/* PANEL DE ADMIN: CREAR CAMPEONATO */}
       {esAdmin && (
         <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/50 rounded-2xl p-5 shadow-2xl space-y-4">
-          <h3 className="text-sm text-amber-400 font-black">➕ CREAR NUEVO CAMPEONATO Y CONFIGURAR PUNTUACIÓN</h3>
+          <h3 className="text-sm text-amber-400 font-black">➕ CREAR NUEVO CAMPEONATO Y ESCALA DE PUNTUACIÓN</h3>
           
           <form onSubmit={handleCrearCampeonato} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -310,7 +361,7 @@ export default function Campeonatos({ esAdmin }) {
                 type="submit"
                 className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-6 py-2.5 rounded-lg transition shadow cursor-pointer"
               >
-                CREAR TORNEO CON ESTA PUNTUACIÓN
+                CREAR TORNEO
               </button>
             </div>
           </form>
@@ -329,7 +380,7 @@ export default function Campeonatos({ esAdmin }) {
             <div className="bg-neutral-950/90 border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-3">
                 <h3 className="text-amber-400 text-xs font-black">
-                  ⚙️ CARGAR O EDITAR RESULTADOS POR FECHA
+                  ⚡ AUTOMATIZACIÓN Y COMISARIADO DEPORTIVO
                 </h3>
 
                 <select
@@ -346,83 +397,83 @@ export default function Campeonatos({ esAdmin }) {
                 </select>
               </div>
 
-              <form onSubmit={handleGuardarPuntosPiloto} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
-                <div className="sm:col-span-2">
-                  <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE DEL PILOTO</label>
-                  <input
-                    type="text"
-                    value={formCargaPiloto.piloto_nombre}
-                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, piloto_nombre: e.target.value })}
-                    placeholder="EJ: JOACO CASTAÑO"
-                    required
-                    className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-neutral-300 mb-1">POSICIÓN QUALY</label>
-                  <input
-                    type="number"
-                    value={formCargaPiloto.pos_qualy}
-                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_qualy: e.target.value })}
-                    min="1" max="50"
-                    className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-neutral-300 mb-1">POSICIÓN FINAL 1</label>
-                  <input
-                    type="number"
-                    value={formCargaPiloto.pos_final1}
-                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_final1: e.target.value })}
-                    min="1" max="50"
-                    className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-neutral-300 mb-1">POSICIÓN FINAL 2</label>
-                  <input
-                    type="number"
-                    value={formCargaPiloto.pos_final2}
-                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_final2: e.target.value })}
-                    min="1" max="50"
-                    className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-                <div className="sm:col-span-5 flex justify-end pt-1">
-                  <button
-                    type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-5 py-2 rounded-lg transition cursor-pointer"
+              {/* Importar desde el servidor de AssettoHosting */}
+              <div className="bg-neutral-900/80 p-3.5 rounded-xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="w-full sm:w-auto flex-1">
+                  <label className="block text-[10px] text-neutral-400 mb-1">SELECCIONAR SESIÓN GUARDADA DEL SERVIDOR</label>
+                  <select
+                    value={sesionSeleccionadaId}
+                    onChange={(e) => setSesionSeleccionadaId(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none font-wrc cursor-pointer"
                   >
-                    GUARDAR PUNTOS DE ESTA FECHA
-                  </button>
+                    <option value="">-- SELECCIONAR SESIÓN DE PISTA --</option>
+                    {sesionesServidor.map(s => (
+                      <option key={s.id} value={s.id}>
+                        [{s.sesion_tipo}] {s.pista} ({new Date(s.created_at).toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </form>
+                <button
+                  type="button"
+                  onClick={importarResultadosServidor}
+                  className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-5 py-2.5 rounded-lg transition cursor-pointer mt-auto"
+                >
+                  📥 IMPORTAR Y SUMAR PUNTOS AUTOMÁTICAMENTE
+                </button>
+              </div>
 
+              {/* LISTADO DE PILOTOS Y OPCIÓN DE EDITAR / SANCIONAR */}
               {resultadosFecha.length > 0 && (
                 <div className="pt-3 border-t border-white/10">
-                  <h4 className="text-[11px] text-neutral-400 mb-2">PILOTOS CON PUNTOS CARGADOS EN ESTA FECHA:</h4>
+                  <h4 className="text-[11px] text-neutral-400 mb-2">CLASIFICACIÓN DE LA FECHA (CLIC EN ✏️ PARA EDITAR O APLICAR SANCIÓN):</h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="text-neutral-400 border-b border-white/10">
                           <th className="py-1.5 px-2">PILOTO</th>
-                          <th className="py-1.5 px-2 text-center">QUALY PTS</th>
-                          <th className="py-1.5 px-2 text-center">FINAL 1 PTS</th>
-                          <th className="py-1.5 px-2 text-center">FINAL 2 PTS</th>
+                          <th className="py-1.5 px-2 text-center">QUALY (POS / PTS)</th>
+                          <th className="py-1.5 px-2 text-center">FINAL 1 (POS / PTS)</th>
+                          <th className="py-1.5 px-2 text-center">FINAL 2 (POS / PTS)</th>
+                          <th className="py-1.5 px-2">SANCIÓN / NOTAS</th>
                           <th className="py-1.5 px-2 text-right">TOTAL FECHA</th>
                           <th className="py-1.5 px-2 text-center">ACCIONES</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {resultadosFecha.map(rf => (
-                          <tr key={rf.id}>
-                            <td className="py-1.5 px-2 font-bold text-white">{rf.piloto_nombre}</td>
-                            <td className="py-1.5 px-2 text-center font-mono text-neutral-300">+{rf.puntos_qualy}</td>
-                            <td className="py-1.5 px-2 text-center font-mono text-neutral-300">+{rf.puntos_final1}</td>
-                            <td className="py-1.5 px-2 text-center font-mono text-neutral-300">+{rf.puntos_final2}</td>
-                            <td className="py-1.5 px-2 text-right font-mono font-black text-amber-400">{rf.puntos_total} PTS</td>
-                            <td className="py-1.5 px-2 text-center">
-                              <button onClick={() => eliminarResultadoPiloto(rf.id)} className="text-red-400 hover:text-red-300 text-xs cursor-pointer">🗑️</button>
+                          <tr key={rf.id} className="hover:bg-white/5">
+                            <td className="py-2 px-2 font-bold text-white">{rf.piloto_nombre}</td>
+                            <td className="py-2 px-2 text-center font-mono text-neutral-300">
+                              {rf.pos_qualy_real || '-'}º (+{rf.puntos_qualy})
+                            </td>
+                            <td className="py-2 px-2 text-center font-mono text-neutral-300">
+                              {rf.pos_final1_real || '-'}º (+{rf.puntos_final1})
+                            </td>
+                            <td className="py-2 px-2 text-center font-mono text-neutral-300">
+                              {rf.pos_final2_real || '-'}º (+{rf.puntos_final2})
+                            </td>
+                            <td className="py-2 px-2 text-amber-300 text-[10px]">
+                              {rf.sancion_aplicada || 'SIN SANCIONES'}
+                            </td>
+                            <td className="py-2 px-2 text-right font-mono font-black text-amber-400">{rf.puntos_total} PTS</td>
+                            <td className="py-2 px-2 text-center flex items-center justify-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  setPilotoEditando(rf);
+                                  setFormEdicionSancion({
+                                    pos_qualy: rf.pos_qualy_real || 1,
+                                    pos_final1: rf.pos_final1_real || 1,
+                                    pos_final2: rf.pos_final2_real || 1,
+                                    sancion_aplicada: rf.sancion_aplicada || ''
+                                  });
+                                }} 
+                                className="text-amber-400 hover:text-amber-300 text-xs cursor-pointer"
+                                title="Editar posición o sancionar"
+                              >
+                                ✏️
+                              </button>
+                              <button onClick={() => eliminarResultadoPiloto(rf.id)} className="text-red-400 hover:text-red-300 text-xs cursor-pointer" title="Eliminar">🗑️</button>
                             </td>
                           </tr>
                         ))}
@@ -431,6 +482,76 @@ export default function Campeonatos({ esAdmin }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* MODAL DE COMISARIO DEPORTIVO / EDICIÓN DE PUESTO */}
+          {pilotoEditando && (
+            <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-neutral-900 border border-amber-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                  <h3 className="text-amber-400 text-sm font-black">
+                    ⚖️ COMISARIADO DEPORTIVO: {pilotoEditando.piloto_nombre}
+                  </h3>
+                  <button onClick={() => setPilotoEditando(null)} className="text-neutral-400 hover:text-white">✕</button>
+                </div>
+
+                <form onSubmit={handleGuardarCorreccion} className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] text-neutral-300 mb-1">NUEVA POSICIÓN QUALY</label>
+                    <input
+                      type="number"
+                      value={formEdicionSancion.pos_qualy}
+                      onChange={(e) => setFormEdicionSancion({ ...formEdicionSancion, pos_qualy: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-neutral-300 mb-1">NUEVA POSICIÓN FINAL 1 (Ej: cambiar 4 por 7)</label>
+                    <input
+                      type="number"
+                      value={formEdicionSancion.pos_final1}
+                      onChange={(e) => setFormEdicionSancion({ ...formEdicionSancion, pos_final1: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-neutral-300 mb-1">NUEVA POSICIÓN FINAL 2</label>
+                    <input
+                      type="number"
+                      value={formEdicionSancion.pos_final2}
+                      onChange={(e) => setFormEdicionSancion({ ...formEdicionSancion, pos_final2: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-amber-400 mb-1">MOTIVO DE SANCIÓN / RECARGO</label>
+                    <input
+                      type="text"
+                      value={formEdicionSancion.sancion_aplicada}
+                      onChange={(e) => setFormEdicionSancion({ ...formEdicionSancion, sancion_aplicada: e.target.value })}
+                      placeholder="EJ: RECARGO DE 3 PUESTOS POR TOQUE"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setPilotoEditando(null)}
+                      className="bg-neutral-800 text-neutral-300 text-xs px-4 py-2 rounded-lg cursor-pointer"
+                    >
+                      CANCELAR
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-5 py-2 rounded-lg cursor-pointer"
+                    >
+                      APLICAR Y RECALCULAR PUNTOS
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 
