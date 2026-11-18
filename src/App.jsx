@@ -49,7 +49,6 @@ const obtenerBanderaPais = (pais) => {
   );
 };
 
-// Función auxiliar para extraer sectores
 const obtenerSectoresJugador = (j) => {
   if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
     return j.lastLap.sectors.map(s => Number(s) || 0);
@@ -98,6 +97,7 @@ export default function App() {
   const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
 
   const [eventos, setEventos] = useState([]);
+  const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
   
@@ -117,7 +117,7 @@ export default function App() {
     horario: '',
     categorias: '',
     modelos_autos: '',
-    pais_origen: 'ARGENTINA'
+    campeonato_id: ''
   });
   const [nuevoCalendario, setNuevoCalendario] = useState({
     titulo: '',
@@ -133,7 +133,6 @@ export default function App() {
 
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
 
-  // --- MOTOR GLOBAL DE AUTOGUARDADO EN SEGUNDO PLANO ---
   useEffect(() => {
     const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
     const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
@@ -208,7 +207,6 @@ export default function App() {
 
     return () => clearInterval(intervaloGlobal);
   }, []);
-  // -----------------------------------------------------
 
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
@@ -230,6 +228,7 @@ export default function App() {
     cargarConfiguracion();
     cargarAlbumes();
     cargarEventos();
+    cargarCampeonatosSelect();
     cargarCalendario();
     cargarSalónDeLaFama();
     cargarMiembros();
@@ -284,6 +283,11 @@ export default function App() {
   async function cargarEventos() {
     const { data } = await supabase.from('eventos').select('*').order('created_at', { ascending: false });
     if (data) setEventos(data);
+  }
+
+  async function cargarCampeonatosSelect() {
+    const { data } = await supabase.from('campeonatos').select('id, nombre').order('nombre', { ascending: true });
+    if (data) setCampeonatosDisponibles(data);
   }
 
   async function cargarCalendario() {
@@ -425,7 +429,16 @@ export default function App() {
     e.preventDefault();
     if (!nuevoEvento.titulo || !nuevoEvento.fecha) return;
 
-    const { error } = await supabase.from('eventos').insert([nuevoEvento]);
+    const datosInsertar = {
+      titulo: nuevoEvento.titulo,
+      fecha: nuevoEvento.fecha,
+      horario: nuevoEvento.horario,
+      categorias: nuevoEvento.categorias,
+      modelos_autos: nuevoEvento.modelos_autos,
+      campeonato_id: nuevoEvento.campeonato_id ? nuevoEvento.campeonato_id : null
+    };
+
+    const { error } = await supabase.from('eventos').insert([datosInsertar]);
 
     if (error) {
       alert('Error al crear evento: ' + error.message);
@@ -436,7 +449,7 @@ export default function App() {
         horario: '',
         categorias: '',
         modelos_autos: '',
-        pais_origen: 'ARGENTINA'
+        campeonato_id: ''
       });
       cargarEventos();
     }
@@ -600,7 +613,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black flex flex-col justify-between uppercase text-xs md:text-sm">
       
-      {/* FONDO GLOBAL */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
           <div
@@ -625,7 +637,6 @@ export default function App() {
         }
       `}</style>
 
-      {/* ENCABEZADO / HUD FLOTANTE */}
       <header className="relative z-50 w-full max-w-[1400px] mx-auto px-4 pt-4 flex flex-wrap items-center justify-between gap-3">
         
         <button 
@@ -777,7 +788,6 @@ export default function App() {
 
       </header>
 
-      {/* CONTENIDO PRINCIPAL DINÁMICO */}
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
         
         {pestanaActiva === 'inicio' && (
@@ -1123,12 +1133,12 @@ export default function App() {
           <div className="space-y-6 max-w-4xl mx-auto">
             <div>
               <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
-              <p className="text-neutral-300 text-xs font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR.</p>
+              <p className="text-neutral-300 text-xs font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR Y VINCULAR AL TORNEO.</p>
             </div>
 
             {esAdmin && (
-              <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
-                <h3 className="font-wrc text-base text-amber-400">➕ CREAR NUEVO EVENTO / INSCRIPCIÓN</h3>
+              <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
+                <h3 className="font-wrc text-base text-amber-400">➕ CREAR NUEVO EVENTO / INSCRIPCIÓN OFICIAL</h3>
                 <form onSubmit={handleCrearEvento} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">TÍTULO DEL EVENTO</label>
@@ -1136,7 +1146,7 @@ export default function App() {
                       type="text"
                       value={nuevoEvento.titulo}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value.toUpperCase() })}
-                      placeholder="EJ: FECHA 1 - RALLY MIT CUP"
+                      placeholder="EJ: FECHA 1 - RALLY SAVEIRO"
                       required
                       className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
                     />
@@ -1167,7 +1177,7 @@ export default function App() {
                       type="text"
                       value={nuevoEvento.categorias}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
-                      placeholder="EJ: RALLY2 / RALLY4"
+                      placeholder="EJ: MONOMARCA / RALLY4"
                       className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
@@ -1177,16 +1187,29 @@ export default function App() {
                       type="text"
                       value={nuevoEvento.modelos_autos}
                       onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
-                      placeholder="EJ: SKODA / PEUGEOT"
+                      placeholder="EJ: SAVEIRO / PEUGEOT"
                       className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
                     />
                   </div>
-                  <div className="flex items-end">
+                  <div>
+                    <label className="block text-[11px] text-amber-400 uppercase mb-1 font-bold">VINCULAR A CAMPEONATO (OPCIONAL)</label>
+                    <select
+                      value={nuevoEvento.campeonato_id || ''}
+                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value })}
+                      className="w-full bg-neutral-950 border border-amber-500/60 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc cursor-pointer"
+                    >
+                      <option value="" className="bg-neutral-900 text-neutral-400">-- NO VINCULAR (SOLO INSCRIPCIÓN) --</option>
+                      {campeonatosDisponibles.map(c => (
+                        <option key={c.id} value={c.id} className="bg-neutral-900 text-white">{c.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-2">
                     <button
                       type="submit"
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs uppercase py-2 rounded-lg transition shadow cursor-pointer font-black"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs uppercase px-6 py-2.5 rounded-lg transition shadow cursor-pointer font-black"
                     >
-                      PUBLICAR EVENTO
+                      PUBLICAR EVENTO Y FECHA OFICIAL
                     </button>
                   </div>
                 </form>
@@ -1553,7 +1576,6 @@ export default function App() {
 
       </main>
 
-      {/* MODAL INTERACTIVO DE CALENDARIO */}
       {diaSeleccionadoModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
           <div className="bg-neutral-900 border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-5 uppercase text-xs" onClick={(e) => e.stopPropagation()}>
@@ -1661,7 +1683,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL INTERACTIVO DE EVENTOS DEL EQUIPO */}
       {eventoModalActivo && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEventoModalActivo(null)}>
           <div className="bg-neutral-900 border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-5 uppercase text-xs" onClick={(e) => e.stopPropagation()}>
@@ -1749,7 +1770,6 @@ export default function App() {
         </div>
       )}
 
-      {/* BARRA INFERIOR / FOOTER FLOTANTE */}
       <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex flex-col md:flex-row items-center justify-between gap-3 mt-8 text-xs">
         <div className="hidden md:block w-20" />
 
