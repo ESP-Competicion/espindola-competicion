@@ -12,44 +12,21 @@ const formatearTiempo = (ms) => {
   return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
 };
 
-const formatearSector = (ms) => {
-  if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
-  const valorMs = ms < 1000 ? ms * 1000 : ms;
-  const segundos = Math.floor(valorMs / 1000);
-  const milesimas = Math.floor(valorMs % 1000);
-  return `${segundos}.${String(milesimas).padStart(3, '0')}`;
-};
-
-const obtenerSectoresJugador = (j) => {
-  if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
-    return j.lastLap.sectors.map(s => Number(s) || 0);
-  }
-  if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
-    return j.bestLap.sectors.map(s => Number(s) || 0);
-  }
-  if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
-    return j.sectors.map(s => Number(s) || 0);
-  }
-  if (j?.sector1 !== undefined || j?.sector2 !== undefined || j?.sector3 !== undefined) {
-    return [Number(j?.sector1) || 0, Number(j?.sector2) || 0, Number(j?.sector3) || 0];
-  }
-  return [0, 0, 0];
-};
-
 export default function Resultados() {
   const [resultadosGuardados, setResultadosGuardados] = useState([]);
   const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [usuarioActual, setUsuarioActual] = useState(null);
+  const [guardandoManual, setGuardandoManual] = useState(false);
 
   useEffect(() => {
     verificarUsuario();
     cargarResultadosSupabase();
 
     let ultimaSesionDetectada = null;
-    let ultimosDatosJugadores = [];
+    let datosUltimosJugadores = [];
 
-    // Monitoreo constante en segundo plano para capturar cuando cambie de Práctica a Qualy o Carrera
+    // MONITOREO INTELIGENTE DE CAMBIO DE SESIÓN
     const intervaloAutoGuardado = setInterval(async () => {
       try {
         const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
@@ -57,7 +34,14 @@ export default function Resultados() {
         const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
         if (!resServidor || !resServidor.ok) return;
         const datosServ = await resServidor.json();
-        const tipoSesionActual = String(datosServ?.session?.type || datosServ?.session?.name || 'PRACTICE').toUpperCase();
+        
+        const tipoSesionActual = String(
+          datosServ?.session?.type || 
+          datosServ?.session?.name || 
+          datosServ?.session || 
+          'PRACTICE'
+        ).toUpperCase();
+        
         const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
 
         const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
@@ -72,42 +56,49 @@ export default function Resultados() {
 
         if (!ultimaSesionDetectada) {
           ultimaSesionDetectada = tipoSesionActual;
-          ultimosDatosJugadores = lista;
+          if (lista.length > 0) datosUltimosJugadores = lista;
           return;
         }
 
-        // Si cambia el tipo de sesión, guardamos automáticamente la que acaba de terminar
+        // SI CAMBIA DE SESIÓN (Ej: Practice -> Qualifying)
         if (ultimaSesionDetectada !== tipoSesionActual) {
-          if (ultimosDatosJugadores.length > 0) {
-            const datosProcesados = ultimosDatosJugadores.map((j, idx) => ({
+          console.log(`[AutoGuardado] Transición detectada: ${ultimaSesionDetectada} ➔ ${tipoSesionActual}`);
+
+          if (datosUltimosJugadores.length > 0) {
+            const datosProcesados = datosUltimosJugadores.map((j, idx) => ({
               pos: idx + 1,
               nombre: j?.name || 'PILOTO',
               auto: j?.car?.name || 'AUTO',
               bestLapMs: Number(j?.bestLapMs) || 0,
               lastLapMs: Number(j?.lastLapMs) || 0,
               vueltas: Number(j?.laps) || 0,
-              sectores: obtenerSectoresJugador(j),
               posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
             }));
 
-            await supabase.from('resultados_sesiones').insert([{
+            // Guardamos automáticamente la sesión que acaba de terminar
+            const { error } = await supabase.from('resultados_sesiones').insert([{
               sesion_tipo: ultimaSesionDetectada,
               pista: pistaNombre,
               datos_json: datosProcesados
             }]);
 
-            cargarResultadosSupabase();
+            if (!error) {
+              cargarResultadosSupabase();
+              console.log(`[AutoGuardado] ¡Sesión ${ultimaSesionDetectada} archivada con éxito en Supabase!`);
+            }
           }
+
           ultimaSesionDetectada = tipoSesionActual;
+          datosUltimosJugadores = [];
         }
 
         if (lista.length > 0) {
-          ultimosDatosJugadores = lista;
+          datosUltimosJugadores = lista;
         }
       } catch (err) {
         console.error("Error en autoguardado:", err);
       }
-    }, 4000);
+    }, 5000);
 
     return () => clearInterval(intervaloAutoGuardado);
   }, []);
@@ -139,13 +130,15 @@ export default function Resultados() {
     setCargando(false);
   }
 
-  // Botón manual de respaldo para guardar la sesión en curso en el momento que desees
+  // GUARDADO MANUAL RÁPIDO
   async function guardarResultadosManualmente() {
     try {
+      setGuardandoManual(true);
       const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
       const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
       if (!resServidor || !resServidor.ok) {
         alert('No se pudo conectar con el servidor.');
+        setGuardandoManual(false);
         return;
       }
       const datosServ = await resServidor.json();
@@ -155,6 +148,7 @@ export default function Resultados() {
       const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
       if (!resJugadores || !resJugadores.ok) {
         alert('No se pudieron obtener los jugadores.');
+        setGuardandoManual(false);
         return;
       }
       const dataJ = await resJugadores.json();
@@ -167,6 +161,7 @@ export default function Resultados() {
 
       if (lista.length === 0) {
         alert('No hay pilotos registrados en pista.');
+        setGuardandoManual(false);
         return;
       }
 
@@ -177,7 +172,6 @@ export default function Resultados() {
         bestLapMs: Number(j?.bestLapMs) || 0,
         lastLapMs: Number(j?.lastLapMs) || 0,
         vueltas: Number(j?.laps) || 0,
-        sectores: obtenerSectoresJugador(j),
         posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
       }));
 
@@ -195,6 +189,8 @@ export default function Resultados() {
       }
     } catch (err) {
       console.error("Error al guardar manualmente:", err);
+    } finally {
+      setGuardandoManual(false);
     }
   }
 
@@ -218,14 +214,16 @@ export default function Resultados() {
         {esAdmin && (
           <button
             onClick={guardarResultadosManualmente}
-            className="bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase"
+            disabled={guardandoManual}
+            className={`bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase ${guardandoManual ? 'opacity-50 pointer-events-none' : ''}`}
           >
-            📥 FORZAR GUARDAR SESIÓN ACTUAL
+            {guardandoManual ? 'GUARDANDO...' : '📥 FORZAR GUARDAR SESIÓN ACTUAL'}
           </button>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* LISTA DE SESIONES GUARDADAS */}
         <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl space-y-2.5">
           <h3 className="text-amber-400 text-xs font-black tracking-wider border-b border-white/10 pb-2">
             SESIONES ARCHIVADAS ({resultadosGuardados.length})
@@ -234,7 +232,7 @@ export default function Resultados() {
           {cargando ? (
             <p className="text-neutral-400 text-xs text-center py-4">CARGANDO RESULTADOS...</p>
           ) : resultadosGuardados.length === 0 ? (
-            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA.</p>
+            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. SE ARCHIVARÁN SOLAS AL CAMBIAR DE FASE.</p>
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {resultadosGuardados.map((sesion) => {
@@ -261,6 +259,7 @@ export default function Resultados() {
           )}
         </div>
 
+        {/* DETALLE DE LA SESIÓN SELECCIONADA */}
         <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
           {!sesionSeleccionada ? (
             <div className="p-10 text-center text-neutral-400 text-xs">
@@ -304,9 +303,6 @@ export default function Resultados() {
                       <th className="py-2.5 px-3">PILOTO</th>
                       <th className="py-2.5 px-3">AUTO</th>
                       <th className="py-2.5 px-3 text-center">VUELTAS</th>
-                      <th className="py-2.5 px-2 text-center">S1</th>
-                      <th className="py-2.5 px-2 text-center">S2</th>
-                      <th className="py-2.5 px-2 text-center">S3</th>
                       <th className="py-2.5 px-3 text-right text-purple-400">MEJOR TIEMPO</th>
                     </tr>
                   </thead>
@@ -335,17 +331,6 @@ export default function Resultados() {
                           <td className="py-2.5 px-3 font-bold text-white">{piloto.nombre}</td>
                           <td className="py-2.5 px-3 text-neutral-300 text-[11px]">{piloto.auto}</td>
                           <td className="py-2.5 px-3 text-center text-white">{piloto.vueltas}</td>
-                          
-                          <td className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300">
-                            {formatearSector(piloto.sectores?.[0])}
-                          </td>
-                          <td className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300">
-                            {formatearSector(piloto.sectores?.[1])}
-                          </td>
-                          <td className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300">
-                            {formatearSector(piloto.sectores?.[2])}
-                          </td>
-
                           <td className="py-2.5 px-3 text-right font-mono font-black text-purple-400 bg-purple-950/20">
                             {formatearTiempo(piloto.bestLapMs)}
                           </td>
