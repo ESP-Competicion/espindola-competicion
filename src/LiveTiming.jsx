@@ -111,7 +111,7 @@ function ContenidoLiveTiming() {
     };
   }, []);
 
-  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO');
+  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO RÍO CUARTO');
   const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
 
   const cantidadSectores = 3;
@@ -125,35 +125,44 @@ function ContenidoLiveTiming() {
 
   const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? Number(jugadoresOrdenados[0]?.bestLapMs) || null : null;
 
+  // Calcular mejores tiempos por sector en toda la sesión para colorear en Púrpura
+  const mejoresSectoresGlobales = arraySectores.map(sIdx => {
+    let mejor = Infinity;
+    jugadoresOrdenados.forEach(j => {
+      const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
+      const val = Number(sectoresPiloto[sIdx]);
+      if (val > 0 && val < mejor) {
+        mejor = val;
+      }
+    });
+    return mejor === Infinity ? null : mejor;
+  });
+
   return (
     <div className="w-full px-3 md:px-6 py-3 font-wrc text-white uppercase space-y-4 max-w-[1400px] mx-auto text-xs">
       
-      {/* CABECERA COMPACTA */}
-      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-2xl p-4 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 w-full">
+      {/* CABECERA COMPACTA (NOMBRE EN UN SOLO RENGLÓN) */}
+      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-2xl px-4 py-3 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 w-full">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-            <span className="text-[10px] text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-[9px] text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
-          <h2 className="text-lg md:text-xl text-white font-black tracking-wide">
-            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
+          <h2 className="text-xs md:text-sm text-white font-black tracking-wide truncate max-w-[700px]" title={extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL - MONOMARCA SAVEIRO")}>
+            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL - MONOMARCA SAVEIRO")}
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] w-full lg:w-auto">
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10">
-            <span className="text-neutral-400 block text-[9px]">CIRCUITO / TRAMO</span>
-            <span className="text-amber-400 text-xs truncate block max-w-[150px]" title={nombrePista}>{nombrePista}</span>
-          </div>
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10">
+        <div className="grid grid-cols-3 gap-2 text-[11px] w-full lg:w-auto">
+          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
             <span className="text-neutral-400 block text-[9px]">SESIÓN</span>
             <span className="text-white text-xs">{estadoSesion}</span>
           </div>
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10">
+          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
             <span className="text-neutral-400 block text-[9px]">PILOTOS EN PISTA</span>
             <span className="text-amber-400 text-xs">{jugadoresOrdenados.length} / {servidor?.slots || 20}</span>
           </div>
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10">
+          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
             <span className="text-neutral-400 block text-[9px]">RÉCORD DE SESIÓN</span>
             <span className="text-emerald-400 text-xs font-mono">{formatearTiempo(mejorTiempoAbsoluto)}</span>
           </div>
@@ -163,14 +172,16 @@ function ContenidoLiveTiming() {
       {/* CONTENEDOR PRINCIPAL: TABLA + FEED */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start w-full">
         
-        {/* TABLA DE POSICIONES Y PARCIALES (9 COLUMNAS) */}
+        {/* TABLA DE POSICIONES Y PARCIALES */}
         <div className="xl:col-span-9 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
-          <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-amber-500/30 flex justify-between items-center">
+          <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-2.5 border-b border-amber-500/30 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">EN VIVO</span>
-              <h3 className="text-white text-sm tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
+              <h3 className="text-white text-xs tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
             </div>
-            <span className="text-[11px] text-emerald-400 font-bold">SISTEMA PROPIO</span>
+            <span className="text-[11px] text-amber-400 font-bold truncate max-w-[280px]" title={nombrePista}>
+              🏁 {nombrePista}
+            </span>
           </div>
 
           <div className="w-full overflow-x-auto">
@@ -180,7 +191,7 @@ function ContenidoLiveTiming() {
                   <th className="py-2.5 px-3 text-center w-10">POS</th>
                   <th className="py-2.5 px-3">PILOTO</th>
                   <th className="py-2.5 px-3">AUTO</th>
-                  <th className="py-2.5 px-3 text-right">BEST</th>
+                  <th className="py-2.5 px-3 text-right">LAST</th>
                   <th className="py-2.5 px-3 text-right">GAP</th>
                   <th className="py-2.5 px-3 text-right">DELTA</th>
                   <th className="py-2.5 px-3 text-center">VUELTAS</th>
@@ -211,22 +222,22 @@ function ContenidoLiveTiming() {
                     const nombrePiloto = extraerTexto(j?.name, "PILOTO");
                     const modeloAuto = extraerTexto(j?.car?.name, "AUTO");
                     const vueltas = Number(j?.laps) || 0;
-                    const tiempoMs = Number(j?.bestLapMs) || 0;
-                    const tiempoFormateado = formatearTiempo(tiempoMs);
+                    const mejorLapMs = Number(j?.bestLapMs) || 0;
                     const ultimoMs = Number(j?.lastLapMs) || 0;
+                    const ultimoFormateado = formatearTiempo(ultimoMs);
 
                     let gapTexto = "---";
-                    if (index === 0 && tiempoMs > 0) {
+                    if (index === 0 && mejorLapMs > 0) {
                       gapTexto = "LÍDER";
-                    } else if (tiempoMs > 0 && mejorTiempoAbsoluto > 0) {
-                      gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
+                    } else if (mejorLapMs > 0 && mejorTiempoAbsoluto > 0) {
+                      gapTexto = formatearDiferencia(mejorLapMs - mejorTiempoAbsoluto);
                     }
 
                     let deltaTexto = "---";
-                    if (index > 0 && tiempoMs > 0) {
+                    if (index > 0 && mejorLapMs > 0) {
                       const tiempoAdelante = Number(jugadoresOrdenados[index - 1]?.bestLapMs) || 0;
                       if (tiempoAdelante > 0) {
-                        deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
+                        deltaTexto = formatearDiferencia(mejorLapMs - tiempoAdelante);
                       }
                     }
 
@@ -247,17 +258,30 @@ function ContenidoLiveTiming() {
                         </td>
                         <td className="py-2.5 px-3 font-bold text-white">{nombrePiloto}</td>
                         <td className="py-2.5 px-3 text-neutral-300 text-[11px]">{modeloAuto}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-amber-300 font-bold">{tiempoFormateado}</td>
-                        <td className={`py-2.5 px-3 text-right font-mono text-[11px] ${index === 0 && tiempoMs > 0 ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>{gapTexto}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-amber-300 font-bold">{ultimoFormateado}</td>
+                        <td className={`py-2.5 px-3 text-right font-mono text-[11px] ${index === 0 && mejorLapMs > 0 ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>{gapTexto}</td>
                         <td className="py-2.5 px-3 text-right font-mono text-[11px] text-neutral-400">{deltaTexto}</td>
                         <td className="py-2.5 px-3 text-center text-white font-bold">{vueltas}</td>
-                        {arraySectores.map((sIdx) => (
-                          <td key={`cell-s-${index}-${sIdx}`} className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300 bg-white/[0.01] border-l border-white/5">
-                            {formatearSector(sectoresPiloto[sIdx])}
-                          </td>
-                        ))}
+                        
+                        {/* SECTORES CON COLOR PÚRPURA SI ES EL MEJOR GLOBAL */}
+                        {arraySectores.map((sIdx) => {
+                          const valSector = Number(sectoresPiloto[sIdx]);
+                          const esMejorSector = mejoresSectoresGlobales[sIdx] !== null && valSector === mejoresSectoresGlobales[sIdx];
+                          
+                          return (
+                            <td 
+                              key={`cell-s-${index}-${sIdx}`} 
+                              className={`py-2.5 px-2 text-center font-mono text-[11px] border-l border-white/5 ${
+                                esMejorSector ? 'bg-purple-600/30 text-purple-300 font-black border-purple-500/50' : 'text-neutral-300 bg-white/[0.01]'
+                              }`}
+                            >
+                              {formatearSector(valSector)}
+                            </td>
+                          );
+                        })}
+
                         <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-400 border-l border-white/10 bg-emerald-950/10">
-                          {formatearTiempo(ultimoMs > 0 ? ultimoMs : tiempoMs)}
+                          {formatearTiempo(mejorLapMs)}
                         </td>
                       </tr>
                     );
@@ -268,7 +292,7 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: FEED DE SESIÓN COMPACTO */}
+        {/* COLUMNA DERECHA: FEED DE SESIÓN */}
         <div className="xl:col-span-3 space-y-4 flex flex-col">
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl p-4 shadow-xl flex flex-col justify-between text-xs">
             <div>
