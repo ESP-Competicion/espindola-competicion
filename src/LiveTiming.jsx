@@ -46,7 +46,7 @@ const formatearTiempo = (ms) => {
 
 const formatearSector = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "--.---";
-  // Si viene en segundos decimales directos (ej: 28.087) o en milisegundos grandes
+  // Si viene en segundos decimales (ej: 28.087) o milisegundos
   const valorMs = ms < 1000 ? ms * 1000 : ms;
   const segundos = Math.floor(valorMs / 1000);
   const milesimas = Math.floor(valorMs % 1000);
@@ -58,26 +58,28 @@ const formatearDiferencia = (ms) => {
   return `+${(ms / 1000).toFixed(3)}`;
 };
 
-// Función blindada para extraer sectores desde cualquier propiedad del sTracker
+// EXTRACCIÓN TOTALMENTE BLINDADA DE SECTORES
 const obtenerSectoresJugador = (j) => {
-  // 1. Revisar si vienen en el array de la última vuelta o mejor vuelta
+  // 1. Revisar si vienen en la última vuelta o mejor vuelta en formato array
   if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
     return j.lastLap.sectors.map(s => Number(s) || 0);
   }
   if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
     return j.bestLap.sectors.map(s => Number(s) || 0);
   }
-  // 2. Revisar array general de sectors
+  // 2. Revisar si vienen como array general en el objeto jugador
   if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
     return j.sectors.map(s => Number(s) || 0);
   }
-  // 3. Revisar propiedades sueltas sector1, sector2, sector3
-  if (j?.sector1 !== undefined || j?.sector2 !== undefined || j?.sector3 !== undefined) {
-    return [Number(j?.sector1) || 0, Number(j?.sector2) || 0, Number(j?.sector3) || 0];
+  // 3. Revisar propiedades individuales estilo s1, s2, s3 o sector1, sector2, sector3
+  const s1 = Number(j?.s1 ?? j?.sector1 ?? j?.lastLap?.s1 ?? j?.lastLap?.sector1 ?? 0);
+  const s2 = Number(j?.s2 ?? j?.sector2 ?? j?.lastLap?.s2 ?? j?.lastLap?.sector2 ?? 0);
+  const s3 = Number(j?.s3 ?? j?.sector3 ?? j?.lastLap?.s3 ?? j?.lastLap?.sector3 ?? 0);
+
+  if (s1 > 0 || s2 > 0 || s3 > 0) {
+    return [s1, s2, s3];
   }
-  if (j?.s1 !== undefined || j?.s2 !== undefined || j?.s3 !== undefined) {
-    return [Number(j?.s1) || 0, Number(j?.s2) || 0, Number(j?.s3) || 0];
-  }
+
   return [0, 0, 0];
 };
 
@@ -116,6 +118,12 @@ function ContenidoLiveTiming() {
             } else if (dataJugadores && typeof dataJugadores === 'object') {
               lista = Object.values(dataJugadores);
             }
+            
+            // LOG DE DIAGNÓSTICO EN CONSOLA (F12) PARA VER QUÉ DEVUELVE EXACTAMENTE TU SERVIDOR
+            if (lista.length > 0) {
+              console.log("Estructura del primer jugador en sTracker:", lista[0]);
+            }
+
             setJugadores(lista);
           }
         }
@@ -172,7 +180,7 @@ function ContenidoLiveTiming() {
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
             <span className="text-[9px] text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
-          <h2 className="text-xs md:text-sm text-white font-black tracking-wide truncate max-w-[700px]" title={extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}>
+          <h2 className="text-xs md:text-sm text-white font-black tracking-wide truncate max-w-[700px]">
             {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
           </h2>
         </div>
@@ -201,7 +209,7 @@ function ContenidoLiveTiming() {
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">EN VIVO</span>
               <h3 className="text-white text-xs tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
             </div>
-            <span className="text-[11px] text-amber-400 font-bold truncate max-w-[350px]" title={nombrePista}>
+            <span className="text-[11px] text-amber-400 font-bold truncate max-w-[350px]">
               🏁 {nombrePista}
             </span>
           </div>
