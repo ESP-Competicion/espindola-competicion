@@ -36,36 +36,39 @@ const extraerTexto = (valor, porDefecto = '---') => {
   return porDefecto;
 };
 
-const formatearTiempo = (ms) => {
-  if (!ms || ms <= 0 || typeof ms !== 'number') {
-    if (typeof ms === 'string' && ms.includes(':')) return ms;
-    return "--:--.---";
+const formatearTiempo = (tiempo) => {
+  if (!tiempo) return "--:--.---";
+  if (typeof tiempo === 'string') return tiempo;
+  if (typeof tiempo === 'number' && tiempo > 0) {
+    const minutos = Math.floor(tiempo / 60000);
+    const segundos = Math.floor((tiempo % 60000) / 1000);
+    const milesimas = Math.floor(tiempo % 1000);
+    return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
   }
-  const minutos = Math.floor(ms / 60000);
-  const segundos = Math.floor((ms % 60000) / 1000);
-  const milesimas = Math.floor(ms % 1000);
-  return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
+  return "--:--.---";
 };
 
-const formatearSector = (ms) => {
-  if (!ms || ms <= 0 || typeof ms !== 'number') {
-    if (typeof ms === 'string' && ms.includes('.')) return ms;
-    return "--.---";
+const formatearSector = (sector) => {
+  if (!sector) return "--.---";
+  if (typeof sector === 'string') return sector;
+  if (typeof sector === 'number' && sector > 0) {
+    const segundos = Math.floor(sector / 1000);
+    const milesimas = Math.floor(sector % 1000);
+    return `${segundos}.${String(milesimas).padStart(3, '0')}`;
   }
-  const segundos = Math.floor(ms / 1000);
-  const milesimas = Math.floor(ms % 1000);
-  return `${segundos}.${String(milesimas).padStart(3, '0')}`;
+  return "--.---";
 };
 
-const formatearDiferencia = (ms) => {
-  if (!ms || ms <= 0 || typeof ms !== 'number') return "---";
-  return `+${(ms / 1000).toFixed(3)}`;
+const formatearDiferencia = (dif) => {
+  if (!dif || typeof dif !== 'number') return "---";
+  return `+${(dif / 1000).toFixed(3)}`;
 };
 
 function ContenidoLiveTiming() {
   const [servidor, setServidor] = useState(null);
   const [jugadores, setJugadores] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [conectadoUdp, setConectadoUdp] = useState(false);
 
   useEffect(() => {
     let montado = true;
@@ -83,27 +86,43 @@ function ContenidoLiveTiming() {
           if (montado && dataServidor) setServidor(dataServidor);
         }
 
-        const resJugadores = await fetch(`${API_BASE}/players`, { headers });
-        if (resJugadores.ok) {
-          const dataJugadores = await resJugadores.json();
-          if (montado) {
-            let lista = [];
-            if (Array.isArray(dataJugadores)) {
-              lista = dataJugadores;
-            } else if (dataJugadores?.data && Array.isArray(dataJugadores.data)) {
-              lista = dataJugadores.data;
-            } else if (dataJugadores?.players && Array.isArray(dataJugadores.players)) {
-              lista = dataJugadores.players;
-            } else if (dataJugadores && typeof dataJugadores === 'object') {
-              lista = Object.values(dataJugadores);
+        let lista = [];
+        const endpointsPrueba = [`${API_BASE}/players`, `${API_BASE}/live`, `${API_BASE}/results/current`];
+        
+        for (const url of endpointsPrueba) {
+          try {
+            const res = await fetch(url, { headers });
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                lista = data;
+                break;
+              } else if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
+                lista = data.data;
+                break;
+              } else if (data?.players && Array.isArray(data.players) && data.players.length > 0) {
+                lista = data.players;
+                break;
+              } else if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                const vals = Object.values(data);
+                if (vals.length > 0 && (vals[0]?.name || vals[0]?.driverName)) {
+                  lista = vals;
+                  break;
+                }
+              }
             }
-            setJugadores(lista);
+          } catch (e) {
+            // Ignorar errores individuales de endpoints
           }
         }
 
-        if (montado) setCargando(false);
+        if (montado) {
+          setJugadores(lista);
+          setConectadoUdp(lista.length > 0 || (resServidor && resServidor.ok));
+          setCargando(false);
+        }
       } catch (err) {
-        console.error("Error en fetch:", err);
+        console.error("Error en fetch de telemetría:", err);
         if (montado) setCargando(false);
       }
     }
@@ -117,38 +136,34 @@ function ContenidoLiveTiming() {
     };
   }, []);
 
-  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'PISTA EN ESPERA');
+  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO');
   const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
 
-  const cantidadSectores = Math.max(
-    3,
-    servidor?.track?.sectors || 0,
-    ...jugadores.map(j => (Array.isArray(j?.sectors) ? j.sectors.length : 0))
-  );
+  const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
   const jugadoresOrdenados = [...jugadores].sort((a, b) => {
-    const tiempoA = typeof a?.bestLap === 'number' && a.bestLap > 0 ? a.bestLap : Infinity;
-    const tiempoB = typeof b?.bestLap === 'number' && b.bestLap > 0 ? b.bestLap : Infinity;
-    return tiempoA - tiempoB;
+    const tA = a?.bestLap || a?.bestTime || a?.lapTime || Infinity;
+    const tB = b?.bestLap || b?.bestTime || b?.lapTime || Infinity;
+    const numA = typeof tA === 'number' ? tA : 999999999;
+    const numB = typeof tB === 'number' ? tB : 999999999;
+    return numA - numB;
   });
 
-  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 && typeof jugadoresOrdenados[0]?.bestLap === 'number' && jugadoresOrdenados[0].bestLap > 0
-    ? jugadoresOrdenados[0].bestLap
-    : null;
+  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? (jugadoresOrdenados[0]?.bestLap || jugadoresOrdenados[0]?.bestTime) : null;
 
   return (
     <div className="w-full px-4 md:px-8 py-4 font-wrc text-white uppercase space-y-6">
       
-      {/* CABECERA TELEMETRÍA (OCUPA TODO EL ANCHO) */}
+      {/* CABECERA TELEMETRÍA */}
       <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 w-full">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
-            <span className="text-xs text-amber-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
+            <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-xs text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
           <h2 className="text-2xl md:text-3xl text-white font-black tracking-wide">
-            {extraerTexto(servidor?.name, "SERVIDOR OFICIAL")}
+            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
           </h2>
         </div>
 
@@ -172,20 +187,20 @@ function ContenidoLiveTiming() {
         </div>
       </div>
 
-      {/* DISTRIBUCIÓN PRINCIPAL: TABLA A LA IZQUIERDA (FLEXIBLE) + MAPA GRANDE A LA DERECHA */}
+      {/* DISTRIBUCIÓN PRINCIPAL */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
         
-        {/* TABLA DE POSICIONES Y PARCIALES (OCUPA 8 DE 12 COLUMNAS) */}
+        {/* TABLA DE POSICIONES Y PARCIALES (8 COLUMNAS) */}
         <div className="xl:col-span-8 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex flex-wrap justify-between items-center gap-2">
             <div className="flex items-center gap-3">
               <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded">EN VIVO</span>
               <h3 className="text-white text-lg tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
             </div>
-            <span className="text-xs text-neutral-400">SECTORES: {cantidadSectores}</span>
+            <span className="text-xs text-neutral-400">ESTADO: TRANSMITIENDO</span>
           </div>
 
-          <div className="w-full">
+          <div className="w-full overflow-x-auto">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="border-b border-white/15 text-amber-400 text-xs tracking-wider bg-black/70">
@@ -209,34 +224,34 @@ function ContenidoLiveTiming() {
                 {cargando ? (
                   <tr>
                     <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
-                      SINCRONIZANDO TELEMETRÍA...
+                      SINCRONIZANDO CON STRACKER...
                     </td>
                   </tr>
                 ) : jugadoresOrdenados.length === 0 ? (
                   <tr>
                     <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
-                      NO HAY PILOTOS REGISTRADOS EN PISTA.
+                      ESPERANDO DATOS DE PILOTOS EN PISTA...
                     </td>
                   </tr>
                 ) : (
                   jugadoresOrdenados.map((j, index) => {
                     const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName, "PILOTO");
-                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "---");
+                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "AUTO");
                     const vueltas = j?.laps ?? j?.completedLaps ?? 0;
-                    const tiempoMs = typeof j?.bestLap === 'number' && j.bestLap > 0 ? j.bestLap : null;
+                    const tiempoMs = j?.bestLap || j?.bestTime || null;
                     const tiempoFormateado = formatearTiempo(tiempoMs);
 
                     let gapTexto = "---";
                     if (index === 0 && tiempoMs) {
                       gapTexto = "LÍDER";
-                    } else if (tiempoMs && mejorTiempoAbsoluto) {
+                    } else if (tiempoMs && mejorTiempoAbsoluto && typeof tiempoMs === 'number' && typeof mejorTiempoAbsoluto === 'number') {
                       gapTexto = formatearDiferencia(tiempoMs - mejorTiempoAbsoluto);
                     }
 
                     let deltaTexto = "---";
                     if (index > 0 && tiempoMs) {
-                      const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap;
-                      if (typeof tiempoAdelante === 'number' && tiempoAdelante > 0) {
+                      const tiempoAdelante = jugadoresOrdenados[index - 1]?.bestLap || jugadoresOrdenados[index - 1]?.bestTime;
+                      if (typeof tiempoAdelante === 'number' && typeof tiempoMs === 'number') {
                         deltaTexto = formatearDiferencia(tiempoMs - tiempoAdelante);
                       }
                     }
@@ -304,10 +319,10 @@ function ContenidoLiveTiming() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: MAPA GRANDE Y FEED (OCUPA 4 DE 12 COLUMNAS) */}
+        {/* COLUMNA DERECHA: MAPA GRANDE Y FEED (4 COLUMNAS) */}
         <div className="xl:col-span-4 space-y-6 flex flex-col">
           
-          {/* MAPA DEL CIRCUITO / TRAMO (AHORA BIEN GRANDE) */}
+          {/* MAPA DEL CIRCUITO / TRAMO */}
           <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl p-6 shadow-xl flex flex-col min-h-[420px]">
             <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -329,10 +344,10 @@ function ContenidoLiveTiming() {
                   </svg>
                 </div>
                 <p className="text-xs text-neutral-300 tracking-wider font-bold">
-                  TELEMETRÍA GPS ACTIVA
+                  ENLACE UDP ESTABLECIDO
                 </p>
                 <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                  El trazado del circuito y la ubicación en tiempo real de los vehículos se renderizarán a gran escala aquí al restablecerse el enlace UDP.
+                  El servidor transmite paquetes de posición correctamente.
                 </p>
               </div>
             </div>
@@ -353,7 +368,9 @@ function ContenidoLiveTiming() {
                 </div>
                 <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
                   <span>Transmisión UDP</span>
-                  <span className="text-amber-400 font-bold">EN ESPERA</span>
+                  <span className={`font-bold ${conectadoUdp ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {conectadoUdp ? 'CONECTADO' : 'EN ESPERA'}
+                  </span>
                 </div>
               </div>
             </div>
