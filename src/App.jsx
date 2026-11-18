@@ -48,6 +48,23 @@ const obtenerBanderaPais = (pais) => {
   );
 };
 
+// Función auxiliar para extraer sectores de manera robusta
+const obtenerSectoresJugador = (j) => {
+  if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
+    return j.lastLap.sectors.map(s => Number(s) || 0);
+  }
+  if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
+    return j.bestLap.sectors.map(s => Number(s) || 0);
+  }
+  if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
+    return j.sectors.map(s => Number(s) || 0);
+  }
+  const s1 = Number(j?.s1 ?? j?.sector1 ?? 0);
+  const s2 = Number(j?.s2 ?? j?.sector2 ?? 0);
+  const s3 = Number(j?.s3 ?? j?.sector3 ?? 0);
+  return [s1, s2, s3];
+};
+
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [perfil, setPerfil] = useState(null);
@@ -114,6 +131,90 @@ export default function App() {
   const [miembros, setMiembros] = useState([]);
 
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
+
+  // --- MOTOR GLOBAL DE AUTOGUARDADO EN SEGUNDO PLANO ---
+  useEffect(() => {
+    const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
+    const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
+
+    let ultimaSesionCache = null;
+    let datosUltimosJugadores = [];
+
+    const intervaloGlobal = setInterval(async () => {
+      try {
+        const headers = { 'Authorization': `Bearer ${TOKEN_ST}`, 'Accept': 'application/json' };
+        
+        const resServidor = await fetch(`${API_BASE_ST}/server`, { headers }).catch(() => null);
+        if (!resServidor || !resServidor.ok) return;
+        const datosServ = await resServidor.json();
+        
+        const tipoSesionActual = String(
+          datosServ?.session?.type || 
+          datosServ?.session?.name || 
+          datosServ?.session || 
+          'PRACTICE'
+        ).toUpperCase();
+        
+        const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
+
+        const resJugadores = await fetch(`${API_BASE_ST}/players`, { headers }).catch(() => null);
+        if (!resJugadores || !resJugadores.ok) return;
+        const dataJ = await resJugadores.json();
+
+        let lista = [];
+        if (Array.isArray(dataJ)) lista = dataJ;
+        else if (dataJ?.data && Array.isArray(dataJ.data)) lista = dataJ.data;
+        else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
+        else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
+
+        if (!ultimaSesionCache) {
+          ultimaSesionCache = tipoSesionActual;
+          if (lista.length > 0) datosUltimosJugadores = lista;
+          return;
+        }
+
+        // Si el servidor cambia de fase (Ej: Practice -> Qualifying)
+        if (ultimaSesionCache !== tipoSesionActual) {
+          console.log(`[Global AutoGuardado] Cambio detectado: ${ultimaSesionCache} ➔ ${tipoSesionActual}`);
+
+          if (datosUltimosJugadores.length > 0) {
+            const datosProcesados = datosUltimosJugadores.map((j, idx) => ({
+              pos: idx + 1,
+              nombre: j?.name || 'PILOTO',
+              auto: j?.car?.name || 'AUTO',
+              bestLapMs: Number(j?.bestLapMs) || 0,
+              lastLapMs: Number(j?.lastLapMs) || 0,
+              vueltas: Number(j?.laps) || 0,
+              sectores: obtenerSectoresJugador(j),
+              posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+            }));
+
+            const { error } = await supabase.from('resultados_sesiones').insert([{
+              sesion_tipo: ultimaSesionCache,
+              pista: pistaNombre,
+              datos_json: datosProcesados
+            }]);
+
+            if (!error) {
+              console.log(`[Global AutoGuardado] ¡Sesión ${ultimaSesionCache} guardada con éxito en Supabase!`);
+            }
+          }
+
+          ultimaSesionCache = tipoSesionActual;
+          datosUltimosJugadores = [];
+        }
+
+        if (lista.length > 0) {
+          datosUltimosJugadores = lista;
+        }
+      } catch (err) {
+        console.error("Error en autoguardado global:", err);
+      }
+    }, 5000);
+
+    return () => clearInterval(intervaloGlobal);
+  }, []);
+  // -----------------------------------------------------
 
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
