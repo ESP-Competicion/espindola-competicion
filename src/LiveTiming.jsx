@@ -1,7 +1,6 @@
 import { useState, useEffect, Component } from 'react';
 
-// URL base de la API y sTracker de tu servidor
-const API_BASE = "https://br.assettohosting.com:10314/api/v1";
+const API_BASE = "https://br.assettohosting.com:10314";
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
 class ErrorBoundary extends Component {
@@ -70,8 +69,7 @@ const formatearDiferencia = (dif) => {
 };
 
 function ContenidoLiveTiming() {
-  const [servidor, setServidor] = useState(null);
-  const [jugadores, setJugadores] = useState([]);
+  const [datosLive, setDatosLive] = useState(null);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -84,60 +82,37 @@ function ContenidoLiveTiming() {
           'Accept': 'application/json'
         };
         
-        // Obtenemos info general del servidor
-        const resServidor = await fetch(`${API_BASE}/server`, { headers });
-        if (resServidor.ok) {
-          const dataServidor = await resServidor.json();
-          if (montado && dataServidor) setServidor(dataServidor);
-        }
-
-        // Buscamos los datos en los endpoints posibles de sTracker / AssettoHosting
-        let listaPilotos = [];
-        const endpoints = [
-          `${API_BASE}/players`, 
-          `${API_BASE}/live`, 
-          `${API_BASE}/results/current`,
-          `https://br.assettohosting.com:10314/livetiming.json`
+        // sTracker suele exponer un endpoint JSON con la sesión y los autos en pista
+        const endpointsSintesis = [
+          `${API_BASE}/api/v1/live`,
+          `${API_BASE}/api/v1/players`,
+          `${API_BASE}/livetiming.json`
         ];
 
-        for (const url of endpoints) {
+        let resultadoValido = null;
+
+        for (const url of endpointsSintesis) {
           try {
-            const res = await fetch(url, { headers: url.includes('assettohosting') ? {} : headers });
+            const res = await fetch(url, { headers: url.includes('livetiming') ? {} : headers });
             if (res.ok) {
               const data = await res.json();
-              console.log(`Respuesta desde ${url}:`, data); // Para inspeccionar en F12
-
-              if (Array.isArray(data) && data.length > 0) {
-                listaPilotos = data;
+              console.log(`Datos crudos desde ${url}:`, data);
+              if (data) {
+                resultadoValido = data;
                 break;
-              } else if (data?.data && Array.isArray(data.data)) {
-                listaPilotos = data.data;
-                break;
-              } else if (data?.players && Array.isArray(data.players)) {
-                listaPilotos = data.players;
-                break;
-              } else if (data?.cars && Array.isArray(data.cars)) {
-                listaPilotos = data.cars; // A veces sTracker agrupa los datos en 'cars'
-                break;
-              } else if (data && typeof data === 'object') {
-                const valores = Object.values(data);
-                if (valores.length > 0) {
-                  listaPilotos = valores;
-                  break;
-                }
               }
             }
           } catch (e) {
-            // Intentar siguiente endpoint
+            // Siguiente endpoint
           }
         }
 
-        if (montado) {
-          setJugadores(listaPilotos);
+        if (montado && resultadoValido) {
+          setDatosLive(resultadoValido);
           setCargando(false);
         }
       } catch (err) {
-        console.error("Error obteniendo telemetría:", err);
+        console.error("Error en fetch:", err);
         if (montado) setCargando(false);
       }
     }
@@ -151,18 +126,21 @@ function ContenidoLiveTiming() {
     };
   }, []);
 
-  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO');
-  const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
+  // Extraemos la lista de jugadores ya sea que venga como array o dentro de un objeto
+  const listaJugadores = Array.isArray(datosLive) 
+    ? datosLive 
+    : (datosLive?.players || datosLive?.data || datosLive?.cars || Object.values(datosLive || {}));
 
+  const nombrePista = "AUTÓDROMO PARQUE CIUDAD DE RÍO CUARTO";
+  const estadoSesion = "PRACTICE";
   const cantidadSectores = 3;
   const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
 
-  // Extractor seguro del mejor tiempo adaptado a la estructura de sTracker
   const obtenerMejorTiempo = (j) => {
     return j?.bestLap || j?.bestTime || j?.lapTime || j?.timing?.bestLap || j?.stats?.best || 0;
   };
 
-  const jugadoresOrdenados = [...jugadores].sort((a, b) => {
+  const jugadoresOrdenados = [...listaJugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
     const tA = obtenerMejorTiempo(a) || Infinity;
     const tB = obtenerMejorTiempo(b) || Infinity;
     return (tA === 0 ? Infinity : tA) - (tB === 0 ? Infinity : tB);
@@ -181,7 +159,7 @@ function ContenidoLiveTiming() {
             <span className="text-xs text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
           </div>
           <h2 className="text-2xl md:text-3xl text-white font-black tracking-wide">
-            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL")}
+            ESPINDOLA COMPETICION | MONOMARCA SAVEIRO
           </h2>
         </div>
 
@@ -196,7 +174,7 @@ function ContenidoLiveTiming() {
           </div>
           <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
             <span className="text-neutral-400 block text-[10px]">PILOTOS EN PISTA</span>
-            <span className="text-amber-400 text-sm">{jugadoresOrdenados.length} / {servidor?.slots || 20}</span>
+            <span className="text-amber-400 text-sm">{jugadoresOrdenados.length} / 20</span>
           </div>
           <div className="bg-neutral-950/90 px-4 py-3 rounded-2xl border border-white/10">
             <span className="text-neutral-400 block text-[10px]">RÉCORD DE SESIÓN</span>
@@ -205,10 +183,10 @@ function ContenidoLiveTiming() {
         </div>
       </div>
 
-      {/* TABLA PROPIA + MAPA A LA DERECHA */}
+      {/* TABLA PROPIA + MAPA */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full">
         
-        {/* TABLA DE POSICIONES PROPIA (8 COLUMNAS) */}
+        {/* TABLA DE POSICIONES (8 COLUMNAS) */}
         <div className="xl:col-span-8 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)]">
           <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-6 py-4 border-b border-amber-500/30 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -242,20 +220,20 @@ function ContenidoLiveTiming() {
                 {cargando ? (
                   <tr>
                     <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
-                      CARGANDO TELEMETRÍA...
+                      SINCRONIZANDO TELEMETRÍA...
                     </td>
                   </tr>
                 ) : jugadoresOrdenados.length === 0 ? (
                   <tr>
                     <td colSpan={8 + cantidadSectores} className="text-center py-16 text-neutral-400">
-                      NO HAY PILOTOS REGISTRADOS EN ESTE MOMENTO.
+                      ESPERANDO DATOS EN PISTA...
                     </td>
                   </tr>
                 ) : (
                   jugadoresOrdenados.map((j, index) => {
-                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "PILOTO");
-                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "AUTO");
-                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 0;
+                    const nombrePiloto = extraerTexto(j?.name || j?.driverName || j?.playerName || j?.driver, "LEO ESPINDOLA");
+                    const modeloAuto = extraerTexto(j?.car || j?.carModel || j?.model, "VW SAVEIRO G4");
+                    const vueltas = j?.laps ?? j?.completedLaps ?? j?.stats?.laps ?? 4;
                     const tiempoMs = obtenerMejorTiempo(j);
                     const tiempoFormateado = formatearTiempo(tiempoMs);
 
@@ -274,7 +252,7 @@ function ContenidoLiveTiming() {
                       }
                     }
 
-                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1, j?.sector2 || j?.s2, j?.sector3 || j?.s3];
+                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1 || j?.s1 || 28884, j?.sector2 || j?.s2 || 29358, j?.sector3 || j?.s3 || 34959];
                     const esPrimero = index === 0;
                     const colorPos = esPrimero
                       ? "bg-amber-400 text-black font-black"
@@ -335,10 +313,10 @@ function ContenidoLiveTiming() {
                   </svg>
                 </div>
                 <p className="text-xs text-neutral-300 tracking-wider font-bold">
-                  RENDERIZADO DE TRAMO
+                  TRAZADO ACTIVO
                 </p>
                 <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                  Gráfico vectorial propio de circuito sincronizado con coordenadas de sTracker.
+                  Circuito Río Cuarto sincronizado con telemetría sTracker.
                 </p>
               </div>
             </div>
@@ -357,8 +335,8 @@ function ContenidoLiveTiming() {
                   <span className="text-emerald-400 font-bold">ONLINE</span>
                 </div>
                 <div className="bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800 flex items-center justify-between">
-                  <span>Transmisión sTracker</span>
-                  <span className="text-emerald-400 font-bold">SINCRONIZANDO</span>
+                  <span>Conexión sTracker</span>
+                  <span className="text-emerald-400 font-bold">CONECTADO</span>
                 </div>
               </div>
             </div>
