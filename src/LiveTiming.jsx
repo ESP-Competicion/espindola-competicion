@@ -56,6 +56,26 @@ const formatearDiferencia = (ms) => {
   return `+${(ms / 1000).toFixed(3)}`;
 };
 
+// Función auxiliar robusta para extraer los sectores del jugador en cualquier formato que mande la API
+const obtenerSectoresJugador = (j) => {
+  // 1. Intentar array directo en sectors
+  if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
+    return j.sectors.map(s => Number(s) || 0);
+  }
+  // 2. Intentar propiedades individuales sector1, sector2, sector3
+  if (j?.sector1 !== undefined || j?.sector2 !== undefined || j?.sector3 !== undefined) {
+    return [Number(j?.sector1) || 0, Number(j?.sector2) || 0, Number(j?.sector3) || 0];
+  }
+  // 3. Intentar dentro de la última vuelta o mejor vuelta registrada
+  if (j?.lastLap && Array.isArray(j.lastLap.sectors)) {
+    return j.lastLap.sectors.map(s => Number(s) || 0);
+  }
+  if (j?.bestLap && Array.isArray(j.bestLap.sectors)) {
+    return j.bestLap.sectors.map(s => Number(s) || 0);
+  }
+  return [0, 0, 0];
+};
+
 function ContenidoLiveTiming() {
   const [servidor, setServidor] = useState(null);
   const [jugadores, setJugadores] = useState([]);
@@ -125,11 +145,11 @@ function ContenidoLiveTiming() {
 
   const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? Number(jugadoresOrdenados[0]?.bestLapMs) || null : null;
 
-  // Calcular mejores tiempos por sector en toda la sesión para colorear en Púrpura
+  // Calcular mejores tiempos por sector en toda la sesión para colorear en Púrpura dinámico
   const mejoresSectoresGlobales = arraySectores.map(sIdx => {
     let mejor = Infinity;
     jugadoresOrdenados.forEach(j => {
-      const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
+      const sectoresPiloto = obtenerSectoresJugador(j);
       const val = Number(sectoresPiloto[sIdx]);
       if (val > 0 && val < mejor) {
         mejor = val;
@@ -239,7 +259,7 @@ function ContenidoLiveTiming() {
                       }
                     }
 
-                    const sectoresPiloto = Array.isArray(j?.sectors) ? j.sectors : [j?.sector1, j?.sector2, j?.sector3];
+                    const sectoresPiloto = obtenerSectoresJugador(j);
                     const esPrimero = index === 0;
                     const colorPos = esPrimero
                       ? "bg-amber-400 text-black font-black"
