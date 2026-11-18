@@ -27,16 +27,23 @@ export default function ResultadosRallyServer({ esAdmin }) {
   }, []);
 
   async function cargarSesionesServidor() {
-    const { data } = await supabase.from('resultados_sesiones').select('*').order('created_at', { ascending: true });
-    if (data) {
+    const { data } = await supabase
+      .from('resultados_sesiones')
+      .select('*')
+      .order('created_at', { ascending: false }); // Ordenadas con la más reciente primero
+
+    if (data && data.length > 0) {
       setSesionesServidor(data);
-      if (data.length > 0 && !sesionActivaId) {
+      if (!sesionActivaId) {
         setSesionActivaId(data[0].id);
       }
+    } else {
+      setSesionesServidor([]);
+      setSesionActivaId(null);
     }
   }
 
-  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL (MISMO MÉTODO LIMPIO DEL LIVETIMING)
+  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL (MÉTODO LIMPIO Y ROBUSTO)
   async function forzarGuardadoManual() {
     try {
       setGuardandoManual(true);
@@ -108,7 +115,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         alert('Error al guardar en Supabase: ' + error.message);
       } else {
         alert('¡Sesión y tiempos guardados exitosamente en la base de datos!');
-        cargarSesionesServidor();
+        await cargarSesionesServidor(); // Recarga inmediata para actualizar la interfaz al instante
       }
     } catch (err) {
       console.error("Error al forzar guardado:", err);
@@ -146,11 +153,11 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
   // Mapear las sesiones como Tramos de Rally
   function obtenerSesionPorTramo(keyTramo) {
-    if (keyTramo === 'tramo1') return sesionesServidor[0] || null;
-    if (keyTramo === 'tramo2') return sesionesServidor[1] || null;
-    if (keyTramo === 'tramo3') return sesionesServidor[2] || null;
-    if (keyTramo === 'tramo4') return sesionesServidor[3] || null;
-    return sesionesServidor[3] || sesionesServidor[0] || null;
+    if (keyTramo === 'tramo1') return sesionesServidor[3] || sesionesServidor[0] || null; // O ajustá según orden de tramos guardados
+    if (keyTramo === 'tramo2') return sesionesServidor[2] || null;
+    if (keyTramo === 'tramo3') return sesionesServidor[1] || null;
+    if (keyTramo === 'tramo4') return sesionesServidor[0] || null;
+    return sesionesServidor[0] || null;
   }
 
   // Datos para la columna izquierda (Tiempo del Tramo actual seleccionado)
