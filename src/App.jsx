@@ -5,17 +5,17 @@ import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
 import SubirImagen from './SubirImagen';
 import LiveTiming from './LiveTiming';
+import Resultados from './Resultados'; // NUEVO COMPONENTE DE RESULTADOS
 
 const fotosRally = [
-  '/fondo.jpg' // Cambialo por el nombre exacto de tu imagen en public
+  '/fondo.jpg'
 ];
 
-// FUNCIÓN AUXILIAR PARA OBTENER EL CÓDIGO ISO DEL PAÍS Y RENDERIZAR SU BANDERA
 const obtenerBanderaPais = (pais) => {
   if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
   
   const p = pais.toUpperCase().trim();
-  let codigoIso = 'ar'; // Por defecto Argentina
+  let codigoIso = 'ar';
 
   if (p.includes('ARGENTINA') || p === 'AR') codigoIso = 'ar';
   else if (p.includes('PERU') || p.includes('PERÚ') || p === 'PE') codigoIso = 'pe';
@@ -59,11 +59,9 @@ export default function App() {
 
   const [fondoActual, setFondoActual] = useState(0);
 
-  // ESTADOS DE MENÚS DESPLEGABLES (HUD)
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  // CONFIGURACIÓN SOCIAL E HISTORIA COMPLETA
   const [config, setConfig] = useState({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
@@ -72,29 +70,24 @@ export default function App() {
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
-  // ESTADOS DE GALERÍA Y ÁLBUMES
   const [albumes, setAlbumes] = useState([]);
   const [albumSeleccionado, setAlbumSeleccionado] = useState(null);
   const [fotosAlbumActual, setFotosAlbumActual] = useState([]);
   const [fotoAmpliada, setFotoAmpliada] = useState(null);
 
-  // FORMULARIOS ADMIN GALERIA
   const [nuevoAlbumNombre, setNuevoAlbumNombre] = useState('');
   const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
   const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
 
-  // EVENTOS Y CALENDARIO VISUAL
   const [eventos, setEventos] = useState([]);
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
   
-  // MODALES INTERACTIVOS (CALENDARIO Y EVENTOS)
   const [diaSeleccionadoModal, setDiaSeleccionadoModal] = useState(null);
   const [modoModalCalendario, setModoModalCalendario] = useState('detalle'); 
   const [asistentesEvento, setAsistentesEvento] = useState([]);
   const [formAsistencia, setFormAsistencia] = useState({ categoria: '', modelo_auto: '' });
 
-  // MODAL INSCRIPCIÓN EVENTOS DEL EQUIPO
   const [eventoModalActivo, setEventoModalActivo] = useState(null);
   const [modoModalEvento, setModoModalEvento] = useState('formulario');
   const [asistentesEventoEquipo, setAsistentesEventoEquipo] = useState([]);
@@ -114,12 +107,10 @@ export default function App() {
     descripcion: ''
   });
 
-  // SALÓN DE LA FAMA
   const [hallFama, setHallFama] = useState([]);
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({ nombre: '', categoria: '', campeonatos: '', foto: '' });
   const [editandoId, setEditandoId] = useState(null);
 
-  // MIEMBROS REGISTRADOS
   const [miembros, setMiembros] = useState([]);
 
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos) || 0), 0);
@@ -591,6 +582,12 @@ export default function App() {
           {menuPrincipalAbierto && (
             <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/85 backdrop-blur-xl border border-white/30 shadow-2xl py-3 px-4 flex flex-col items-center gap-2.5 z-50">
               <button
+                onClick={() => { setPestanaActiva('resultados'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'resultados' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
+              >
+                RESULTADOS
+              </button>
+              <button
                 onClick={() => { setPestanaActiva('calendario'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
                 className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'calendario' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
@@ -682,7 +679,6 @@ export default function App() {
       {/* CONTENIDO PRINCIPAL DINÁMICO */}
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
         
-        {/* 1. INICIO */}
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[60vh] flex flex-col items-center justify-center">
             <div className="max-w-lg mx-auto text-center space-y-4 py-8">
@@ -697,7 +693,11 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. NUESTRA HISTORIA */}
+        {/* 0. RESULTADOS (NUEVO) */}
+        {pestanaActiva === 'resultados' && (
+          <Resultados />
+        )}
+
         {pestanaActiva === 'historia' && (
           <div className="space-y-6 max-w-3xl mx-auto">
             <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl space-y-6">
@@ -749,7 +749,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. CALENDARIO VISUAL 2027+ */}
         {pestanaActiva === 'calendario' && (
           <div className="space-y-6 max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
@@ -888,7 +887,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. GALERÍA */}
         {pestanaActiva === 'galeria' && (
           <div className="space-y-6 max-w-5xl mx-auto">
             {!albumSeleccionado ? (
@@ -1013,12 +1011,10 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. LIVETIMING */}
         {pestanaActiva === 'livetiming' && (
           <LiveTiming />
         )}
 
-        {/* 6. EVENTOS */}
         {pestanaActiva === 'eventos' && (
           <div className="space-y-6 max-w-4xl mx-auto">
             <div>
@@ -1141,7 +1137,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. SALÓN DE LA FAMA */}
         {pestanaActiva === 'fama' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             
@@ -1355,7 +1350,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 8. MIEMBROS */}
         {pestanaActiva === 'miembros' && (
           <div className="space-y-6 max-w-4xl mx-auto">
             <div>
@@ -1394,7 +1388,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 9. MI PERFIL */}
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-md mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl space-y-5">
             <h2 className="font-wrc text-2xl text-amber-400">MI PERFIL DE PILOTO</h2>
@@ -1613,7 +1606,7 @@ export default function App() {
                     onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value.toUpperCase() })}
                     placeholder="EJ: PEUGEOT 208 RALLY4"
                     required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
                   />
                 </div>
                 <button
@@ -1683,7 +1676,6 @@ export default function App() {
         </div>
       </footer>
 
-      {/* MODALES AUXILIARES */}
       {mostrarPerfilModal && (
         <PerfilModal usuario={usuario} perfil={perfil} onClose={() => setMostrarPerfilModal(false)} onActualizado={() => verificarAdminYPerfil(usuario)} />
       )}

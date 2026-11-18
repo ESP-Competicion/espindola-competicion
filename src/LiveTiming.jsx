@@ -1,40 +1,8 @@
-import { useState, useEffect, Component } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 
 const API_BASE = "https://br.assettohosting.com:10314/api/v1";
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
-
-class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, errorInfo) {
-    console.error("Error en LiveTiming:", error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="bg-red-950/80 border-2 border-red-500 text-white p-6 rounded-2xl max-w-4xl mx-auto my-6 font-wrc text-sm">
-          <h2 className="text-xl text-red-400 font-black mb-2">⚠️ ERROR EN EL COMPONENTE</h2>
-          <pre className="text-xs text-red-300 overflow-auto">{this.state.error?.toString()}</pre>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-const extraerTexto = (valor, porDefecto = '---') => {
-  if (valor === null || valor === undefined || valor === '') return porDefecto;
-  if (typeof valor === 'string' || typeof valor === 'number') return String(valor);
-  if (typeof valor === 'object') {
-    return valor.name || valor.type || valor.model || valor.title || porDefecto;
-  }
-  return porDefecto;
-};
 
 const formatearTiempo = (ms) => {
   if (!ms || ms <= 0 || isNaN(ms)) return "--:--.---";
@@ -51,273 +19,239 @@ const formatearSector = (ms) => {
   return `${segundos}.${String(milesimas).padStart(3, '0')}`;
 };
 
-const formatearDiferencia = (ms) => {
-  if (!ms || ms <= 0 || isNaN(ms)) return "---";
-  return `+${(ms / 1000).toFixed(3)}`;
-};
-
-// Función auxiliar robusta para extraer los sectores del jugador en cualquier formato que mande la API
 const obtenerSectoresJugador = (j) => {
-  // 1. Intentar array directo en sectors
   if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
     return j.sectors.map(s => Number(s) || 0);
   }
-  // 2. Intentar propiedades individuales sector1, sector2, sector3
   if (j?.sector1 !== undefined || j?.sector2 !== undefined || j?.sector3 !== undefined) {
     return [Number(j?.sector1) || 0, Number(j?.sector2) || 0, Number(j?.sector3) || 0];
-  }
-  // 3. Intentar dentro de la última vuelta o mejor vuelta registrada
-  if (j?.lastLap && Array.isArray(j.lastLap.sectors)) {
-    return j.lastLap.sectors.map(s => Number(s) || 0);
-  }
-  if (j?.bestLap && Array.isArray(j.bestLap.sectors)) {
-    return j.bestLap.sectors.map(s => Number(s) || 0);
   }
   return [0, 0, 0];
 };
 
-function ContenidoLiveTiming() {
-  const [servidor, setServidor] = useState(null);
-  const [jugadores, setJugadores] = useState([]);
+export default function Resultados() {
+  const [resultadosGuardados, setResultadosGuardados] = useState([]);
+  const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [sesionAnteriorEnVivo, setSesionAnteriorEnVivo] = useState(null);
 
   useEffect(() => {
-    let montado = true;
+    cargarResultadosSupabase();
 
-    async function obtenerTelemetria() {
+    // Verificador en tiempo real para autoguardar cuando cambie la sesión en el servidor
+    const intervaloMonitoreo = setInterval(async () => {
       try {
-        const headers = { 
-          'Authorization': `Bearer ${TOKEN}`,
-          'Accept': 'application/json'
-        };
-        
+        const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
         const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
-        if (resServidor && resServidor.ok) {
-          const dataServidor = await resServidor.json();
-          if (montado && dataServidor) setServidor(dataServidor);
-        }
+        if (!resServidor || !resServidor.ok) return;
+        const dataServ = await resServidor.json();
+        const tipoSesionActual = String(dataServ?.session?.type || dataServ?.session?.name || 'PRACTICE').toUpperCase();
 
-        const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
-        if (resJugadores && resJugadores.ok) {
-          const dataJugadores = await resJugadores.json();
-          if (montado) {
-            let lista = [];
-            if (Array.isArray(dataJugadores)) {
-              lista = dataJugadores;
-            } else if (dataJugadores?.data && Array.isArray(dataJugadores.data)) {
-              lista = dataJugadores.data;
-            } else if (dataJugadores?.players && Array.isArray(dataJugadores.players)) {
-              lista = dataJugadores.players;
-            } else if (dataJugadores && typeof dataJugadores === 'object') {
-              lista = Object.values(dataJugadores);
-            }
-            setJugadores(lista);
-          }
+        if (sesionAnteriorEnVivo && sesionAnteriorEnVivo !== tipoSesionActual) {
+          // El servidor cambió de sesión (Ej: Práctica -> Qualy o Qualy -> Carrera)
+          // Guardamos automáticamente los resultados de la sesión que acaba de terminar
+          await capturarYGuardarSesion(sesionAnteriorEnVivo, dataServ);
+          cargarResultadosSupabase();
         }
-
-        if (montado) setCargando(false);
+        setSesionAnteriorEnVivo(tipoSesionActual);
       } catch (err) {
-        console.error("Error en fetch:", err);
-        if (montado) setCargando(false);
+        console.error("Error monitoreando sesión:", err);
+      }
+    }, 5000);
+
+    return () => clearInterval(intervaloMonitoreo);
+  }, [sesionAnteriorEnVivo]);
+
+  async function cargarResultadosSupabase() {
+    setCargando(true);
+    const { data, error } = await supabase
+      .from('resultados_sesiones')
+      .select('*')
+      .order('fecha', { ascending: false });
+
+    if (error) {
+      console.error('Error al cargar resultados:', error.message);
+    } else if (data) {
+      setResultadosGuardados(data);
+      if (data.length > 0 && !sesionSeleccionada) {
+        setSesionSeleccionada(data[0]);
       }
     }
+    setCargando(false);
+  }
 
-    obtenerTelemetria();
-    const intervalo = setInterval(obtenerTelemetria, 3000);
-    
-    return () => {
-      montado = false;
-      clearInterval(intervalo);
-    };
-  }, []);
+  async function capturarYGuardarSesion(tipoSesion, datosServ) {
+    try {
+      const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
+      const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
+      if (!resJugadores || !resJugadores.ok) return;
+      const dataJ = await resJugadores.json();
 
-  const nombrePista = extraerTexto(servidor?.track?.name || servidor?.track, 'AUTÓDROMO RÍO CUARTO');
-  const estadoSesion = extraerTexto(servidor?.session?.type || servidor?.session?.name || servidor?.session, 'PRACTICE');
+      let lista = [];
+      if (Array.isArray(dataJ)) lista = dataJ;
+      else if (dataJ?.data && Array.isArray(dataJ.data)) lista = dataJ.data;
+      else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
+      else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
 
-  const cantidadSectores = 3;
-  const arraySectores = Array.from({ length: cantidadSectores }, (_, i) => i);
+      if (lista.length === 0) return;
 
-  const jugadoresOrdenados = [...jugadores].filter(j => typeof j === 'object' && j !== null).sort((a, b) => {
-    const tA = Number(a?.bestLapMs) || Infinity;
-    const tB = Number(b?.bestLapMs) || Infinity;
-    return (tA === 0 ? Infinity : tA) - (tB === 0 ? Infinity : tB);
-  });
+      const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
 
-  const mejorTiempoAbsoluto = jugadoresOrdenados.length > 0 ? Number(jugadoresOrdenados[0]?.bestLapMs) || null : null;
+      const datosProcesados = lista.map((j, idx) => ({
+        pos: idx + 1,
+        nombre: j?.name || 'PILOTO',
+        auto: j?.car?.name || 'AUTO',
+        bestLapMs: Number(j?.bestLapMs) || 0,
+        lastLapMs: Number(j?.lastLapMs) || 0,
+        vueltas: Number(j?.laps) || 0,
+        sectores: obtenerSectoresJugador(j),
+        posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+      }));
 
-  // Calcular mejores tiempos por sector en toda la sesión para colorear en Púrpura dinámico
-  const mejoresSectoresGlobales = arraySectores.map(sIdx => {
-    let mejor = Infinity;
-    jugadoresOrdenados.forEach(j => {
-      const sectoresPiloto = obtenerSectoresJugador(j);
-      const val = Number(sectoresPiloto[sIdx]);
-      if (val > 0 && val < mejor) {
-        mejor = val;
-      }
-    });
-    return mejor === Infinity ? null : mejor;
-  });
+      await supabase.from('resultados_sesiones').insert([{
+        sesion_tipo: tipoSesion,
+        pista: pistaNombre,
+        datos_json: datosProcesados
+      }]);
+
+      console.log(`¡Resultados de ${tipoSesion} guardados automáticamente!`);
+    } catch (err) {
+      console.error("Error al autoguardar sesión:", err);
+    }
+  }
 
   return (
-    <div className="w-full px-3 md:px-6 py-3 font-wrc text-white uppercase space-y-4 max-w-[1400px] mx-auto text-xs">
-      
-      {/* CABECERA COMPACTA (NOMBRE EN UN SOLO RENGLÓN) */}
-      <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/40 rounded-2xl px-4 py-3 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 w-full">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span className="text-[9px] text-emerald-400 tracking-widest font-bold">LIVE TIMING OFICIAL • ESPÍNDOLA COMPETICIÓN</span>
-          </div>
-          <h2 className="text-xs md:text-sm text-white font-black tracking-wide truncate max-w-[700px]" title={extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL - MONOMARCA SAVEIRO")}>
-            {extraerTexto(servidor?.name, "ESPINDOLA COMPETICION | SERVER OFICIAL - MONOMARCA SAVEIRO")}
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 text-[11px] w-full lg:w-auto">
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
-            <span className="text-neutral-400 block text-[9px]">SESIÓN</span>
-            <span className="text-white text-xs">{estadoSesion}</span>
-          </div>
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
-            <span className="text-neutral-400 block text-[9px]">PILOTOS EN PISTA</span>
-            <span className="text-amber-400 text-xs">{jugadoresOrdenados.length} / {servidor?.slots || 20}</span>
-          </div>
-          <div className="bg-neutral-950/90 px-3 py-2 rounded-xl border border-white/10 text-center">
-            <span className="text-neutral-400 block text-[9px]">RÉCORD DE SESIÓN</span>
-            <span className="text-purple-400 text-xs font-mono font-black">{formatearTiempo(mejorTiempoAbsoluto)}</span>
-          </div>
-        </div>
+    <div className="space-y-6 max-w-5xl mx-auto font-wrc text-white uppercase">
+      <div>
+        <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">RESULTADOS DE SESIONES</h2>
+        <p className="text-neutral-300 text-xs font-wrc">HISTORIAL AUTOMÁTICO DE PRÁCTICAS, CLASIFICACIONES Y CARRERAS.</p>
       </div>
 
-      {/* CONTENEDOR PRINCIPAL: TABLA A ANCHO COMPLETO */}
-      <div className="w-full">
-        <div className="bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl w-full">
-          <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-2.5 border-b border-amber-500/30 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">EN VIVO</span>
-              <h3 className="text-white text-xs tracking-wider font-black">CLASIFICACIÓN Y PARCIALES</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* LISTA DE SESIONES GUARDADAS */}
+        <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl space-y-2.5">
+          <h3 className="text-amber-400 text-xs font-black tracking-wider border-b border-white/10 pb-2">
+            SESIONES ARCHIVADAS ({resultadosGuardados.length})
+          </h3>
+
+          {cargando ? (
+            <p className="text-neutral-400 text-xs text-center py-4">CARGANDO RESULTADOS...</p>
+          ) : resultadosGuardados.length === 0 ? (
+            <p className="text-neutral-400 text-xs text-center py-6">NO HAY SESIONES GUARDADAS TODAVÍA. SE GUARDARÁN AUTOMÁTICAMENTE AL CAMBIAR DE SESIÓN EN EL SERVIDOR.</p>
+          ) : (
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              {resultadosGuardados.map((sesion) => {
+                const esActiva = sesionSeleccionada?.id === sesion.id;
+                const fechaLegible = new Date(sesion.fecha).toLocaleString();
+
+                return (
+                  <div
+                    key={sesion.id}
+                    onClick={() => setSesionSeleccionada(sesion)}
+                    className={`p-3 rounded-xl border transition cursor-pointer flex flex-col gap-1 ${
+                      esActiva ? 'bg-amber-500/20 border-amber-500/80 shadow-md' : 'bg-neutral-950/50 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-amber-400 font-black text-xs">{sesion.sesion_tipo}</span>
+                      <span className="text-[9px] text-neutral-400">{fechaLegible}</span>
+                    </div>
+                    <span className="text-[11px] text-white truncate">🏁 {sesion.pista}</span>
+                  </div>
+                );
+              })}
             </div>
-            <span className="text-[11px] text-amber-400 font-bold truncate max-w-[350px]" title={nombrePista}>
-              🏁 {nombrePista}
-            </span>
-          </div>
+          )}
+        </div>
 
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
-              <thead>
-                <tr className="border-b border-white/15 text-amber-400 tracking-wider bg-black/70">
-                  <th className="py-2.5 px-3 text-center w-10">POS</th>
-                  <th className="py-2.5 px-3">PILOTO</th>
-                  <th className="py-2.5 px-3">AUTO</th>
-                  <th className="py-2.5 px-3 text-right">LAST</th>
-                  <th className="py-2.5 px-3 text-right">GAP</th>
-                  <th className="py-2.5 px-3 text-right">DELTA</th>
-                  <th className="py-2.5 px-3 text-center">VUELTAS</th>
-                  {arraySectores.map((idx) => (
-                    <th key={`header-s-${idx}`} className="py-2.5 px-2 text-center text-neutral-300 bg-white/[0.02] border-l border-white/5">
-                      S{idx + 1}
-                    </th>
-                  ))}
-                  <th className="py-2.5 px-3 text-right border-l border-white/10 text-purple-400">MEJOR</th>
-                </tr>
-              </thead>
-              
-              <tbody className="divide-y divide-white/10">
-                {cargando ? (
-                  <tr>
-                    <td colSpan={8 + cantidadSectores} className="text-center py-10 text-neutral-400 text-xs">
-                      SINCRONIZANDO TELEMETRÍA...
-                    </td>
-                  </tr>
-                ) : jugadoresOrdenados.length === 0 ? (
-                  <tr>
-                    <td colSpan={8 + cantidadSectores} className="text-center py-10 text-neutral-400 text-xs">
-                      ESPERANDO DATOS EN PISTA...
-                    </td>
-                  </tr>
-                ) : (
-                  jugadoresOrdenados.map((j, index) => {
-                    const nombrePiloto = extraerTexto(j?.name, "PILOTO");
-                    const modeloAuto = extraerTexto(j?.car?.name, "AUTO");
-                    const vueltas = Number(j?.laps) || 0;
-                    const mejorLapMs = Number(j?.bestLapMs) || 0;
-                    const ultimoMs = Number(j?.lastLapMs) || 0;
-                    const ultimoFormateado = formatearTiempo(ultimoMs);
+        {/* DETALLE DE LA SESIÓN SELECCIONADA */}
+        <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
+          {!sesionSeleccionada ? (
+            <div className="p-10 text-center text-neutral-400 text-xs">
+              SELECCIONA UNA SESIÓN DE LA IZQUIERDA PARA VER SUS DATOS.
+            </div>
+          ) : (
+            <div>
+              <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-amber-500/30 flex justify-between items-center">
+                <div>
+                  <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">
+                    {sesionSeleccionada.sesion_tipo}
+                  </span>
+                  <h3 className="text-white text-xs tracking-wider font-black mt-1">
+                    🏁 {sesionSeleccionada.pista}
+                  </h3>
+                </div>
+                <span className="text-[10px] text-neutral-400">
+                  {new Date(sesionSeleccionada.fecha).toLocaleString()}
+                </span>
+              </div>
 
-                    let gapTexto = "---";
-                    if (index === 0 && mejorLapMs > 0) {
-                      gapTexto = "LÍDER";
-                    } else if (mejorLapMs > 0 && mejorTiempoAbsoluto > 0) {
-                      gapTexto = formatearDiferencia(mejorLapMs - mejorTiempoAbsoluto);
-                    }
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
+                  <thead>
+                    <tr className="border-b border-white/15 text-amber-400 tracking-wider bg-black/70">
+                      <th className="py-2.5 px-3 text-center w-10">POS</th>
+                      {sesionSeleccionada.sesion_tipo.toUpperCase().includes('RACE') && (
+                        <th className="py-2.5 px-2 text-center" title="Posiciones ganadas / perdidas respecto a la largada">+/-</th>
+                      )}
+                      <th className="py-2.5 px-3">PILOTO</th>
+                      <th className="py-2.5 px-3">AUTO</th>
+                      <th className="py-2.5 px-3 text-center">VUELTAS</th>
+                      <th className="py-2.5 px-2 text-center">S1</th>
+                      <th className="py-2.5 px-2 text-center">S2</th>
+                      <th className="py-2.5 px-2 text-center">S3</th>
+                      <th className="py-2.5 px-3 text-right text-purple-400">MEJOR TIEMPO</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {sesionSeleccionada.datos_json.map((piloto, idx) => {
+                      const posActual = piloto.pos || idx + 1;
+                      const posLargada = piloto.posicionLargada || posActual;
+                      const diferenciaPos = posLargada - posActual; // Positivo = ganó posiciones, Negativo = perdió
 
-                    let deltaTexto = "---";
-                    if (index > 0 && mejorLapMs > 0) {
-                      const tiempoAdelante = Number(jugadoresOrdenados[index - 1]?.bestLapMs) || 0;
-                      if (tiempoAdelante > 0) {
-                        deltaTexto = formatearDiferencia(mejorLapMs - tiempoAdelante);
-                      }
-                    }
-
-                    const sectoresPiloto = obtenerSectoresJugador(j);
-                    const esPrimero = index === 0;
-                    const colorPos = esPrimero
-                      ? "bg-amber-400 text-black font-black"
-                      : index === 1
-                      ? "bg-neutral-300 text-black font-black"
-                      : index === 2
-                      ? "bg-amber-700 text-white font-black"
-                      : "text-neutral-300 font-bold";
-
-                    return (
-                      <tr key={j?.steamId || j?.carId || index} className={`transition ${esPrimero ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-white/5'}`}>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`inline-block w-5 h-5 leading-5 rounded text-[11px] ${colorPos}`}>{index + 1}</span>
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-white">{nombrePiloto}</td>
-                        <td className="py-2.5 px-3 text-neutral-300 text-[11px]">{modeloAuto}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-amber-300 font-bold">{ultimoFormateado}</td>
-                        <td className={`py-2.5 px-3 text-right font-mono text-[11px] ${index === 0 && mejorLapMs > 0 ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>{gapTexto}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-[11px] text-neutral-400">{deltaTexto}</td>
-                        <td className="py-2.5 px-3 text-center text-white font-bold">{vueltas}</td>
-                        
-                        {/* SECTORES CON COLOR PÚRPURA SI ES EL MEJOR GLOBAL */}
-                        {arraySectores.map((sIdx) => {
-                          const valSector = Number(sectoresPiloto[sIdx]);
-                          const esMejorSector = mejoresSectoresGlobales[sIdx] !== null && valSector === mejoresSectoresGlobales[sIdx];
+                      return (
+                        <tr key={idx} className="hover:bg-white/5 transition">
+                          <td className="py-2.5 px-3 text-center font-bold text-amber-400">#{posActual}</td>
                           
-                          return (
-                            <td 
-                              key={`cell-s-${index}-${sIdx}`} 
-                              className={`py-2.5 px-2 text-center font-mono text-[11px] border-l border-white/5 ${
-                                esMejorSector ? 'bg-purple-600/30 text-purple-300 font-black border-purple-500/50' : 'text-neutral-300 bg-white/[0.01]'
-                              }`}
-                            >
-                              {formatearSector(valSector)}
+                          {sesionSeleccionada.sesion_tipo.toUpperCase().includes('RACE') && (
+                            <td className="py-2.5 px-2 text-center font-mono">
+                              {diferenciaPos > 0 ? (
+                                <span className="text-emerald-400 font-bold">+{diferenciaPos}</span>
+                              ) : diferenciaPos < 0 ? (
+                                <span className="text-red-400 font-bold">{diferenciaPos}</span>
+                              ) : (
+                                <span className="text-neutral-500">=</span>
+                              )}
                             </td>
-                          );
-                        })}
+                          )}
 
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-purple-400 border-l border-white/10 bg-purple-950/20">
-                          {formatearTiempo(mejorLapMs)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          <td className="py-2.5 px-3 font-bold text-white">{piloto.nombre}</td>
+                          <td className="py-2.5 px-3 text-neutral-300 text-[11px]">{piloto.auto}</td>
+                          <td className="py-2.5 px-3 text-center text-white">{piloto.vueltas}</td>
+                          
+                          <td className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300">
+                            {formatearSector(piloto.sectores?.[0])}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300">
+                            {formatearSector(piloto.sectores?.[1])}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono text-[11px] text-neutral-300">
+                            {formatearSector(piloto.sectores?.[2])}
+                          </td>
+
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-purple-400 bg-purple-950/20">
+                            {formatearTiempo(piloto.bestLapMs)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LiveTiming() {
-  return (
-    <ErrorBoundary>
-      <ContenidoLiveTiming />
-    </ErrorBoundary>
   );
 }
