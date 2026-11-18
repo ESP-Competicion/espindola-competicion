@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
+const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
+const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
+
+const extraerTexto = (valor, porDefecto = '---') => {
+  if (valor === null || valor === undefined || valor === '') return porDefecto;
+  if (typeof valor === 'string' || typeof valor === 'number') return String(valor);
+  if (typeof valor === 'object') {
+    return valor.name || valor.type || valor.model || valor.title || porDefecto;
+  }
+  return porDefecto;
+};
+
 export default function ResultadosRallyServer({ esAdmin }) {
   const [vistaPrincipal, setVistaPrincipal] = useState('rally'); // 'server' o 'rally'
   const [subVistaRally, setSubVistaRally] = useState('tramo1'); // 'tramo1', 'tramo2', 'tramo3', 'tramo4', 'general'
@@ -24,29 +36,30 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   }
 
-  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL DE LA SESIÓN ACTUAL DEL SERVIDOR
+  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL (MISMO MÉTODO LIMPIO DEL LIVETIMING)
   async function forzarGuardadoManual() {
     try {
       setGuardandoManual(true);
-      const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
-      const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
-      const headers = { 'Authorization': `Bearer ${TOKEN_ST}`, 'Accept': 'application/json' };
+      const headers = { 
+        'Authorization': `Bearer ${TOKEN_ST}`,
+        'Accept': 'application/json'
+      };
 
       const resServidor = await fetch(`${API_BASE_ST}/server`, { headers }).catch(() => null);
       if (!resServidor || !resServidor.ok) {
-        alert('Error: No se pudo conectar con la API del servidor de Assetto Hosting.');
+        alert('Error: No se pudo conectar con el servidor de Assetto Hosting.');
         return;
       }
       const datosServ = await resServidor.json();
 
-      const tipoSesionActual = String(
+      const tipoSesionActual = extraerTexto(
         datosServ?.session?.type || 
         datosServ?.session?.name || 
-        datosServ?.session || 
+        datosServ?.session, 
         'PRACTICE'
       ).toUpperCase();
 
-      const pistaNombre = datosServ?.track?.name || datosServ?.track || 'TRAMO DE RALLY';
+      const pistaNombre = extraerTexto(datosServ?.track?.name || datosServ?.track, 'TRAMO DE RALLY');
 
       const resJugadores = await fetch(`${API_BASE_ST}/players`, { headers }).catch(() => null);
       if (!resJugadores || !resJugadores.ok) {
@@ -56,34 +69,34 @@ export default function ResultadosRallyServer({ esAdmin }) {
       const dataJ = await resJugadores.json();
 
       let lista = [];
-      if (Array.isArray(dataJ)) lista = dataJ;
-      else if (dataJ?.data && Array.isArray(dataJ.data)) lista = dataJ.data;
-      else if (dataJ?.players && Array.isArray(dataJ.players)) lista = dataJ.players;
-      else if (dataJ && typeof dataJ === 'object') lista = Object.values(dataJ);
+      if (Array.isArray(dataJ)) {
+        lista = dataJ;
+      } else if (dataJ?.data && Array.isArray(dataJ.data)) {
+        lista = dataJ.data;
+      } else if (dataJ?.players && Array.isArray(dataJ.players)) {
+        lista = dataJ.players;
+      } else if (dataJ && typeof dataJ === 'object') {
+        lista = Object.values(dataJ);
+      }
 
-      if (lista.length === 0) {
-        alert('Atención: No hay pilotos activos en este momento en el servidor para guardar.');
+      const jugadoresFiltrados = lista.filter(j => typeof j === 'object' && j !== null);
+
+      if (jugadoresFiltrados.length === 0) {
+        alert('Atención: No hay pilotos activos en este momento en la pista para guardar.');
         return;
       }
 
-      const datosProcesados = lista.map((j, idx) => {
-        const nombrePiloto = j?.name || j?.driver || j?.nombre || 'PILOTO';
-        const nombreAuto = typeof j?.car === 'object' ? (j?.car?.name || j?.car?.model) : (j?.car || j?.auto || 'AUTO');
-        const categoriaAuto = j?.carClass || j?.categoria || 'GENERAL';
-        const mejorTiempoMs = Number(j?.bestLapMs || j?.bestLap || j?.tiempoMs || 0);
-
-        return {
-          pos: idx + 1,
-          nombre: nombrePiloto,
-          auto: nombreAuto,
-          categoria: categoriaAuto,
-          bestLapMs: mejorTiempoMs,
-          lastLapMs: Number(j?.lastLapMs || 0),
-          vueltas: Number(j?.laps || j?.lapCount || 0),
-          sectores: j?.lastLap?.sectors || [0,0,0],
-          posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
-        };
-      });
+      const datosProcesados = jugadoresFiltrados.map((j, idx) => ({
+        pos: idx + 1,
+        nombre: extraerTexto(j?.name, 'PILOTO'),
+        auto: extraerTexto(j?.car?.name, 'AUTO'),
+        categoria: extraerTexto(j?.carClass || j?.categoria, 'GENERAL'),
+        bestLapMs: Number(j?.bestLapMs) || 0,
+        lastLapMs: Number(j?.lastLapMs) || 0,
+        vueltas: Number(j?.laps) || 0,
+        sectores: j?.lastLap?.sectors || [0, 0, 0],
+        posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+      }));
 
       const { error } = await supabase.from('resultados_sesiones').insert([{
         sesion_tipo: tipoSesionActual,
@@ -98,7 +111,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         cargarSesionesServidor();
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error al forzar guardado:", err);
       alert('Ocurrió un error inesperado al forzar el guardado.');
     } finally {
       setGuardandoManual(false);
@@ -131,7 +144,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   });
 
-  // Mapear las sesiones como Tramos de Rally (Tramo 1 = Sesión 1, Tramo 2 = Sesión 2, etc.)
+  // Mapear las sesiones como Tramos de Rally
   function obtenerSesionPorTramo(keyTramo) {
     if (keyTramo === 'tramo1') return sesionesServidor[0] || null;
     if (keyTramo === 'tramo2') return sesionesServidor[1] || null;
