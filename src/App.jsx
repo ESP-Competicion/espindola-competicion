@@ -49,22 +49,6 @@ const obtenerBanderaPais = (pais) => {
   );
 };
 
-const obtenerSectoresJugador = (j) => {
-  if (j?.lastLap?.sectors && Array.isArray(j.lastLap.sectors)) {
-    return j.lastLap.sectors.map(s => Number(s) || 0);
-  }
-  if (j?.bestLap?.sectors && Array.isArray(j.bestLap.sectors)) {
-    return j.bestLap.sectors.map(s => Number(s) || 0);
-  }
-  if (Array.isArray(j?.sectors) && j.sectors.length > 0) {
-    return j.sectors.map(s => Number(s) || 0);
-  }
-  const s1 = Number(j?.s1 ?? j?.sector1 ?? 0);
-  const s2 = Number(j?.s2 ?? j?.sector2 ?? 0);
-  const s3 = Number(j?.s3 ?? j?.sector3 ?? 0);
-  return [s1, s2, s3];
-};
-
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [perfil, setPerfil] = useState(null);
@@ -75,7 +59,6 @@ export default function App() {
   const [esAdmin, setEsAdmin] = useState(false);
 
   const [fondoActual, setFondoActual] = useState(0);
-
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
@@ -729,7 +712,6 @@ export default function App() {
           </div>
         )}
 
-        {/* AQUÍ PASAMOS esAdmin CORRECTAMENTE AL COMPONENTE */}
         {pestanaActiva === 'resultados' && (
           <ResultadosRallyServer esAdmin={esAdmin} />
         )}
@@ -741,7 +723,6 @@ export default function App() {
         {pestanaActiva === 'historia' && (
           <div className="space-y-6 max-w-3xl mx-auto">
             <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl space-y-6">
-              
               <div className="flex justify-between items-center border-b border-white/10 pb-3">
                 <h2 className="font-wrc text-2xl md:text-3xl text-amber-400 tracking-wide">HISTORIA DEL EQUIPO</h2>
                 {esAdmin && !editandoConfig && (
@@ -784,7 +765,6 @@ export default function App() {
                   </div>
                 </form>
               )}
-
             </div>
           </div>
         )}
@@ -862,68 +842,6 @@ export default function App() {
                 })}
               </div>
             </div>
-
-            {esAdmin && (
-              <div className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
-                <h3 className="font-wrc text-base text-amber-400">➕ AGREGAR FECHA DE CARRERA AL CALENDARIO</h3>
-                <form onSubmit={handleCrearCalendario} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">TÍTULO DE LA CARRERA</label>
-                    <input
-                      type="text"
-                      value={nuevoCalendario.titulo}
-                      onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value.toUpperCase() })}
-                      placeholder="EJ: GRAN PREMIO MISIONES 2027"
-                      required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
-                    <input
-                      type="date"
-                      value={nuevoCalendario.fecha}
-                      onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, fecha: e.target.value })}
-                      required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <button
-                      type="submit"
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs uppercase py-2 rounded-lg transition shadow cursor-pointer font-black"
-                    >
-                      GUARDAR FECHA
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div className="space-y-2.5 pt-2">
-              <h3 className="font-wrc text-base text-white tracking-wide">LISTADO DE FECHAS REGISTRADAS</h3>
-              {calendario.length === 0 ? (
-                <p className="text-neutral-400 text-xs font-wrc">NO HAY FECHAS CARGADAS EN EL CALENDARIO TODAVÍA.</p>
-              ) : (
-                calendario.map((cal) => (
-                  <div key={cal.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 flex justify-between items-center shadow-md">
-                    <div>
-                      <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{cal.fecha}</span>
-                      <h4 className="font-wrc text-base text-white mt-0.5">{cal.titulo}</h4>
-                    </div>
-                    {esAdmin && (
-                      <button
-                        onClick={() => handleEliminarCalendario(cal.id)}
-                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-2.5 py-1 rounded-lg text-[11px] border border-red-500/30 cursor-pointer font-wrc"
-                      >
-                        🗑️ ELIMINAR
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-
           </div>
         )}
 
@@ -935,36 +853,6 @@ export default function App() {
                   <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">ÁLBUMES DE EVENTOS</h2>
                   <p className="text-neutral-300 text-xs font-wrc">SELECCIONA UNA CARPETA PARA VER LAS FOTOGRAFÍAS OFICIALES.</p>
                 </div>
-
-                {esAdmin && (
-                  <div className="bg-neutral-900/60 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
-                    <h3 className="font-wrc text-base text-amber-400">📁 CREAR NUEVA CARPETA DE EVENTO</h3>
-                    <form onSubmit={handleCrearAlbum} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                      <div>
-                        <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">NOMBRE DEL ÁLBUM / EVENTO</label>
-                        <input
-                          type="text"
-                          value={nuevoAlbumNombre}
-                          onChange={(e) => setNuevoAlbumNombre(e.target.value.toUpperCase())}
-                          placeholder="EJ: RALLY DE CÓRDOBA 2027"
-                          className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FOTO DE PORTADA</label>
-                        <SubirImagen currentUrl={portadaAlbumUrl} onUpload={(url) => setPortadaAlbumUrl(url)} />
-                      </div>
-                      <div>
-                        <button
-                          type="submit"
-                          className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-xs uppercase px-5 py-2 rounded-lg transition shadow cursor-pointer"
-                        >
-                          CREAR ÁLBUM
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {albumes.map((album) => (
@@ -983,14 +871,6 @@ export default function App() {
                       </div>
                       <div className="p-4 flex justify-between items-center">
                         <h3 className="font-wrc text-base text-white group-hover:text-amber-400 transition">{album.nombre}</h3>
-                        {esAdmin && (
-                          <button
-                            onClick={(e) => handleEliminarAlbum(album.id, e)}
-                            className="text-red-400 hover:text-red-300 text-[10px] px-2.5 py-1 bg-red-500/10 rounded border border-red-500/30 cursor-pointer font-wrc"
-                          >
-                            ELIMINAR
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -1008,21 +888,6 @@ export default function App() {
                     </button>
                     <h2 className="font-wrc text-3xl text-white">{albumSeleccionado.nombre}</h2>
                   </div>
-
-                  {esAdmin && (
-                    <div className="flex items-center gap-2.5">
-                      <label className={`bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-4 py-2 rounded-xl transition shadow cursor-pointer font-black ${subiendoFotosMasivo ? 'opacity-50 pointer-events-none' : ''}`}>
-                        {subiendoFotosMasivo ? 'SUBIENDO FOTOS...' : '📷 SUBIR FOTOS'}
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={handleSubirFotosMultiples}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
@@ -1034,15 +899,6 @@ export default function App() {
                         onClick={() => setFotoAmpliada(foto.imagen_url)}
                         className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition duration-300"
                       />
-                      {esAdmin && (
-                        <button
-                          onClick={() => handleEliminarFotoAlbum(foto.id)}
-                          className="absolute top-1.5 right-1.5 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded text-[10px] shadow transition opacity-0 group-hover:opacity-100 cursor-pointer"
-                          title="Eliminar foto"
-                        >
-                          ✕
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -1061,86 +917,6 @@ export default function App() {
               <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
               <p className="text-neutral-300 text-xs font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR Y VINCULAR AL TORNEO.</p>
             </div>
-
-            {esAdmin && (
-              <div className="bg-neutral-900/90 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
-                <h3 className="font-wrc text-base text-amber-400">➕ CREAR NUEVO EVENTO / INSCRIPCIÓN OFICIAL</h3>
-                <form onSubmit={handleCrearEvento} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">TÍTULO DEL EVENTO</label>
-                    <input
-                      type="text"
-                      value={nuevoEvento.titulo}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value.toUpperCase() })}
-                      placeholder="EJ: FECHA 1 - RALLY SAVEIRO"
-                      required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FECHA</label>
-                    <input
-                      type="date"
-                      value={nuevoEvento.fecha}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, fecha: e.target.value })}
-                      required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">HORARIO</label>
-                    <input
-                      type="text"
-                      value={nuevoEvento.horario}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value.toUpperCase() })}
-                      placeholder="EJ: 21:00 HS"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CATEGORÍAS</label>
-                    <input
-                      type="text"
-                      value={nuevoEvento.categorias}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
-                      placeholder="EJ: MONOMARCA / RALLY4"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">MODELOS DE AUTOS</label>
-                    <input
-                      type="text"
-                      value={nuevoEvento.modelos_autos}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
-                      placeholder="EJ: SAVEIRO / PEUGEOT"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-amber-400 uppercase mb-1 font-bold">VINCULAR A CAMPEONATO (OPCIONAL)</label>
-                    <select
-                      value={nuevoEvento.campeonato_id || ''}
-                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value })}
-                      className="w-full bg-neutral-950 border border-amber-500/60 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none font-wrc cursor-pointer"
-                    >
-                      <option value="" className="bg-neutral-900 text-neutral-400">-- NO VINCULAR (SOLO INSCRIPCIÓN) --</option>
-                      {campeonatosDisponibles.map(c => (
-                        <option key={c.id} value={c.id} className="bg-neutral-900 text-white">{c.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs uppercase px-6 py-2.5 rounded-lg transition shadow cursor-pointer font-black"
-                    >
-                      PUBLICAR EVENTO Y FECHA OFICIAL
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
 
             <div className="space-y-3">
               {eventos.map((ev) => (
@@ -1162,27 +938,6 @@ export default function App() {
                     >
                       INSCRIBIRSE
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setEventoModalActivo(ev);
-                        setModoModalEvento('lista');
-                        cargarAsistentesEventoEquipo(ev.id);
-                      }}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs px-3.5 py-2 rounded-xl transition cursor-pointer uppercase"
-                    >
-                      INSCRIPTOS
-                    </button>
-
-                    {esAdmin && (
-                      <button
-                        onClick={() => handleEliminarEvento(ev.id)}
-                        className="bg-red-500/10 text-red-400 hover:bg-red-500/20 px-2.5 py-2 rounded-xl text-xs border border-red-500/30 cursor-pointer"
-                        title="Eliminar evento"
-                      >
-                        🗑️
-                      </button>
-                    )}
                   </div>
                 </div>
               ))}
@@ -1192,13 +947,12 @@ export default function App() {
 
         {pestanaActiva === 'fama' && (
           <div className="space-y-8 max-w-5xl mx-auto">
-            
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h2 className="font-wrc text-3xl md:text-4xl text-amber-400 tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                <h2 className="font-wrc text-3xl md:text-4xl text-amber-400 tracking-wide">
                   SALÓN DE LA FAMA - PODIO DE CAMPEONES
                 </h2>
-                <p className="text-neutral-200 text-xs md:text-sm font-wrc mt-0.5 drop-shadow uppercase">
+                <p className="text-neutral-200 text-xs md:text-sm font-wrc mt-0.5 uppercase">
                   LOS PILOTOS CON MÁS TÍTULOS OFICIALES EN LA HISTORIA DE ESPÍNDOLA COMPETICIÓN.
                 </p>
               </div>
@@ -1218,94 +972,20 @@ export default function App() {
               </div>
             </div>
 
-            {esAdmin && (
-              <div className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/50 rounded-xl p-5 shadow-2xl space-y-3">
-                <h3 className="font-wrc text-base text-amber-400">
-                  {editandoId !== null ? '✏️ EDITAR PILOTO DEL PODIO' : '🏆 AGREGAR PILOTO AL SALÓN DE LA FAMA'}
-                </h3>
-                <form onSubmit={handleGuardarPilotoFama} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">NOMBRE PILOTO</label>
-                    <input
-                      type="text"
-                      value={nuevoPilotoFama.nombre}
-                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value.toUpperCase() })}
-                      placeholder="EJ: JOACO CASTAÑO"
-                      required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CIUDAD / CATEGORÍA</label>
-                    <input
-                      type="text"
-                      value={nuevoPilotoFama.categoria}
-                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value.toUpperCase() })}
-                      placeholder="EJ: POSADAS - MISIONES"
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CAMPEONATOS</label>
-                    <input
-                      type="number"
-                      value={nuevoPilotoFama.campeonatos}
-                      onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
-                      placeholder="EJ: 17"
-                      required
-                      className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">FOTO PILOTO</label>
-                    <SubirImagen currentUrl={nuevoPilotoFama.foto} onUpload={(url) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: url })} />
-                  </div>
-                  <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2.5 pt-1">
-                    {editandoId !== null && (
-                      <button
-                        type="button"
-                        onClick={() => { setEditandoId(null); setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' }); }}
-                        className="bg-neutral-800 text-neutral-300 font-wrc text-[11px] px-4 py-2 rounded-xl cursor-pointer"
-                      >
-                        CANCELAR
-                      </button>
-                    )}
-                    <button
-                      type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase px-5 py-2 rounded-xl transition shadow-lg cursor-pointer"
-                    >
-                      {editandoId !== null ? 'ACTUALIZAR PILOTO' : 'GUARDAR EN EL SALÓN'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
             {hallFama.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center pt-6 pb-2">
-                
                 {hallFama[1] && (
                   <div className="order-2 md:order-1 relative bg-black/70 backdrop-blur-md border border-neutral-400/50 rounded-2xl p-5 text-center shadow-2xl flex flex-col items-center justify-between">
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-neutral-200 text-black font-wrc text-[11px] px-3.5 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥈</span> 2º PUESTO
                     </div>
-
-                    {esAdmin && (
-                      <div className="absolute top-2.5 right-3 flex gap-2">
-                        <button onClick={() => handleEditarPilotoFama(hallFama[1])} className="text-xs text-amber-400 hover:scale-110 transition cursor-pointer">✏️</button>
-                        <button onClick={() => handleEliminarPilotoFama(hallFama[1].id)} className="text-xs text-red-400 hover:scale-110 transition cursor-pointer">🗑️</button>
-                      </div>
-                    )}
-
                     <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-neutral-300 mt-3 mb-2 shadow-lg bg-neutral-900">
                       <img src={hallFama[1].foto} alt={hallFama[1].nombre} className="w-full h-full object-cover" />
                     </div>
-
                     <div className="space-y-0.5 my-1">
                       <h3 className="font-wrc text-xl md:text-2xl text-white tracking-wide">{hallFama[1].nombre}</h3>
                       <p className="text-neutral-300 text-[11px] font-wrc uppercase">{hallFama[1].categoria}</p>
                     </div>
-
                     <div className="mt-3 bg-white/5 border border-white/15 rounded-lg px-4 py-1.5 font-wrc text-xs tracking-wider text-neutral-200">
                       TÍTULOS: <span className="text-white text-sm ml-1">{hallFama[1].campeonatos}</span> 🏆
                     </div>
@@ -1317,23 +997,13 @@ export default function App() {
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-black font-wrc text-xs px-4 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥇</span> 1º PUESTO
                     </div>
-
-                    {esAdmin && (
-                      <div className="absolute top-2.5 right-3 flex gap-2">
-                        <button onClick={() => handleEditarPilotoFama(hallFama[0])} className="text-xs text-amber-400 hover:scale-110 transition cursor-pointer">✏️</button>
-                        <button onClick={() => handleEliminarPilotoFama(hallFama[0].id)} className="text-xs text-red-400 hover:scale-110 transition cursor-pointer">🗑️</button>
-                      </div>
-                    )}
-
                     <div className="w-24 h-24 rounded-full overflow-hidden border-[3px] border-amber-400 mt-3 mb-2 shadow-[0_0_15px_rgba(251,191,36,0.4)] bg-neutral-900">
                       <img src={hallFama[0].foto} alt={hallFama[0].nombre} className="w-full h-full object-cover" />
                     </div>
-
                     <div className="space-y-0.5 my-1">
-                      <h3 className="font-wrc text-2xl md:text-3xl text-amber-400 tracking-wide drop-shadow">{hallFama[0].nombre}</h3>
+                      <h3 className="font-wrc text-2xl md:text-3xl text-amber-400 tracking-wide">{hallFama[0].nombre}</h3>
                       <p className="text-neutral-200 text-xs font-wrc uppercase">{hallFama[0].categoria}</p>
                     </div>
-
                     <div className="mt-3 bg-amber-500/15 border border-amber-400/50 rounded-lg px-5 py-2 font-wrc text-sm tracking-wider text-amber-300">
                       TÍTULOS ABSOLUTOS: <span className="text-amber-400 text-base ml-1">{hallFama[0].campeonatos}</span> 🏆
                     </div>
@@ -1345,59 +1015,18 @@ export default function App() {
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc text-[11px] px-3.5 py-0.5 rounded-full shadow-lg tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥉</span> 3º PUESTO
                     </div>
-
-                    {esAdmin && (
-                      <div className="absolute top-2.5 right-3 flex gap-2">
-                        <button onClick={() => handleEditarPilotoFama(hallFama[2])} className="text-xs text-amber-400 hover:scale-110 transition cursor-pointer">✏️</button>
-                        <button onClick={() => handleEliminarPilotoFama(hallFama[2].id)} className="text-xs text-red-400 hover:scale-110 transition cursor-pointer">🗑️</button>
-                      </div>
-                    )}
-
                     <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-amber-600 mt-3 mb-2 shadow-lg bg-neutral-900">
                       <img src={hallFama[2].foto} alt={hallFama[2].nombre} className="w-full h-full object-cover" />
                     </div>
-
                     <div className="space-y-0.5 my-1">
                       <h3 className="font-wrc text-xl md:text-2xl text-white tracking-wide">{hallFama[2].nombre}</h3>
                       <p className="text-neutral-300 text-[11px] font-wrc uppercase">{hallFama[2].categoria}</p>
                     </div>
-
                     <div className="mt-3 bg-white/5 border border-amber-700/40 rounded-lg px-4 py-1.5 font-wrc text-xs tracking-wider text-neutral-200">
                       TÍTULOS: <span className="text-amber-500 text-sm ml-1">{hallFama[2].campeonatos}</span> 🏆
                     </div>
                   </div>
                 )}
-
-              </div>
-            )}
-
-            {restoPilotos.length > 0 && (
-              <div className="space-y-2.5 pt-2">
-                {restoPilotos.map((piloto) => (
-                  <div key={piloto.id} className="bg-black/55 backdrop-blur-md border border-white/10 hover:border-amber-500/40 rounded-xl p-3.5 flex items-center justify-between shadow-md transition">
-                    <div className="flex items-center gap-3">
-                      <span className="font-wrc text-amber-400 text-lg w-7 text-center">#{piloto.puesto}</span>
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-700 bg-neutral-900">
-                        <img src={piloto.foto} alt={piloto.nombre} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <h4 className="font-wrc text-base text-white tracking-wide">{piloto.nombre}</h4>
-                        <p className="text-[10px] text-neutral-400 font-wrc uppercase">{piloto.categoria}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-wrc text-amber-400 text-xs bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-lg">
-                        {piloto.campeonatos} TÍTULO(S) 🏆
-                      </span>
-                      {esAdmin && (
-                        <div className="flex gap-2.5">
-                          <button onClick={() => handleEditarPilotoFama(piloto)} className="text-xs text-amber-400 hover:scale-110 transition cursor-pointer">✏️</button>
-                          <button onClick={() => handleEliminarPilotoFama(piloto.id)} className="text-xs text-red-400 hover:scale-110 transition cursor-pointer">🗑️</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
           </div>
@@ -1428,11 +1057,6 @@ export default function App() {
                       <p className="text-[11px] font-wrc uppercase">
                         <span className="text-amber-400">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
                       </p>
-                      {m.provincia && (
-                        <p className="text-[11px] font-wrc uppercase">
-                          <span className="text-amber-400">PROVINCIA:</span> <span className="text-white">{m.provincia.toUpperCase()}</span>
-                        </p>
-                      )}
                     </div>
                   </div>
                 ))
@@ -1459,29 +1083,6 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-black/40 border border-white/10 rounded-xl p-4 space-y-2.5 font-wrc text-xs">
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-amber-400">NOMBRE DE PILOTO:</span>
-                <span className="text-white">{(perfil?.nombre_piloto || 'NO CONFIGURADO').toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-amber-400">PAÍS:</span>
-                <span className="text-white">{obtenerBanderaPais(perfil?.nacionalidad)}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-amber-400">PROVINCIA:</span>
-                <span className="text-white">{(perfil?.provincia || 'NO CONFIGURADA').toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-amber-400">STEAM ID:</span>
-                <span className="text-white">{(perfil?.steam_id || 'NO CONFIGURADO').toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-amber-400">TELÉFONO:</span>
-                <span className="text-white">{(perfil?.telefono || 'NO CONFIGURADO').toUpperCase()}</span>
-              </div>
-            </div>
-
             <div className="space-y-2.5 pt-1">
               <button
                 onClick={() => setMostrarPerfilModal(true)}
@@ -1489,212 +1090,11 @@ export default function App() {
               >
                 EDITAR DATOS PERSONALES
               </button>
-
-              <button
-                onClick={() => setMostrarCambiarPasswordModal(true)}
-                className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-wrc text-xs uppercase py-2.5 rounded-xl transition cursor-pointer"
-              >
-                CAMBIAR CONTRASEÑA
-              </button>
             </div>
           </div>
         )}
 
       </main>
-
-      {diaSeleccionadoModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDiaSeleccionadoModal(null)}>
-          <div className="bg-neutral-900 border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-5 uppercase text-xs" onClick={(e) => e.stopPropagation()}>
-            
-            <div className="flex justify-between items-center border-b border-white/10 pb-3">
-              <div>
-                <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{diaSeleccionadoModal.fecha}</span>
-                <h3 className="font-wrc text-2xl text-white">{diaSeleccionadoModal.titulo}</h3>
-              </div>
-              <button onClick={() => setDiaSeleccionadoModal(null)} className="text-neutral-400 hover:text-white text-lg">✕</button>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setModoModalCalendario('detalle')}
-                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'detalle' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
-              >
-                INFO
-              </button>
-              <button
-                onClick={() => setModoModalCalendario('formulario')}
-                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
-              >
-                PARTICIPAR 🏁
-              </button>
-              <button
-                onClick={() => setModoModalCalendario('lista')}
-                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalCalendario === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
-              >
-                INSCRIPTOS ({asistentesEvento.length})
-              </button>
-            </div>
-
-            {modoModalCalendario === 'detalle' && (
-              <div className="space-y-3 py-1">
-                <p className="text-neutral-300 text-xs font-wrc uppercase">{diaSeleccionadoModal.descripcion || 'COMPETENCIA OFICIAL PROGRAMADA EN EL CALENDARIO.'}</p>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => setModoModalCalendario('formulario')}
-                    className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
-                  >
-                    QUIERO PARTICIPAR
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modoModalCalendario === 'formulario' && (
-              <form onSubmit={(e) => handleInscribirseCalendario(e, diaSeleccionadoModal.id)} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA A CORRER</label>
-                  <input
-                    type="text"
-                    value={formAsistencia.categoria}
-                    onChange={(e) => setFormAsistencia({ ...formAsistencia, categoria: e.target.value.toUpperCase() })}
-                    placeholder="EJ: RALLY2 / WRC"
-                    required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
-                  <input
-                    type="text"
-                    value={formAsistencia.modelo_auto}
-                    onChange={(e) => setFormAsistencia({ ...formAsistencia, modelo_auto: e.target.value.toUpperCase() })}
-                    placeholder="EJ: SKODA FABIA RS"
-                    required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
-                >
-                  CONFIRMAR ASISTENCIA
-                </button>
-              </form>
-            )}
-
-            {modoModalCalendario === 'lista' && (
-              <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
-                {asistentesEvento.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-4 text-xs font-wrc">TODAVÍA NO HAY PILOTOS CONFIRMADOS.</p>
-                ) : (
-                  asistentesEvento.map((asistente) => (
-                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-xl p-2.5 flex justify-between items-center">
-                      <div>
-                        <h4 className="font-wrc text-white text-sm">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-[10px] text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
-                        <p className="text-[10px] text-amber-400 font-wrc mt-0.5 flex items-center gap-1">
-                          <span>PAÍS:</span> {obtenerBanderaPais(asistente.nacionalidad)}
-                        </p>
-                      </div>
-                      <span className="text-amber-400 text-[10px] font-wrc bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                        CONFIRMADO ✅
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
-
-      {eventoModalActivo && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEventoModalActivo(null)}>
-          <div className="bg-neutral-900 border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-5 uppercase text-xs" onClick={(e) => e.stopPropagation()}>
-            
-            <div className="flex justify-between items-center border-b border-white/10 pb-3">
-              <div>
-                <span className="text-amber-400 font-wrc text-[10px] tracking-widest uppercase">{eventoModalActivo.fecha} • {eventoModalActivo.horario || 'POR CONFIRMAR'}</span>
-                <h3 className="font-wrc text-2xl text-white">{eventoModalActivo.titulo}</h3>
-              </div>
-              <button onClick={() => setEventoModalActivo(null)} className="text-neutral-400 hover:text-white text-lg">✕</button>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setModoModalEvento('formulario')}
-                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalEvento === 'formulario' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
-              >
-                INSCRIBIRME 🏁
-              </button>
-              <button
-                onClick={() => setModoModalEvento('lista')}
-                className={`flex-1 font-wrc text-[11px] py-2 rounded-lg transition cursor-pointer uppercase ${modoModalEvento === 'lista' ? 'bg-amber-500 text-black font-black' : 'bg-neutral-800 text-neutral-300'}`}
-              >
-                INSCRIPTOS ({asistentesEventoEquipo.length})
-              </button>
-            </div>
-
-            {modoModalEvento === 'formulario' && (
-              <form onSubmit={(e) => handleInscribirseEventoEquipo(e, eventoModalActivo.id)} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">CATEGORÍA</label>
-                  <input
-                    type="text"
-                    value={formAsistenciaEvento.categoria}
-                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, categoria: e.target.value.toUpperCase() })}
-                    placeholder="EJ: RALLY2 / RALLY4"
-                    required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-neutral-300 uppercase mb-1 font-bold">MODELO DE AUTO</label>
-                  <input
-                    type="text"
-                    value={formAsistenciaEvento.modelo_auto}
-                    onChange={(e) => setFormAsistenciaEvento({ ...formAsistenciaEvento, modelo_auto: e.target.value.toUpperCase() })}
-                    placeholder="EJ: PEUGEOT 208 RALLY4"
-                    required
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:border-amber-500 outline-none uppercase font-wrc"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2.5 rounded-xl transition shadow cursor-pointer"
-                >
-                  CONFIRMAR INSCRIPCIÓN
-                </button>
-              </form>
-            )}
-
-            {modoModalEvento === 'lista' && (
-              <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
-                {asistentesEventoEquipo.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-4 text-xs font-wrc">TODAVÍA NO HAY PILOTOS INSCRIPTOS.</p>
-                ) : (
-                  asistentesEventoEquipo.map((asistente) => (
-                    <div key={asistente.id} className="bg-neutral-950 border border-white/10 rounded-xl p-2.5 flex justify-between items-center">
-                      <div>
-                        <h4 className="font-wrc text-white text-sm">{asistente.nombre_piloto || 'PILOTO ESPÍNDOLA'}</h4>
-                        <p className="text-[10px] text-neutral-400 font-wrc">CAT: {asistente.categoria} | AUTO: {asistente.modelo_auto}</p>
-                        <p className="text-[10px] text-amber-400 font-wrc mt-0.5 flex items-center gap-1">
-                          <span>PAÍS:</span> {obtenerBanderaPais(asistente.nacionalidad)}
-                        </p>
-                      </div>
-                      <span className="text-amber-400 text-[10px] font-wrc bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                        INSCRIPTO ✅
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
 
       <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex flex-col md:flex-row items-center justify-between gap-3 mt-8 text-xs">
         <div className="hidden md:block w-20" />
@@ -1705,24 +1105,6 @@ export default function App() {
             alt="Sponsors Espíndola Competición" 
             className="h-4 md:h-5 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md"
           />
-        </div>
-
-        <div className="flex items-center gap-4 text-white">
-          <a href={config.instagram} target="_blank" rel="noreferrer" className="hover:text-amber-400 transition" aria-label="Instagram">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-            </svg>
-          </a>
-          <a href={config.tiktok} target="_blank" rel="noreferrer" className="hover:text-amber-400 transition" aria-label="TikTok">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-            </svg>
-          </a>
-          <a href={config.discord} target="_blank" rel="noreferrer" className="hover:text-amber-400 transition" aria-label="Discord">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-            </svg>
-          </a>
         </div>
       </footer>
 
@@ -1737,13 +1119,6 @@ export default function App() {
       {mostrarCambiarPasswordModal && (
         <CambiarPasswordModal onClose={() => setMostrarCambiarPasswordModal(false)} />
       )}
-
-      {fotoAmpliada && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setFotoAmpliada(null)}>
-          <img src={fotoAmpliada} alt="Ampliación" className="max-w-full max-h-[90vh] object-contain rounded-xl border border-white/20 shadow-2xl" />
-        </div>
-      )}
-
     </div>
   );
 }

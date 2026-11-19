@@ -30,7 +30,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
     const { data } = await supabase
       .from('resultados_sesiones')
       .select('*')
-      .order('created_at', { ascending: false }); // Ordenadas con la más reciente primero
+      .order('created_at', { ascending: false });
 
     if (data && data.length > 0) {
       setSesionesServidor(data);
@@ -115,7 +115,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         alert('Error al guardar en Supabase: ' + error.message);
       } else {
         alert('¡Sesión y tiempos guardados exitosamente en la base de datos!');
-        await cargarSesionesServidor(); // Recarga inmediata para actualizar la interfaz al instante
+        await cargarSesionesServidor(); // Recarga inmediata para reflejar los cambios en pantalla
       }
     } catch (err) {
       console.error("Error al forzar guardado:", err);
@@ -138,7 +138,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
     return (Number(ms) || 0) / 1000;
   }
 
-  // Extraer categorías únicas de las sesiones guardadas
   const categoriasDisponibles = ['TODAS'];
   sesionesServidor.forEach(s => {
     if (s.datos_json && Array.isArray(s.datos_json)) {
@@ -151,16 +150,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   });
 
-  // Mapear las sesiones como Tramos de Rally
   function obtenerSesionPorTramo(keyTramo) {
-    if (keyTramo === 'tramo1') return sesionesServidor[3] || sesionesServidor[0] || null; // O ajustá según orden de tramos guardados
+    if (keyTramo === 'tramo1') return sesionesServidor[3] || sesionesServidor[0] || null;
     if (keyTramo === 'tramo2') return sesionesServidor[2] || null;
     if (keyTramo === 'tramo3') return sesionesServidor[1] || null;
     if (keyTramo === 'tramo4') return sesionesServidor[0] || null;
     return sesionesServidor[0] || null;
   }
 
-  // Datos para la columna izquierda (Tiempo del Tramo actual seleccionado)
   function obtenerDatosTramoActual() {
     const sesion = obtenerSesionPorTramo(subVistaRally === 'general' ? 'tramo4' : subVistaRally);
     if (!sesion || !sesion.datos_json) return [];
@@ -206,7 +203,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
     });
   }
 
-  // Datos para la columna derecha (Clasificación General Acumulada sumando los tramos)
   function obtenerClasificacionGeneral() {
     let cantTramos = 4;
     if (subVistaRally === 'tramo1') cantTramos = 1;
@@ -290,7 +286,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
           </button>
         </div>
 
-        {/* BOTÓN DE FORZAR GUARDADO MANUAL (SOLO ADMIN) */}
+        {/* BOTÓN DE FORZAR GUARDADO MANUAL */}
         {esAdmin && (
           <button
             onClick={forzarGuardadoManual}
@@ -371,12 +367,11 @@ export default function ResultadosRallyServer({ esAdmin }) {
         </div>
       )}
 
-      {/* VISTA 2: RESULTADOS RALLY CON DOBLE COLUMNA Y DATOS REALES */}
+      {/* VISTA 2: RESULTADOS RALLY CON DOBLE COLUMNA Y FILTROS */}
       {vistaPrincipal === 'rally' && (
         <div className="bg-neutral-950/90 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
           <div className="bg-neutral-900/90 p-3 border-b border-white/10 flex flex-wrap justify-between items-center gap-2">
             
-            {/* FILTRO POR CATEGORÍA */}
             <div className="flex items-center gap-2">
               <select
                 value={categoriaSeleccionada}
@@ -391,7 +386,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
               </select>
             </div>
 
-            {/* SELECCIÓN DE TRAMOS */}
             <div className="flex flex-wrap items-center gap-1.5 bg-neutral-950/70 p-1 rounded-xl border border-white/5">
               {['tramo1', 'tramo2', 'tramo3', 'tramo4', 'general'].map((tramoKey) => {
                 const labels = { tramo1: 'TRAMO 1', tramo2: 'TRAMO 2', tramo3: 'TRAMO 3', tramo4: 'TRAMO 4', general: 'TIEMPO GENERAL' };
@@ -415,7 +409,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/10">
             
-            {/* COLUMNA IZQUIERDA: TIEMPO DEL TRAMO */}
             <div className="p-4 space-y-3 bg-neutral-900/20">
               <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
                 <h4 className="text-amber-400 text-xs font-black">
@@ -461,7 +454,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
               </div>
             </div>
 
-            {/* COLUMNA DERECHA: CLASIFICACIÓN GENERAL ACUMULADA */}
             <div className="p-4 space-y-3 bg-neutral-900/40">
               <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
                 <h4 className="text-amber-400 text-xs font-black">
