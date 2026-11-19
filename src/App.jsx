@@ -11,6 +11,13 @@ const fotosRally = [
   '/FondoTaller.png'
 ];
 
+const ADMINS_EMAILS = [
+  'leosimracingok@gmail.com',
+  'lucashutter6@gmail.com'
+];
+
+const TEXTO_INICIO_DEFAULT = '10 AÑOS DE PASIÓN, VELOCIDAD Y GLORIA';
+
 const obtenerBanderaPais = (pais) => {
   if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
   
@@ -68,9 +75,11 @@ export default function App() {
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: ''
+    historia_texto: '',
+    titulo_inicio: TEXTO_INICIO_DEFAULT
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
+  const [editandoPortadaYRedes, setEditandoPortadaYRedes] = useState(false);
 
   const [eventos, setEventos] = useState([]);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
@@ -166,8 +175,15 @@ export default function App() {
 
   async function cargarConfiguracion() {
     const { data } = await supabase.from('configuracion_equipo').select('*').eq('id', 1).single();
-    if (data && data.historia_texto) {
-      setConfig(prev => ({ ...prev, ...data }));
+    if (data) {
+      setConfig(prev => ({
+        ...prev,
+        ...data,
+        instagram: data.instagram || prev.instagram,
+        discord: data.discord || prev.discord,
+        tiktok: data.tiktok || prev.tiktok,
+        titulo_inicio: data.titulo_inicio || prev.titulo_inicio || TEXTO_INICIO_DEFAULT
+      }));
     }
   }
 
@@ -210,7 +226,10 @@ export default function App() {
   }
 
   async function verificarAdminYPerfil(user) {
-    if (user.email === 'leosimracingok@gmail.com') {
+    const emailNormalizado = (user.email || '').toLowerCase().trim();
+    const tienePermisoAdmin = ADMINS_EMAILS.includes(emailNormalizado);
+
+    if (tienePermisoAdmin) {
       setEsAdmin(true);
       setVistaAdminActiva(true);
     } else {
@@ -233,15 +252,26 @@ export default function App() {
 
   const handleGuardarConfig = async (e) => {
     e.preventDefault();
+    const payload = {
+      id: 1,
+      instagram: config.instagram,
+      discord: config.discord,
+      tiktok: config.tiktok,
+      historia_texto: config.historia_texto,
+      titulo_inicio: config.titulo_inicio,
+      updated_at: new Date()
+    };
+
     const { error } = await supabase
       .from('configuracion_equipo')
-      .upsert({ id: 1, ...config, updated_at: new Date() });
+      .upsert(payload);
 
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
     } else {
-      alert('¡Historia guardada exitosamente!');
+      alert('¡Cambios guardados exitosamente!');
       setEditandoConfig(false);
+      setEditandoPortadaYRedes(false);
     }
   };
 
@@ -380,6 +410,8 @@ export default function App() {
     : usuario?.email
       ? usuario.email.charAt(0).toUpperCase()
       : 'E';
+
+  const tituloPrincipalActual = (config.titulo_inicio || TEXTO_INICIO_DEFAULT).toUpperCase();
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
@@ -573,16 +605,97 @@ export default function App() {
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
         
         {pestanaActiva === 'inicio' && (
-          <div className="min-h-[55vh] flex flex-col items-center justify-center">
-            <div className="max-w-lg mx-auto text-center space-y-3 py-6">
+          <div className="min-h-[55vh] flex flex-col items-center justify-center space-y-4">
+            <div className="max-w-xl mx-auto text-center space-y-3 py-4">
               <span className="inline-block bg-[#38bdf8]/20 text-[#38bdf8] font-wrc text-[11px] tracking-widest px-3 py-1 rounded-full border border-[#38bdf8]/40 uppercase backdrop-blur-md shadow-md">
-                TEMPORADA OFICIAL 2027 • ESPÍNDOLA COMPETICIÓN {esAdminEfectivo && '• MODO ADMIN'}
+                TEMPORADA OFICIAL 2027 • 10 AÑOS DE ESPÍNDOLA COMPETICIÓN {esAdminEfectivo && '• MODO ADMIN'}
               </span>
 
               <h1 className="font-wrc text-3xl md:text-5xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)]">
-                PRECISIÓN, VELOCIDAD Y <span className="text-[#38bdf8] drop-shadow-[0_0_20px_rgba(56,189,248,0.55)]">GLORIA</span>
+                {tituloPrincipalActual}
               </h1>
+
+              {esAdminEfectivo && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditandoPortadaYRedes(!editandoPortadaYRedes)}
+                    className="bg-neutral-950/80 hover:bg-neutral-900 text-[#38bdf8] border border-[#38bdf8]/50 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer"
+                  >
+                    ⚙️ {editandoPortadaYRedes ? 'CERRAR EDICIÓN' : 'EDITAR TEXTO PRINCIPAL Y REDES'}
+                  </button>
+                </div>
+              )}
             </div>
+
+            {esAdminEfectivo && editandoPortadaYRedes && (
+              <form onSubmit={handleGuardarConfig} className="w-full max-w-2xl bg-neutral-900/85 backdrop-blur-md border border-[#38bdf8]/40 rounded-xl p-4 shadow-2xl space-y-3">
+                <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">
+                  ⚙️ EDITAR TEXTO PRINCIPAL Y LINKS DE REDES SOCIALES (ADMIN)
+                </h3>
+
+                <div>
+                  <label className="block text-[10px] font-wrc text-neutral-300 mb-1">TEXTO PRINCIPAL DE INICIO</label>
+                  <input
+                    type="text"
+                    value={config.titulo_inicio}
+                    onChange={(e) => setConfig({ ...config, titulo_inicio: e.target.value.toUpperCase() })}
+                    placeholder={TEXTO_INICIO_DEFAULT}
+                    className="w-full bg-neutral-950 border border-white/15 rounded-lg px-3 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-wrc text-neutral-300 mb-1">LINK INSTAGRAM</label>
+                    <input
+                      type="text"
+                      value={config.instagram}
+                      onChange={(e) => setConfig({ ...config, instagram: e.target.value })}
+                      placeholder="https://instagram.com/..."
+                      className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8] normal-case"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-wrc text-neutral-300 mb-1">LINK TIKTOK</label>
+                    <input
+                      type="text"
+                      value={config.tiktok}
+                      onChange={(e) => setConfig({ ...config, tiktok: e.target.value })}
+                      placeholder="https://tiktok.com/@..."
+                      className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8] normal-case"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-wrc text-neutral-300 mb-1">LINK DISCORD</label>
+                    <input
+                      type="text"
+                      value={config.discord}
+                      onChange={(e) => setConfig({ ...config, discord: e.target.value })}
+                      placeholder="https://discord.gg/..."
+                      className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8] normal-case"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditandoPortadaYRedes(false)}
+                    className="bg-neutral-800 text-neutral-300 font-wrc text-[10px] px-3 py-1.5 rounded-lg cursor-pointer"
+                  >
+                    CANCELAR
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] font-black px-4 py-1.5 rounded-lg transition cursor-pointer"
+                  >
+                    💾 GUARDAR TEXTO Y REDES
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
@@ -1253,13 +1366,65 @@ export default function App() {
 
       </main>
 
-      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex items-center justify-center mt-6 text-xs">
-        <div className="flex items-center justify-center w-full">
+      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex flex-wrap items-center justify-between gap-3 mt-6 text-xs">
+        <div className="hidden md:block w-28" />
+
+        <div className="flex items-center justify-center flex-1">
           <img 
             src="/sponsor.svg" 
             alt="Sponsors Espíndola Competición" 
             className="h-4 md:h-5 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md mx-auto"
           />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 w-full md:w-auto">
+          {config.instagram && (
+            <a
+              href={config.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Instagram"
+              className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 font-wrc text-[10px] transition shadow"
+            >
+              IG
+            </a>
+          )}
+          {config.tiktok && (
+            <a
+              href={config.tiktok}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="TikTok"
+              className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 font-wrc text-[10px] transition shadow"
+            >
+              TIKTOK
+            </a>
+          )}
+          {config.discord && (
+            <a
+              href={config.discord}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Discord"
+              className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 font-wrc text-[10px] transition shadow"
+            >
+              DISCORD
+            </a>
+          )}
+          {esAdminEfectivo && (
+            <button
+              type="button"
+              onClick={() => {
+                setPestanaActiva('inicio');
+                setEditandoPortadaYRedes(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              title="Editar redes y texto principal"
+              className="px-2 py-1 rounded-full bg-neutral-900/80 border border-[#38bdf8]/50 text-[#38bdf8] hover:bg-neutral-800 text-[10px] cursor-pointer transition"
+            >
+              ⚙️
+            </button>
+          )}
         </div>
       </footer>
 
