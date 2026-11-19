@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import SubirImagen from './SubirImagen';
 
-export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
+export default function PerfilModal({ usuario, onClose, onPerfilGuardado, onActualizado }) {
   const [nombrePiloto, setNombrePiloto] = useState('');
   const [steamId, setSteamId] = useState('');
   const [nacionalidad, setNacionalidad] = useState('Argentina 🇦🇷');
@@ -58,14 +58,15 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
     } else {
       alert('¡Perfil actualizado con éxito!');
       if (onPerfilGuardado) onPerfilGuardado();
+      if (onActualizado) onActualizado();
       onClose();
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-      <div className="bg-neutral-900 border border-amber-500/40 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative font-sans max-h-[90vh] overflow-y-auto">
-        <h2 className="font-wrc text-2xl font-black text-amber-400 mb-2 uppercase tracking-wide">
+      <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative font-sans max-h-[90vh] overflow-y-auto">
+        <h2 className="font-wrc text-2xl font-black text-[#38bdf8] mb-2 uppercase tracking-wide">
           Configurar Perfil de Piloto
         </h2>
         <p className="text-neutral-400 text-xs mb-6">
@@ -80,7 +81,7 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
               value={nombrePiloto}
               onChange={(e) => setNombrePiloto(e.target.value)}
               placeholder="Ej: Leonardo Espíndola"
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
               required
             />
           </div>
@@ -93,7 +94,7 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
                 value={nacionalidad}
                 onChange={(e) => setNacionalidad(e.target.value)}
                 placeholder="Ej: Argentina 🇦🇷"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
               />
             </div>
             <div>
@@ -103,7 +104,7 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
                 value={provincia}
                 onChange={(e) => setProvincia(e.target.value)}
                 placeholder="Ej: Misiones"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
               />
             </div>
           </div>
@@ -115,7 +116,7 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
               placeholder="Ej: +54 9 376..."
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
             />
           </div>
 
@@ -126,7 +127,7 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
               value={steamId}
               onChange={(e) => setSteamId(e.target.value)}
               placeholder="Ej: 76561199..."
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-amber-500 outline-none font-mono"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none font-mono"
             />
           </div>
 
@@ -146,7 +147,7 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado }) {
             <button 
               type="submit"
               disabled={guardando}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
+              className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc font-black text-sm uppercase px-6 py-2.5 rounded-xl transition shadow-lg shadow-[#38bdf8]/20 cursor-pointer"
             >
               {guardando ? 'Guardando...' : 'Guardar Perfil'}
             </button>
