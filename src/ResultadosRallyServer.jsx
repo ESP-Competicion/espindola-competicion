@@ -13,6 +13,38 @@ const extraerTexto = (valor, porDefecto = '---') => {
   return porDefecto;
 };
 
+const detectarCategoria = (j, nombreAuto = '') => {
+  const rawCat = extraerTexto(
+    j?.carClass || j?.class || j?.category || j?.categoria || j?.car?.class || j?.car?.category || '',
+    ''
+  ).trim().toUpperCase();
+
+  if (rawCat && rawCat !== '---') {
+    return rawCat;
+  }
+
+  const autoUpper = String(nombreAuto || '').toUpperCase();
+
+  const patronesConocidos = [
+    'RALLY1', 'RC1',
+    'RALLY2', 'RC2',
+    'RALLY3', 'RC3',
+    'RALLY4', 'RC4',
+    'RALLY5', 'RC5',
+    'AYGO CUP', 'AYGO',
+    'GT3', 'GT4', 'GTE',
+    'TCR', 'N5', 'MAXI', 'HISTORIC', 'GROUP A', 'GROUP B'
+  ];
+
+  for (const patron of patronesConocidos) {
+    if (autoUpper.includes(patron)) {
+      return patron;
+    }
+  }
+
+  return 'GENERAL';
+};
+
 export default function ResultadosRallyServer({ esAdmin }) {
   const [vistaPrincipal, setVistaPrincipal] = useState('rally');
   const [subVistaRally, setSubVistaRally] = useState('tramo1');
@@ -88,7 +120,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
     try {
       setBorrando(true);
-      // Borramos todas las filas existentes por su id
       const ids = sesionesServidor.map(s => s.id);
       if (ids.length > 0) {
         const { error } = await supabase
@@ -162,17 +193,30 @@ export default function ResultadosRallyServer({ esAdmin }) {
         return;
       }
 
-      const datosProcesados = jugadoresFiltrados.map((j, idx) => ({
-        pos: idx + 1,
-        nombre: extraerTexto(j?.name, 'PILOTO'),
-        auto: extraerTexto(j?.car?.name, 'AUTO'),
-        categoria: extraerTexto(j?.carClass || j?.categoria, 'GENERAL'),
-        bestLapMs: Number(j?.bestLapMs) || 0,
-        lastLapMs: Number(j?.lastLapMs) || 0,
-        vueltas: Number(j?.laps) || 0,
-        sectores: j?.lastLap?.sectors || [0, 0, 0],
-        posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
-      }));
+      console.log("DATOS CRUDOS /players:", jugadoresFiltrados);
+
+      const datosProcesados = jugadoresFiltrados.map((j, idx) => {
+        const nombreAuto = extraerTexto(j?.car?.name || j?.car, 'AUTO');
+        const categoriaDetectada = detectarCategoria(j, nombreAuto);
+
+        console.log("CATEGORÍA DETECTADA:", {
+          piloto: extraerTexto(j?.name, 'PILOTO'),
+          auto: nombreAuto,
+          categoria: categoriaDetectada
+        });
+
+        return {
+          pos: idx + 1,
+          nombre: extraerTexto(j?.name, 'PILOTO'),
+          auto: nombreAuto,
+          categoria: categoriaDetectada,
+          bestLapMs: Number(j?.bestLapMs) || 0,
+          lastLapMs: Number(j?.lastLapMs) || 0,
+          vueltas: Number(j?.laps) || 0,
+          sectores: j?.lastLap?.sectors || [0, 0, 0],
+          posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
+        };
+      });
 
       const { error } = await supabase.from('resultados_sesiones').insert([{
         sesion_tipo: tipoSesionActual,
@@ -215,17 +259,20 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
   const sesionesCronologicas = [...sesionesServidor].reverse();
 
-  const categoriasDisponibles = ['TODAS'];
+  const categoriasSet = new Set();
   sesionesCronologicas.forEach(s => {
     if (s.datos_json && Array.isArray(s.datos_json)) {
       s.datos_json.forEach(j => {
-        const cat = j.categoria || j.carClass || 'GENERAL';
-        if (!categoriasDisponibles.includes(cat.toUpperCase())) {
-          categoriasDisponibles.push(cat.toUpperCase());
+        const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
+        const cat = detectarCategoria(j, nombreAuto);
+        if (cat && cat !== 'GENERAL') {
+          categoriasSet.add(cat);
         }
       });
     }
   });
+
+  const categoriasDisponibles = ['TODAS', ...Array.from(categoriasSet), 'GENERAL'];
 
   function obtenerIndiceTramo(keyTramo) {
     if (keyTramo === 'tramo1') return 0;
@@ -245,10 +292,10 @@ export default function ResultadosRallyServer({ esAdmin }) {
     if (!sesion || !sesion.datos_json) return [];
 
     let lista = sesion.datos_json.map((j, idx) => {
-      const cat = (j.categoria || j.carClass || 'GENERAL').toUpperCase();
+      const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
+      const cat = detectarCategoria(j, nombreAuto);
       const mejorMs = Number(j.bestLapMs || j.bestLap || j.tiempoMs || j.lastLapMs || 0);
       const nombrePiloto = j.nombre || j.driver || j.name || 'PILOTO';
-      const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
 
       return {
         pos: idx + 1,
@@ -261,7 +308,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
       };
     });
 
-    if (categoriaSeleccionada !== 'TODAS') {
+    if (categoriaSeleccionada !== 'TODAS' && categoriaSeleccionada !== 'GENERAL') {
       lista = lista.filter(p => p.categoria === categoriaSeleccionada);
     }
 
@@ -302,7 +349,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         ses.datos_json.forEach(j => {
           const nombre = (j.nombre || j.driver || j.name || 'PILOTO').toUpperCase();
           const auto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
-          const cat = (j.categoria || j.carClass || 'GENERAL').toUpperCase();
+          const cat = detectarCategoria(j, auto);
           const ms = Number(j.bestLapMs || j.bestLap || j.tiempoMs || j.lastLapMs || 0);
 
           if (!acumulados[nombre]) {
@@ -318,7 +365,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
     let listaGen = Object.values(acumulados).filter(p => p.tramosConTiempo > 0);
 
-    if (categoriaSeleccionada !== 'TODAS') {
+    if (categoriaSeleccionada !== 'TODAS' && categoriaSeleccionada !== 'GENERAL') {
       listaGen = listaGen.filter(p => p.categoria === categoriaSeleccionada);
     }
 
@@ -334,6 +381,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         pos: idx + 1,
         piloto: p.piloto,
         auto: p.auto,
+        categoria: p.categoria,
         tiempoTotal: formatearMilisegundos(p.totalMs),
         difLider: idx === 0 ? '0.0' : `+${difLider.toFixed(2)}`,
         difAnterior: idx === 0 ? '-' : `+${difAnt.toFixed(2)}`
@@ -487,7 +535,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
               >
                 {categoriasDisponibles.map(cat => (
                   <option key={cat} value={cat} className="bg-neutral-900 text-white">
-                    CAT: {cat}
+                    {cat === 'TODAS' ? 'CAT: TODAS' : cat === 'GENERAL' ? 'GENERAL (TODOS)' : `CAT: ${cat}`}
                   </option>
                 ))}
               </select>
@@ -548,7 +596,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
                           <td className="py-2.5 px-1 text-center font-bold text-amber-400">#{dt.pos}</td>
                           <td className="py-2 px-2">
                             <p className="font-bold text-white">{dt.piloto}</p>
-                            <span className="text-[9px] text-neutral-400">{dt.auto}</span>
+                            <span className="text-[9px] text-amber-400">{dt.auto} — [{dt.categoria}]</span>
                           </td>
                           <td className="py-2 px-2 text-center text-white font-bold">{dt.tiempoStr}</td>
                           <td className="py-2 px-2 text-right text-amber-300">{dt.difLider}</td>
@@ -597,7 +645,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
                             <td className="py-2.5 px-1 text-center font-black text-amber-400">#{dg.pos}</td>
                             <td className="py-2 px-2">
                               <p className="font-bold text-white">{dg.piloto}</p>
-                              <span className="text-[9px] text-neutral-400">{dg.auto}</span>
+                              <span className="text-[9px] text-amber-400">{dg.auto} — [{dg.categoria}]</span>
                             </td>
                             <td className="py-2 px-2 text-center text-amber-400 font-bold">{dg.tiempoTotal}</td>
                             <td className="py-2 px-2 text-right text-amber-300">{dg.difLider}</td>
