@@ -148,8 +148,11 @@ export default function ResultadosRallyServer({ esAdmin }) {
     return new Date(fechaRaw).toLocaleString();
   }
 
+  // Orden cronológico real: índice 0 = Tramo 1 (primera guardada), índice 1 = Tramo 2 (segunda guardada), etc.
+  const sesionesCronologicas = [...sesionesServidor].reverse();
+
   const categoriasDisponibles = ['TODAS'];
-  sesionesServidor.forEach(s => {
+  sesionesCronologicas.forEach(s => {
     if (s.datos_json && Array.isArray(s.datos_json)) {
       s.datos_json.forEach(j => {
         const cat = j.categoria || j.carClass || 'GENERAL';
@@ -160,16 +163,21 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   });
 
+  function obtenerIndiceTramo(keyTramo) {
+    if (keyTramo === 'tramo1') return 0;
+    if (keyTramo === 'tramo2') return 1;
+    if (keyTramo === 'tramo3') return 2;
+    if (keyTramo === 'tramo4') return 3;
+    return Math.max(0, sesionesCronologicas.length - 1);
+  }
+
   function obtenerSesionPorTramo(keyTramo) {
-    if (keyTramo === 'tramo1') return sesionesServidor[3] || sesionesServidor[0] || null;
-    if (keyTramo === 'tramo2') return sesionesServidor[2] || null;
-    if (keyTramo === 'tramo3') return sesionesServidor[1] || null;
-    if (keyTramo === 'tramo4') return sesionesServidor[0] || null;
-    return sesionesServidor[0] || null;
+    const idx = obtenerIndiceTramo(keyTramo);
+    return sesionesCronologicas[idx] || null;
   }
 
   function obtenerDatosTramoActual() {
-    const sesion = obtenerSesionPorTramo(subVistaRally === 'general' ? 'tramo4' : subVistaRally);
+    const sesion = obtenerSesionPorTramo(subVistaRally);
     if (!sesion || !sesion.datos_json) return [];
 
     let lista = sesion.datos_json.map((j, idx) => {
@@ -214,16 +222,18 @@ export default function ResultadosRallyServer({ esAdmin }) {
   }
 
   function obtenerClasificacionGeneral() {
-    let cantTramos = 4;
+    let cantTramos = sesionesCronologicas.length;
     if (subVistaRally === 'tramo1') cantTramos = 1;
     if (subVistaRally === 'tramo2') cantTramos = 2;
     if (subVistaRally === 'tramo3') cantTramos = 3;
-    if (subVistaRally === 'tramo4' || subVistaRally === 'general') cantTramos = sesionesServidor.length > 0 ? sesionesServidor.length : 1;
+    if (subVistaRally === 'tramo4') cantTramos = 4;
+
+    const tramosAIncluir = sesionesCronologicas.slice(0, cantTramos);
+    if (tramosAIncluir.length === 0) return [];
 
     const acumulados = {};
 
-    for (let i = 0; i < Math.min(cantTramos, sesionesServidor.length); i++) {
-      const ses = sesionesServidor[i];
+    tramosAIncluir.forEach((ses) => {
       if (ses && ses.datos_json && Array.isArray(ses.datos_json)) {
         ses.datos_json.forEach(j => {
           const nombre = (j.nombre || j.driver || j.name || 'PILOTO').toUpperCase();
@@ -232,14 +242,17 @@ export default function ResultadosRallyServer({ esAdmin }) {
           const ms = Number(j.bestLapMs || j.bestLap || j.tiempoMs || j.lastLapMs || 0);
 
           if (!acumulados[nombre]) {
-            acumulados[nombre] = { piloto: nombre, auto, categoria: cat, totalMs: 0 };
+            acumulados[nombre] = { piloto: nombre, auto, categoria: cat, totalMs: 0, tramosConTiempo: 0 };
           }
-          acumulados[nombre].totalMs += ms;
+          if (ms > 0) {
+            acumulados[nombre].totalMs += ms;
+            acumulados[nombre].tramosConTiempo += 1;
+          }
         });
       }
-    }
+    });
 
-    let listaGen = Object.values(acumulados);
+    let listaGen = Object.values(acumulados).filter(p => p.tramosConTiempo > 0);
 
     if (categoriaSeleccionada !== 'TODAS') {
       listaGen = listaGen.filter(p => p.categoria === categoriaSeleccionada);
@@ -418,7 +431,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
             <div className="p-4 space-y-3 bg-neutral-900/20">
               <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
                 <h4 className="text-amber-400 text-xs font-black">
-                  ⏱️ TIEMPO {subVistaRally === 'general' ? 'TRAMO 4 (PARCIAL)' : subVistaRally.toUpperCase()}
+                  ⏱️ TIEMPO {subVistaRally === 'general' ? `TRAMO ${Math.max(1, sesionesCronologicas.length)} (ÚLTIMO)` : subVistaRally.toUpperCase()}
                 </h4>
                 <span className="text-[10px] text-neutral-400">FILTRO: {categoriaSeleccionada}</span>
               </div>
