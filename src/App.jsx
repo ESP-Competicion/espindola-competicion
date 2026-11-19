@@ -16,8 +16,6 @@ const ADMINS_EMAILS = [
   'lucashutter6@gmail.com'
 ];
 
-const TEXTO_INICIO_DEFAULT = '10 AÑOS DE PASIÓN, VELOCIDAD Y GLORIA';
-
 const obtenerBanderaPais = (pais) => {
   if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
   
@@ -75,11 +73,9 @@ export default function App() {
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: '',
-    titulo_inicio: TEXTO_INICIO_DEFAULT
+    historia_texto: ''
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
-  const [editandoPortadaYRedes, setEditandoPortadaYRedes] = useState(false);
 
   const [eventos, setEventos] = useState([]);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
@@ -181,8 +177,7 @@ export default function App() {
         ...data,
         instagram: data.instagram || prev.instagram,
         discord: data.discord || prev.discord,
-        tiktok: data.tiktok || prev.tiktok,
-        titulo_inicio: data.titulo_inicio || prev.titulo_inicio || TEXTO_INICIO_DEFAULT
+        tiktok: data.tiktok || prev.tiktok
       }));
     }
   }
@@ -258,7 +253,6 @@ export default function App() {
       discord: config.discord,
       tiktok: config.tiktok,
       historia_texto: config.historia_texto,
-      titulo_inicio: config.titulo_inicio,
       updated_at: new Date()
     };
 
@@ -269,9 +263,8 @@ export default function App() {
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
     } else {
-      alert('¡Cambios guardados exitosamente!');
+      alert('¡Historia guardada exitosamente!');
       setEditandoConfig(false);
-      setEditandoPortadaYRedes(false);
     }
   };
 
@@ -410,8 +403,6 @@ export default function App() {
     : usuario?.email
       ? usuario.email.charAt(0).toUpperCase()
       : 'E';
-
-  const tituloPrincipalActual = (config.titulo_inicio || TEXTO_INICIO_DEFAULT).toUpperCase();
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
@@ -605,97 +596,16 @@ export default function App() {
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
         
         {pestanaActiva === 'inicio' && (
-          <div className="min-h-[55vh] flex flex-col items-center justify-center space-y-4">
-            <div className="max-w-xl mx-auto text-center space-y-3 py-4">
+          <div className="min-h-[55vh] flex flex-col items-center justify-center">
+            <div className="max-w-xl mx-auto text-center space-y-3 py-6">
               <span className="inline-block bg-[#38bdf8]/20 text-[#38bdf8] font-wrc text-[11px] tracking-widest px-3 py-1 rounded-full border border-[#38bdf8]/40 uppercase backdrop-blur-md shadow-md">
                 TEMPORADA OFICIAL 2027 • 10 AÑOS DE ESPÍNDOLA COMPETICIÓN {esAdminEfectivo && '• MODO ADMIN'}
               </span>
 
               <h1 className="font-wrc text-3xl md:text-5xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)]">
-                {tituloPrincipalActual}
+                10 AÑOS DE PASIÓN, VELOCIDAD Y <span className="text-[#38bdf8] drop-shadow-[0_0_20px_rgba(56,189,248,0.55)]">GLORIA</span>
               </h1>
-
-              {esAdminEfectivo && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditandoPortadaYRedes(!editandoPortadaYRedes)}
-                    className="bg-neutral-950/80 hover:bg-neutral-900 text-[#38bdf8] border border-[#38bdf8]/50 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer"
-                  >
-                    ⚙️ {editandoPortadaYRedes ? 'CERRAR EDICIÓN' : 'EDITAR TEXTO PRINCIPAL Y REDES'}
-                  </button>
-                </div>
-              )}
             </div>
-
-            {esAdminEfectivo && editandoPortadaYRedes && (
-              <form onSubmit={handleGuardarConfig} className="w-full max-w-2xl bg-neutral-900/85 backdrop-blur-md border border-[#38bdf8]/40 rounded-xl p-4 shadow-2xl space-y-3">
-                <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">
-                  ⚙️ EDITAR TEXTO PRINCIPAL Y LINKS DE REDES SOCIALES (ADMIN)
-                </h3>
-
-                <div>
-                  <label className="block text-[10px] font-wrc text-neutral-300 mb-1">TEXTO PRINCIPAL DE INICIO</label>
-                  <input
-                    type="text"
-                    value={config.titulo_inicio}
-                    onChange={(e) => setConfig({ ...config, titulo_inicio: e.target.value.toUpperCase() })}
-                    placeholder={TEXTO_INICIO_DEFAULT}
-                    className="w-full bg-neutral-950 border border-white/15 rounded-lg px-3 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-wrc text-neutral-300 mb-1">LINK INSTAGRAM</label>
-                    <input
-                      type="text"
-                      value={config.instagram}
-                      onChange={(e) => setConfig({ ...config, instagram: e.target.value })}
-                      placeholder="https://instagram.com/..."
-                      className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8] normal-case"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-wrc text-neutral-300 mb-1">LINK TIKTOK</label>
-                    <input
-                      type="text"
-                      value={config.tiktok}
-                      onChange={(e) => setConfig({ ...config, tiktok: e.target.value })}
-                      placeholder="https://tiktok.com/@..."
-                      className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8] normal-case"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-wrc text-neutral-300 mb-1">LINK DISCORD</label>
-                    <input
-                      type="text"
-                      value={config.discord}
-                      onChange={(e) => setConfig({ ...config, discord: e.target.value })}
-                      placeholder="https://discord.gg/..."
-                      className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8] normal-case"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditandoPortadaYRedes(false)}
-                    className="bg-neutral-800 text-neutral-300 font-wrc text-[10px] px-3 py-1.5 rounded-lg cursor-pointer"
-                  >
-                    CANCELAR
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] font-black px-4 py-1.5 rounded-lg transition cursor-pointer"
-                  >
-                    💾 GUARDAR TEXTO Y REDES
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         )}
 
@@ -1366,8 +1276,8 @@ export default function App() {
 
       </main>
 
-      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex flex-wrap items-center justify-between gap-3 mt-6 text-xs">
-        <div className="hidden md:block w-28" />
+      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex items-center justify-between gap-3 mt-6 text-xs">
+        <div className="hidden md:block w-24" />
 
         <div className="flex items-center justify-center flex-1">
           <img 
@@ -1377,16 +1287,19 @@ export default function App() {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-2 w-full md:w-auto">
+        <div className="flex items-center justify-end gap-3.5">
           {config.instagram && (
             <a
               href={config.instagram}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Instagram"
               title="Instagram"
-              className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 font-wrc text-[10px] transition shadow"
+              className="text-white hover:text-[#38bdf8] transition drop-shadow"
             >
-              IG
+              <svg className="w-4 h-4 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
             </a>
           )}
           {config.tiktok && (
@@ -1394,10 +1307,13 @@ export default function App() {
               href={config.tiktok}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="TikTok"
               title="TikTok"
-              className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 font-wrc text-[10px] transition shadow"
+              className="text-white hover:text-[#38bdf8] transition drop-shadow"
             >
-              TIKTOK
+              <svg className="w-4 h-4 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+              </svg>
             </a>
           )}
           {config.discord && (
@@ -1405,25 +1321,14 @@ export default function App() {
               href={config.discord}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Discord"
               title="Discord"
-              className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 font-wrc text-[10px] transition shadow"
+              className="text-white hover:text-[#38bdf8] transition drop-shadow"
             >
-              DISCORD
+              <svg className="w-4 h-4 md:w-5 md:h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+              </svg>
             </a>
-          )}
-          {esAdminEfectivo && (
-            <button
-              type="button"
-              onClick={() => {
-                setPestanaActiva('inicio');
-                setEditandoPortadaYRedes(true);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              title="Editar redes y texto principal"
-              className="px-2 py-1 rounded-full bg-neutral-900/80 border border-[#38bdf8]/50 text-[#38bdf8] hover:bg-neutral-800 text-[10px] cursor-pointer transition"
-            >
-              ⚙️
-            </button>
           )}
         </div>
       </footer>
