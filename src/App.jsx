@@ -16,6 +16,31 @@ const ADMINS_EMAILS = [
   'lucashutter6@gmail.com'
 ];
 
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+
+const leerCache = (clave) => {
+  try {
+    const raw = sessionStorage.getItem(clave);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL_MS) {
+      sessionStorage.removeItem(clave);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+const guardarCache = (clave, data) => {
+  try {
+    sessionStorage.setItem(clave, JSON.stringify({ ts: Date.now(), data }));
+  } catch {
+    // ignorar si sessionStorage está lleno o bloqueado
+  }
+};
+
 const obtenerBanderaPais = (pais) => {
   if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
   
@@ -31,7 +56,7 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('COLOMBIA') || p === 'CO') codigoIso = 'co';
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
   else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
-  else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
+  else if (p.includes('ESPAÑA') || p === 'SPAIN') codigoIso = 'es';
   else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p === 'EEUU' || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
@@ -69,7 +94,7 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState(() => leerCache('esp_config') || {
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
@@ -132,11 +157,6 @@ export default function App() {
 
     obtenerDatosSesion();
     cargarConfiguracion();
-    cargarEventos();
-    cargarCampeonatosSelect();
-    cargarCalendario();
-    cargarSalónDeLaFama();
-    cargarMiembros();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -152,53 +172,86 @@ export default function App() {
       }
     });
 
-    const canalMiembros = supabase
-      .channel('cambios-perfiles')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'perfiles' },
-        () => {
-          cargarMiembros();
-        }
-      )
-      .subscribe();
-
     return () => {
       subscription.unsubscribe();
-      supabase.removeChannel(canalMiembros);
     };
   }, []);
 
-  async function cargarConfiguracion() {
-    const { data } = await supabase.from('configuracion_equipo').select('*').eq('id', 1).single();
+  // Carga bajo demanda según la pestaña activa para no gastar Egress al abrir el inicio
+  useEffect(() => {
+    if (pestanaActiva === 'eventos') {
+      cargarEventos();
+      if (esAdminEfectivo) {
+        cargarCampeonatosSelect();
+      }
+    } else if (pestanaActiva === 'calendario') {
+      cargarCalendario();
+    } else if (pestanaActiva === 'fama') {
+      cargarSalónDeLaFama();
+    } else if (pestanaActiva === 'miembros') {
+      cargarMiembros();
+    } else if (pestanaActiva === 'historia') {
+      cargarConfiguracion();
+    }
+  }, [pestanaActiva, esAdminEfectivo]);
+
+  async function cargarConfiguracion(forzar = false) {
+    if (!forzar) {
+      const cached = leerCache('esp_config');
+      if (cached) {
+        setConfig(prev => ({ ...prev, ...cached }));
+        return;
+      }
+    }
+
+    const { data } = await supabase
+      .from('configuracion_equipo')
+      .select('instagram, discord, tiktok, historia_texto')
+      .eq('id', 1)
+      .single();
+
     if (data) {
-      setConfig(prev => ({
-        ...prev,
-        ...data,
-        instagram: data.instagram || prev.instagram,
-        discord: data.discord || prev.discord,
-        tiktok: data.tiktok || prev.tiktok
-      }));
+      const nuevaConfig = {
+        instagram: data.instagram || 'https://instagram.com',
+        discord: data.discord || 'https://discord.gg',
+        tiktok: data.tiktok || 'https://tiktok.com',
+        historia_texto: data.historia_texto || ''
+      };
+      setConfig(nuevaConfig);
+      guardarCache('esp_config', nuevaConfig);
     }
   }
 
   async function cargarEventos() {
-    const { data } = await supabase.from('eventos').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from('eventos')
+      .select('id, titulo, fecha, horario, categorias, modelos_autos, campeonato_id')
+      .order('created_at', { ascending: false })
+      .limit(30);
     if (data) setEventos(data);
   }
 
   async function cargarCampeonatosSelect() {
-    const { data } = await supabase.from('campeonatos').select('id, nombre').order('nombre', { ascending: true });
+    const { data } = await supabase
+      .from('campeonatos')
+      .select('id, nombre')
+      .order('nombre', { ascending: true });
     if (data) setCampeonatosDisponibles(data);
   }
 
   async function cargarCalendario() {
-    const { data } = await supabase.from('calendario').select('*').order('fecha', { ascending: true });
+    const { data } = await supabase
+      .from('calendario')
+      .select('id, titulo, fecha, descripcion')
+      .order('fecha', { ascending: true });
     if (data) setCalendario(data);
   }
 
   async function cargarSalónDeLaFama() {
-    const { data } = await supabase.from('salon_fama').select('*').order('campeonatos', { ascending: false });
+    const { data } = await supabase
+      .from('salon_fama')
+      .select('id, nombre, categoria, campeonatos, foto')
+      .order('campeonatos', { ascending: false });
     if (data) {
       const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
       setHallFama(listaConPuestos);
@@ -206,7 +259,9 @@ export default function App() {
   }
 
   async function cargarMiembros() {
-    const { data } = await supabase.from('perfiles').select('*');
+    const { data } = await supabase
+      .from('perfiles')
+      .select('id, nombre_piloto, nacionalidad, provincia, avatar_url');
     if (data) setMiembros(data);
   }
 
@@ -234,7 +289,7 @@ export default function App() {
 
     const { data } = await supabase
       .from('perfiles')
-      .select('*')
+      .select('id, nombre_piloto, nacionalidad, provincia, avatar_url, steam_id')
       .eq('id', user.id)
       .single();
 
@@ -263,6 +318,12 @@ export default function App() {
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
     } else {
+      guardarCache('esp_config', {
+        instagram: config.instagram,
+        discord: config.discord,
+        tiktok: config.tiktok,
+        historia_texto: config.historia_texto
+      });
       alert('¡Historia guardada exitosamente!');
       setEditandoConfig(false);
     }
