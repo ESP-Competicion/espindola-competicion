@@ -8,7 +8,7 @@ import ResultadosRallyServer from './ResultadosRallyServer';
 import Campeonatos from './Campeonatos';
 
 const fotosRally = [
-  '/fondo.jpg'
+  '/FondoTaller.png'
 ];
 
 const obtenerBanderaPais = (pais) => {
