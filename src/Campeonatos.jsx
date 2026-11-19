@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
 export default function Campeonatos({ esAdmin }) {
@@ -7,6 +7,10 @@ export default function Campeonatos({ esAdmin }) {
   const [fechasCampeonato, setFechasCampeonato] = useState([]);
   const [tablaPosiciones, setTablaPosiciones] = useState([]);
   const [cargando, setCargando] = useState(true);
+
+  const cacheResultadosFecha = useRef({});
+  const cacheTablasGenerales = useRef({});
+  const cacheFechasCamp = useRef({});
 
   // Formulario de creación
   const [nuevoNombre, setNuevoNombre] = useState('');
@@ -40,19 +44,31 @@ export default function Campeonatos({ esAdmin }) {
     cargarCampeonatos();
   }, []);
 
-  async function cargarCampeonatos() {
+  async function cargarCampeonatos(forzarRefresco = false) {
     setCargando(true);
-    const { data } = await supabase.from('campeonatos').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from('campeonatos')
+      .select('id, nombre, modalidad, estado, puntos_qualy, puntos_final1, puntos_final2')
+      .order('created_at', { ascending: false });
+
     if (data && data.length > 0) {
       setCampeonatos(data);
-      if (!campeonatoSeleccionado) {
-        seleccionarCampeonato(data[0]);
+      const actual = forzarRefresco
+        ? (data.find(c => c.id === campeonatoSeleccionado?.id) || data[0])
+        : (campeonatoSeleccionado || data[0]);
+      if (actual) {
+        seleccionarCampeonato(actual, forzarRefresco);
       }
+    } else {
+      setCampeonatos([]);
+      setCampeonatoSeleccionado(null);
+      setFechasCampeonato([]);
+      setTablaPosiciones([]);
     }
     setCargando(false);
   }
 
-  async function seleccionarCampeonato(camp) {
+  async function seleccionarCampeonato(camp, forzarRefresco = false) {
     setCampeonatoSeleccionado(camp);
 
     if (camp.puntos_final1 && Array.isArray(camp.puntos_final1)) {
@@ -66,30 +82,64 @@ export default function Campeonatos({ esAdmin }) {
       setStrPuntosF2(camp.puntos_final2.join(', '));
     }
 
-    const { data: fechas } = await supabase.from('campeonato_fechas').select('*').eq('campeonato_id', camp.id).order('numero_fecha', { ascending: true });
-    if (fechas) {
-      setFechasCampeonato(fechas);
-      if (fechas.length > 0) {
-        setFechaSeleccionadaId(fechas[0].id);
-        cargarResultadosFecha(fechas[0].id);
-      }
+    let fechas = cacheFechasCamp.current[camp.id];
+    if (!fechas || forzarRefresco) {
+      const { data } = await supabase
+        .from('campeonato_fechas')
+        .select('id, numero_fecha, titulo_fecha, fecha_programada, estado')
+        .eq('campeonato_id', camp.id)
+        .order('numero_fecha', { ascending: true });
+      fechas = data || [];
+      cacheFechasCamp.current[camp.id] = fechas;
     }
 
-    calcularTablaGeneral(camp.id);
+    setFechasCampeonato(fechas);
+    if (fechas.length > 0) {
+      const primeraFechaId = fechas[0].id;
+      setFechaSeleccionadaId(primeraFechaId);
+      cargarResultadosFecha(primeraFechaId, forzarRefresco);
+    } else {
+      setFechaSeleccionadaId('');
+      setResultadosFecha([]);
+    }
+
+    calcularTablaGeneral(camp.id, forzarRefresco);
   }
 
-  async function cargarResultadosFecha(fechaId) {
-    const { data } = await supabase.from('campeonato_resultados_fecha').select('*').eq('fecha_id', fechaId);
-    if (data) setResultadosFecha(data);
+  async function cargarResultadosFecha(fechaId, forzarRefresco = false) {
+    if (!fechaId) {
+      setResultadosFecha([]);
+      return;
+    }
+
+    if (!forzarRefresco && cacheResultadosFecha.current[fechaId]) {
+      setResultadosFecha(cacheResultadosFecha.current[fechaId]);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('campeonato_resultados_fecha')
+      .select('id, piloto_nombre, puntos_qualy, puntos_final1, puntos_final2, puntos_tramo1, puntos_tramo2, puntos_tramo3, puntos_tramo4, puntos_total')
+      .eq('fecha_id', fechaId);
+
+    const lista = data || [];
+    cacheResultadosFecha.current[fechaId] = lista;
+    setResultadosFecha(lista);
   }
 
-  async function calcularTablaGeneral(campId) {
+  async function calcularTablaGeneral(campId, forzarRefresco = false) {
+    if (!forzarRefresco && cacheTablasGenerales.current[campId]) {
+      setTablaPosiciones(cacheTablasGenerales.current[campId]);
+      return;
+    }
+
     const { data: resultados } = await supabase
       .from('campeonato_resultados_fecha')
-      .select('*, campeonato_fechas!inner(campeonato_id)')
+      .select('piloto_nombre, puntos_total, puntos_qualy, puntos_final1, puntos_final2, puntos_tramo1, puntos_tramo2, puntos_tramo3, puntos_tramo4, campeonato_fechas!inner(campeonato_id)')
       .eq('campeonato_fechas.campeonato_id', campId);
 
     if (!resultados) {
+      cacheTablasGenerales.current[campId] = [];
       setTablaPosiciones([]);
       return;
     }
@@ -110,6 +160,7 @@ export default function Campeonatos({ esAdmin }) {
     });
 
     const listaOrdenada = Object.values(acumulado).sort((a, b) => b.total - a.total);
+    cacheTablasGenerales.current[campId] = listaOrdenada;
     setTablaPosiciones(listaOrdenada);
   }
 
@@ -156,7 +207,7 @@ export default function Campeonatos({ esAdmin }) {
 
     setNuevoNombre('');
     alert('¡Campeonato creado con éxito!');
-    cargarCampeonatos();
+    await cargarCampeonatos(true);
   }
 
   async function handleGuardarPuntosPiloto(e) {
@@ -226,21 +277,27 @@ export default function Campeonatos({ esAdmin }) {
     }
 
     setFormCargaPiloto({ piloto_nombre: '', pos_qualy: 1, pos_final1: 1, pos_final2: 1, pos_tramo1: 1, pos_tramo2: 1, pos_tramo3: 1, pos_tramo4: 1, sancion: '' });
-    cargarResultadosFecha(fechaSeleccionadaId);
-    calcularTablaGeneral(campeonatoSeleccionado.id);
+    delete cacheResultadosFecha.current[fechaSeleccionadaId];
+    delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
+    await cargarResultadosFecha(fechaSeleccionadaId, true);
+    await calcularTablaGeneral(campeonatoSeleccionado.id, true);
   }
 
   async function eliminarResultadoPiloto(id) {
     await supabase.from('campeonato_resultados_fecha').delete().eq('id', id);
-    cargarResultadosFecha(fechaSeleccionadaId);
-    calcularTablaGeneral(campeonatoSeleccionado.id);
+    delete cacheResultadosFecha.current[fechaSeleccionadaId];
+    delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
+    await cargarResultadosFecha(fechaSeleccionadaId, true);
+    await calcularTablaGeneral(campeonatoSeleccionado.id, true);
   }
 
   async function eliminarCampeonato(id) {
     if (!confirm('¿Estás seguro de eliminar este campeonato?')) return;
     await supabase.from('campeonatos').delete().eq('id', id);
+    delete cacheFechasCamp.current[id];
+    delete cacheTablasGenerales.current[id];
     setCampeonatoSeleccionado(null);
-    cargarCampeonatos();
+    await cargarCampeonatos(true);
   }
 
   const esRallyActivo = campeonatoSeleccionado?.modalidad === 'rally';
@@ -379,7 +436,7 @@ export default function Campeonatos({ esAdmin }) {
       {/* VISTA PRINCIPAL */}
       {!campeonatoSeleccionado ? (
         <div className="bg-neutral-900/60 border border-white/10 rounded-2xl p-10 text-center text-neutral-400 text-xs">
-          NO HAY CAMPEONATOS CREADOS. CREÁ UNO NUEVO ARRIBA.
+          {cargando ? 'CARGANDO CAMPEONATOS...' : 'NO HAY CAMPEONATOS CREADOS. CREÁ UNO NUEVO ARRIBA.'}
         </div>
       ) : (
         <div className="space-y-6">

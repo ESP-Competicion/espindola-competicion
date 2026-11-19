@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 
 const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
@@ -45,6 +45,25 @@ const detectarCategoria = (j, nombreAuto = '') => {
   return 'GENERAL';
 };
 
+function formatearMilisegundos(ms) {
+  if (!ms || isNaN(ms) || ms === 0) return "00:00.000";
+  const totalSeconds = ms / 1000;
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = (totalSeconds % 60).toFixed(3);
+  const secsFormatted = Number(secs) < 10 ? `0${secs}` : secs;
+  return `${mins}:${secsFormatted}`;
+}
+
+function convertirMsASegundos(ms) {
+  return (Number(ms) || 0) / 1000;
+}
+
+function formatearFechaSesion(s) {
+  const fechaRaw = s.fecha || s.created_at || s.inserted_at;
+  if (!fechaRaw) return `SESIÓN #${s.id}`;
+  return new Date(fechaRaw).toLocaleString();
+}
+
 export default function ResultadosRallyServer({ esAdmin }) {
   const [vistaPrincipal, setVistaPrincipal] = useState('rally');
   const [subVistaRally, setSubVistaRally] = useState('tramo1');
@@ -62,7 +81,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
   async function cargarSesionesServidor() {
     const { data, error } = await supabase
       .from('resultados_sesiones')
-      .select('*')
+      .select('id, fecha, sesion_tipo, pista, datos_json')
       .order('fecha', { ascending: false });
 
     if (error) {
@@ -72,9 +91,10 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
     if (data && data.length > 0) {
       setSesionesServidor(data);
-      if (!sesionActivaId || !data.some(s => s.id === sesionActivaId)) {
-        setSesionActivaId(data[0].id);
-      }
+      setSesionActivaId((prevId) => {
+        if (prevId && data.some(s => s.id === prevId)) return prevId;
+        return data[0].id;
+      });
     } else {
       setSesionesServidor([]);
       setSesionActivaId(null);
@@ -230,67 +250,42 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   }
 
-  function formatearMilisegundos(ms) {
-    if (!ms || isNaN(ms) || ms === 0) return "00:00.000";
-    const totalSeconds = ms / 1000;
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = (totalSeconds % 60).toFixed(3);
-    const secsFormatted = secs < 10 ? `0${secs}` : secs;
-    return `${mins}:${secsFormatted}`;
-  }
+  const sesionesCronologicas = useMemo(() => [...sesionesServidor].reverse(), [sesionesServidor]);
 
-  function convertirMsASegundos(ms) {
-    return (Number(ms) || 0) / 1000;
-  }
+  const categoriasDisponibles = useMemo(() => {
+    const categoriasSet = new Set();
+    sesionesCronologicas.forEach(s => {
+      if (s.datos_json && Array.isArray(s.datos_json)) {
+        s.datos_json.forEach(j => {
+          const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
+          const cat = detectarCategoria(j, nombreAuto);
+          if (cat && cat !== 'GENERAL') {
+            categoriasSet.add(cat);
+          }
+        });
+      }
+    });
+    return ['TODAS', ...Array.from(categoriasSet), 'GENERAL'];
+  }, [sesionesCronologicas]);
 
-  function formatearFechaSesion(s) {
-    const fechaRaw = s.fecha || s.created_at || s.inserted_at;
-    if (!fechaRaw) return `SESIÓN #${s.id}`;
-    return new Date(fechaRaw).toLocaleString();
-  }
+  const datosTramo = useMemo(() => {
+    let idx = 0;
+    if (subVistaRally === 'tramo2') idx = 1;
+    else if (subVistaRally === 'tramo3') idx = 2;
+    else if (subVistaRally === 'tramo4') idx = 3;
+    else if (subVistaRally === 'general') idx = Math.max(0, sesionesCronologicas.length - 1);
 
-  const sesionesCronologicas = [...sesionesServidor].reverse();
-
-  const categoriasSet = new Set();
-  sesionesCronologicas.forEach(s => {
-    if (s.datos_json && Array.isArray(s.datos_json)) {
-      s.datos_json.forEach(j => {
-        const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
-        const cat = detectarCategoria(j, nombreAuto);
-        if (cat && cat !== 'GENERAL') {
-          categoriasSet.add(cat);
-        }
-      });
-    }
-  });
-
-  const categoriasDisponibles = ['TODAS', ...Array.from(categoriasSet), 'GENERAL'];
-
-  function obtenerIndiceTramo(keyTramo) {
-    if (keyTramo === 'tramo1') return 0;
-    if (keyTramo === 'tramo2') return 1;
-    if (keyTramo === 'tramo3') return 2;
-    if (keyTramo === 'tramo4') return 3;
-    return Math.max(0, sesionesCronologicas.length - 1);
-  }
-
-  function obtenerSesionPorTramo(keyTramo) {
-    const idx = obtenerIndiceTramo(keyTramo);
-    return sesionesCronologicas[idx] || null;
-  }
-
-  function obtenerDatosTramoActual() {
-    const sesion = obtenerSesionPorTramo(subVistaRally);
+    const sesion = sesionesCronologicas[idx] || null;
     if (!sesion || !sesion.datos_json) return [];
 
-    let lista = sesion.datos_json.map((j, idx) => {
+    let lista = sesion.datos_json.map((j, i) => {
       const nombreAuto = typeof j.auto === 'object' ? (j.auto.name || 'AUTO') : (j.auto || j.car || 'AUTO');
       const cat = detectarCategoria(j, nombreAuto);
       const mejorMs = Number(j.bestLapMs || j.bestLap || j.tiempoMs || j.lastLapMs || 0);
       const nombrePiloto = j.nombre || j.driver || j.name || 'PILOTO';
 
       return {
-        pos: idx + 1,
+        pos: i + 1,
         piloto: nombrePiloto,
         auto: nombreAuto,
         categoria: cat,
@@ -310,21 +305,21 @@ export default function ResultadosRallyServer({ esAdmin }) {
       return a.segundos - b.segundos;
     });
 
-    return lista.map((p, idx) => {
+    return lista.map((p, i) => {
       const liderSeg = lista[0]?.segundos || 0;
-      const difLider = idx === 0 ? 0 : p.segundos - liderSeg;
-      const difAnt = idx === 0 ? 0 : p.segundos - lista[idx - 1].segundos;
+      const difLider = i === 0 ? 0 : p.segundos - liderSeg;
+      const difAnt = i === 0 ? 0 : p.segundos - lista[i - 1].segundos;
 
       return {
         ...p,
-        pos: idx + 1,
-        difLider: idx === 0 ? '0.0' : `+${difLider.toFixed(2)}`,
-        difAnterior: idx === 0 ? '-' : `+${difAnt.toFixed(2)}`
+        pos: i + 1,
+        difLider: i === 0 ? '0.0' : `+${difLider.toFixed(2)}`,
+        difAnterior: i === 0 ? '-' : `+${difAnt.toFixed(2)}`
       };
     });
-  }
+  }, [sesionesCronologicas, subVistaRally, categoriaSeleccionada]);
 
-  function obtenerClasificacionGeneral() {
+  const datosGeneral = useMemo(() => {
     let cantTramos = sesionesCronologicas.length;
     if (subVistaRally === 'tramo1') cantTramos = 1;
     if (subVistaRally === 'tramo2') cantTramos = 2;
@@ -377,11 +372,12 @@ export default function ResultadosRallyServer({ esAdmin }) {
         difAnterior: idx === 0 ? '-' : `+${difAnt.toFixed(2)}`
       };
     });
-  }
+  }, [sesionesCronologicas, subVistaRally, categoriaSeleccionada]);
 
-  const datosTramo = obtenerDatosTramoActual();
-  const datosGeneral = obtenerClasificacionGeneral();
-  const sesionActualObj = sesionesServidor.find(s => s.id === sesionActivaId);
+  const sesionActualObj = useMemo(
+    () => sesionesServidor.find(s => s.id === sesionActivaId),
+    [sesionesServidor, sesionActivaId]
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-wrc text-white uppercase p-4">
