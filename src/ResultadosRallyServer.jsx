@@ -21,6 +21,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
   const [sesionesServidor, setSesionesServidor] = useState([]);
   const [sesionActivaId, setSesionActivaId] = useState(null);
   const [guardandoManual, setGuardandoManual] = useState(false);
+  const [borrando, setBorrando] = useState(false);
 
   useEffect(() => {
     cargarSesionesServidor();
@@ -39,12 +40,76 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
     if (data && data.length > 0) {
       setSesionesServidor(data);
-      if (!sesionActivaId) {
+      if (!sesionActivaId || !data.some(s => s.id === sesionActivaId)) {
         setSesionActivaId(data[0].id);
       }
     } else {
       setSesionesServidor([]);
       setSesionActivaId(null);
+    }
+  }
+
+  async function eliminarSesionIndividual(id, e) {
+    if (e) e.stopPropagation();
+    if (!esAdmin) return;
+
+    const confirmar = window.confirm('¿Seguro que querés borrar esta sesión guardada?');
+    if (!confirmar) return;
+
+    try {
+      setBorrando(true);
+      const { error } = await supabase
+        .from('resultados_sesiones')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert('Error al borrar la sesión: ' + error.message);
+      } else {
+        alert('Sesión eliminada correctamente.');
+        await cargarSesionesServidor();
+      }
+    } catch (err) {
+      console.error("Error al borrar sesión:", err);
+      alert('Ocurrió un error al intentar borrar la sesión.');
+    } finally {
+      setBorrando(false);
+    }
+  }
+
+  async function resetearTodosLosResultados() {
+    if (!esAdmin) return;
+
+    const confirmar1 = window.confirm('⚠️ ¿Seguro que querés borrar TODOS los resultados y sesiones guardadas para empezar de cero?');
+    if (!confirmar1) return;
+
+    const confirmar2 = window.confirm('Última confirmación: se eliminarán todos los registros de la tabla resultados_sesiones.');
+    if (!confirmar2) return;
+
+    try {
+      setBorrando(true);
+      // Borramos todas las filas existentes por su id
+      const ids = sesionesServidor.map(s => s.id);
+      if (ids.length > 0) {
+        const { error } = await supabase
+          .from('resultados_sesiones')
+          .delete()
+          .in('id', ids);
+
+        if (error) {
+          alert('Error al resetear resultados: ' + error.message);
+          return;
+        }
+      }
+
+      alert('¡Todos los resultados se borraron y la tabla quedó reseteada!');
+      setSesionesServidor([]);
+      setSesionActivaId(null);
+    } catch (err) {
+      console.error("Error al resetear:", err);
+      alert('Ocurrió un error al resetear los resultados.');
+    } finally {
+      setBorrando(false);
     }
   }
 
@@ -148,7 +213,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
     return new Date(fechaRaw).toLocaleString();
   }
 
-  // Orden cronológico real: índice 0 = Tramo 1 (primera guardada), índice 1 = Tramo 2 (segunda guardada), etc.
   const sesionesCronologicas = [...sesionesServidor].reverse();
 
   const categoriasDisponibles = ['TODAS'];
@@ -309,13 +373,24 @@ export default function ResultadosRallyServer({ esAdmin }) {
         </div>
 
         {esAdmin && (
-          <button
-            onClick={forzarGuardadoManual}
-            disabled={guardandoManual}
-            className="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {guardandoManual ? 'GUARDANDO SESIÓN...' : '⚡ FORZAR GUARDADO DE SESIÓN'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={forzarGuardadoManual}
+              disabled={guardandoManual || borrando}
+              className="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {guardandoManual ? 'GUARDANDO SESIÓN...' : '⚡ FORZAR GUARDADO DE SESIÓN'}
+            </button>
+
+            <button
+              onClick={resetearTodosLosResultados}
+              disabled={guardandoManual || borrando || sesionesServidor.length === 0}
+              className="bg-neutral-900 hover:bg-neutral-800 text-red-400 border border-red-500/40 font-black text-xs px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-40"
+              title="Borrar todas las sesiones guardadas para empezar de cero"
+            >
+              {borrando ? 'BORRANDO...' : '🗑️ RESETEAR TODO'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -328,15 +403,28 @@ export default function ResultadosRallyServer({ esAdmin }) {
                 <div
                   key={s.id}
                   onClick={() => setSesionActivaId(s.id)}
-                  className={`p-3 rounded-xl cursor-pointer border transition ${
+                  className={`p-3 rounded-xl cursor-pointer border transition flex justify-between items-start gap-2 ${
                     sesionActivaId === s.id
                       ? 'bg-amber-500/15 border-amber-500 text-white'
                       : 'bg-neutral-950 border-white/5 text-neutral-400 hover:bg-white/5'
                   }`}
                 >
-                  <span className="text-[10px] text-amber-400 font-bold">[{s.sesion_tipo}]</span>
-                  <p className="text-xs font-bold text-white truncate">{s.pista}</p>
-                  <span className="text-[9px] text-neutral-500">{formatearFechaSesion(s)}</span>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-amber-400 font-bold">[{s.sesion_tipo}]</span>
+                    <p className="text-xs font-bold text-white truncate">{s.pista}</p>
+                    <span className="text-[9px] text-neutral-500">{formatearFechaSesion(s)}</span>
+                  </div>
+
+                  {esAdmin && (
+                    <button
+                      onClick={(e) => eliminarSesionIndividual(s.id, e)}
+                      disabled={borrando}
+                      className="text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-2 py-1 rounded text-[10px] cursor-pointer shrink-0"
+                      title="Borrar esta sesión"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
