@@ -56,6 +56,9 @@ export default function App() {
   const [mostrarCambiarPasswordModal, setMostrarCambiarPasswordModal] = useState(false);
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
   const [esAdmin, setEsAdmin] = useState(false);
+  const [vistaAdminActiva, setVistaAdminActiva] = useState(true);
+
+  const esAdminEfectivo = esAdmin && vistaAdminActiva;
 
   const [fondoActual, setFondoActual] = useState(0);
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
@@ -140,6 +143,7 @@ export default function App() {
       } else {
         setPerfil(null);
         setEsAdmin(false);
+        setVistaAdminActiva(false);
       }
     });
 
@@ -208,8 +212,10 @@ export default function App() {
   async function verificarAdminYPerfil(user) {
     if (user.email === 'leosimracingok@gmail.com') {
       setEsAdmin(true);
+      setVistaAdminActiva(true);
     } else {
       setEsAdmin(false);
+      setVistaAdminActiva(false);
     }
 
     const { data } = await supabase
@@ -421,7 +427,7 @@ export default function App() {
           <nav className="flex items-center gap-3 md:gap-5 px-4 md:px-6 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
             {[
               { id: 'historia', label: 'HISTORIA' },
-              { id: 'eventos', label: `EVENTOS${esAdmin ? ' ⚙️' : ''}` },
+              { id: 'eventos', label: `EVENTOS${esAdminEfectivo ? ' ⚙️' : ''}` },
               { id: 'livetiming', label: 'LIVETIMING' },
               { id: 'resultados', label: 'RESULTADOS' },
               { id: 'calendario', label: 'CALENDARIO' }
@@ -538,6 +544,14 @@ export default function App() {
               >
                 MI PERFIL
               </button>
+              {esAdmin && (
+                <button
+                  onClick={() => { setVistaAdminActiva(!vistaAdminActiva); setMenuUsuarioAbierto(false); }}
+                  className="text-xs font-wrc tracking-wider transition text-[#38bdf8] hover:text-sky-200 cursor-pointer"
+                >
+                  {vistaAdminActiva ? 'VER COMO PILOTO' : 'VOLVER A VISTA ADMIN'}
+                </button>
+              )}
               <button
                 onClick={() => { setMostrarPerfilModal(true); setMenuUsuarioAbierto(false); }}
                 className="text-xs font-wrc tracking-wider transition text-white hover:text-sky-300 cursor-pointer"
@@ -562,7 +576,7 @@ export default function App() {
           <div className="min-h-[55vh] flex flex-col items-center justify-center">
             <div className="max-w-lg mx-auto text-center space-y-3 py-6">
               <span className="inline-block bg-[#38bdf8]/20 text-[#38bdf8] font-wrc text-[11px] tracking-widest px-3 py-1 rounded-full border border-[#38bdf8]/40 uppercase backdrop-blur-md shadow-md">
-                TEMPORADA OFICIAL 2027 • ESPÍNDOLA COMPETICIÓN {esAdmin && '• MODO ADMIN'}
+                TEMPORADA OFICIAL 2027 • ESPÍNDOLA COMPETICIÓN {esAdminEfectivo && '• MODO ADMIN'}
               </span>
 
               <h1 className="font-wrc text-3xl md:text-5xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)]">
@@ -573,11 +587,11 @@ export default function App() {
         )}
 
         {pestanaActiva === 'resultados' && (
-          <ResultadosRallyServer esAdmin={esAdmin} />
+          <ResultadosRallyServer esAdmin={esAdminEfectivo} />
         )}
 
         {pestanaActiva === 'campeonato' && (
-          <Campeonatos esAdmin={esAdmin} />
+          <Campeonatos esAdmin={esAdminEfectivo} />
         )}
 
         {pestanaActiva === 'historia' && (
@@ -585,7 +599,7 @@ export default function App() {
             <div className="bg-neutral-900/65 backdrop-blur-md border border-white/10 rounded-xl p-4 md:p-5 shadow-2xl space-y-3">
               <div className="flex justify-between items-center border-b border-white/10 pb-2">
                 <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">HISTORIA DEL EQUIPO</h2>
-                {esAdmin && !editandoConfig && (
+                {esAdminEfectivo && !editandoConfig && (
                   <button
                     onClick={() => setEditandoConfig(true)}
                     className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer font-black"
@@ -656,7 +670,7 @@ export default function App() {
               </div>
             </div>
 
-            {esAdmin && (
+            {esAdminEfectivo && (
               <form onSubmit={handleCrearCalendario} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2">
                 <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">⚙️ AGREGAR FECHA AL CALENDARIO (ADMIN)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -739,7 +753,7 @@ export default function App() {
               </div>
             </div>
 
-            {esAdmin && calendario.length > 0 && (
+            {esAdminEfectivo && calendario.length > 0 && (
               <div className="bg-neutral-900/60 border border-white/10 rounded-xl p-3 space-y-1.5">
                 <h3 className="font-wrc text-[11px] text-[#38bdf8]">FECHAS CARGADAS EN CALENDARIO</h3>
                 <div className="divide-y divide-white/10">
@@ -775,7 +789,7 @@ export default function App() {
               <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR Y VINCULAR AL TORNEO.</p>
             </div>
 
-            {esAdmin && (
+            {esAdminEfectivo && (
               <form onSubmit={handleCrearEvento} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2.5">
                 <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">⚙️ CREAR NUEVO EVENTO (ADMIN)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -857,7 +871,7 @@ export default function App() {
                     >
                       INSCRIBIRSE
                     </button>
-                    {esAdmin && (
+                    {esAdminEfectivo && (
                       <button
                         onClick={() => handleEliminarEvento(ev.id)}
                         className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
@@ -899,7 +913,7 @@ export default function App() {
               </div>
             </div>
 
-            {esAdmin && (
+            {esAdminEfectivo && (
               <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2">
                 <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">
                   ⚙️ {editandoId !== null ? 'EDITAR PILOTO DEL SALÓN DE LA FAMA' : 'AGREGAR PILOTO AL SALÓN DE LA FAMA'} (ADMIN)
@@ -976,7 +990,7 @@ export default function App() {
                     <div className="mt-2 bg-white/5 border border-white/15 rounded-lg px-3 py-1 font-wrc text-[11px] tracking-wider text-neutral-200">
                       TÍTULOS: <span className="text-white text-xs ml-1">{hallFama[1].campeonatos}</span> 🏆
                     </div>
-                    {esAdmin && (
+                    {esAdminEfectivo && (
                       <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => handleEditarPilotoFama(hallFama[1])}
@@ -1010,7 +1024,7 @@ export default function App() {
                     <div className="mt-2 bg-[#38bdf8]/15 border border-[#38bdf8]/50 rounded-lg px-3.5 py-1 font-wrc text-xs tracking-wider text-sky-200">
                       TÍTULOS ABSOLUTOS: <span className="text-[#38bdf8] text-sm ml-1">{hallFama[0].campeonatos}</span> 🏆
                     </div>
-                    {esAdmin && (
+                    {esAdminEfectivo && (
                       <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => handleEditarPilotoFama(hallFama[0])}
@@ -1044,7 +1058,7 @@ export default function App() {
                     <div className="mt-2 bg-white/5 border border-sky-700/40 rounded-lg px-3 py-1 font-wrc text-[11px] tracking-wider text-neutral-200">
                       TÍTULOS: <span className="text-sky-300 text-xs ml-1">{hallFama[2].campeonatos}</span> 🏆
                     </div>
-                    {esAdmin && (
+                    {esAdminEfectivo && (
                       <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => handleEditarPilotoFama(hallFama[2])}
@@ -1090,7 +1104,7 @@ export default function App() {
                         <span className="font-mono text-[11px] text-sky-300 font-bold">
                           {piloto.campeonatos} TÍTULOS 🏆
                         </span>
-                        {esAdmin && (
+                        {esAdminEfectivo && (
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleEditarPilotoFama(piloto)}
@@ -1176,7 +1190,14 @@ export default function App() {
 
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-md mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5 shadow-2xl space-y-4">
-            <h2 className="font-wrc text-xl text-[#38bdf8]">MI PERFIL DE PILOTO</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-wrc text-xl text-[#38bdf8]">MI PERFIL DE PILOTO</h2>
+              {esAdmin && (
+                <span className="text-[10px] font-wrc px-2.5 py-0.5 rounded-full border border-[#38bdf8]/40 bg-[#38bdf8]/15 text-[#38bdf8]">
+                  {vistaAdminActiva ? 'MODO ADMIN' : 'MODO PILOTO'}
+                </span>
+              )}
+            </div>
             
             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
               <div className="w-14 h-14 rounded-full bg-neutral-800 border-2 border-[#38bdf8] overflow-hidden flex items-center justify-center font-wrc text-[#38bdf8] text-lg flex-shrink-0">
@@ -1213,6 +1234,19 @@ export default function App() {
               >
                 EDITAR DATOS PERSONALES
               </button>
+
+              {esAdmin && (
+                <button
+                  onClick={() => setVistaAdminActiva(!vistaAdminActiva)}
+                  className={`w-full font-wrc text-xs font-black uppercase py-2 rounded-xl transition shadow cursor-pointer border ${
+                    vistaAdminActiva
+                      ? 'bg-neutral-900 hover:bg-neutral-800 text-[#38bdf8] border-[#38bdf8]/50'
+                      : 'bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 border-[#38bdf8]'
+                  }`}
+                >
+                  {vistaAdminActiva ? '👁️ CAMBIAR A VISTA PILOTO' : '⚙️ CAMBIAR A VISTA ADMIN'}
+                </button>
+              )}
             </div>
           </div>
         )}
