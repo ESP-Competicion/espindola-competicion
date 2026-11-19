@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
 const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
-// Pega aquí tu token actual de AssettoHosting si lo tienes a mano:
-const TOKEN_POR_DEFECTO = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
+const TOKEN_ST = "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
 const extraerTexto = (valor, porDefecto = '---') => {
   if (valor === null || valor === undefined || valor === '') return porDefecto;
@@ -22,14 +21,12 @@ export default function ResultadosRallyServer({ esAdmin }) {
   const [sesionesServidor, setSesionesServidor] = useState([]);
   const [sesionActivaId, setSesionActivaId] = useState(null);
   const [guardandoManual, setGuardandoManual] = useState(false);
-  const [tokenApi, setTokenApi] = useState(() => localStorage.getItem('assetto_token') || TOKEN_POR_DEFECTO);
 
   useEffect(() => {
     cargarSesionesServidor();
   }, []);
 
   async function cargarSesionesServidor() {
-    // Quitamos el .order('created_at') que daba error 400 y ordenamos por 'id' descendente
     const { data, error } = await supabase
       .from('resultados_sesiones')
       .select('*')
@@ -51,27 +48,17 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   }
 
-  function actualizarToken(nuevoToken) {
-    setTokenApi(nuevoToken);
-    localStorage.setItem('assetto_token', nuevoToken.trim());
-  }
-
   async function forzarGuardadoManual() {
     try {
       setGuardandoManual(true);
-      const tokenLimpio = tokenApi.trim();
       const headers = { 
-        'Authorization': `Bearer ${tokenLimpio}`,
+        'Authorization': `Bearer ${TOKEN_ST}`,
         'Accept': 'application/json'
       };
 
       const resServidor = await fetch(`${API_BASE_ST}/server`, { headers }).catch(() => null);
       if (!resServidor || !resServidor.ok) {
-        if (resServidor?.status === 401) {
-          alert('Error 401 (No Autorizado): El Token de AssettoHosting es incorrecto o venció. Pégalo en la barra roja de arriba e intenta de nuevo.');
-        } else {
-          alert('Error: No se pudo conectar con el servidor de Assetto Hosting.');
-        }
+        alert('Error: No se pudo conectar con el servidor de Assetto Hosting.');
         return;
       }
       const datosServ = await resServidor.json();
@@ -309,23 +296,13 @@ export default function ResultadosRallyServer({ esAdmin }) {
         </div>
 
         {esAdmin && (
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={tokenApi}
-              onChange={(e) => actualizarToken(e.target.value)}
-              placeholder="TOKEN ASSETTO HOSTING (ahsm_...)"
-              className="bg-neutral-950 border border-red-500/50 text-neutral-200 text-[10px] px-3 py-2 rounded-xl w-56 outline-none font-mono"
-              title="Si el token venció, pega aquí el nuevo de AssettoHosting"
-            />
-            <button
-              onClick={forzarGuardadoManual}
-              disabled={guardandoManual}
-              className="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {guardandoManual ? 'GUARDANDO SESIÓN...' : '⚡ FORZAR GUARDADO DE SESIÓN'}
-            </button>
-          </div>
+          <button
+            onClick={forzarGuardadoManual}
+            disabled={guardandoManual}
+            className="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {guardandoManual ? 'GUARDANDO SESIÓN...' : '⚡ FORZAR GUARDADO DE SESIÓN'}
+          </button>
         )}
       </div>
 
