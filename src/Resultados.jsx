@@ -26,22 +26,21 @@ export default function Resultados() {
     let ultimaSesionDetectada = null;
     let datosUltimosJugadores = [];
 
-    // MONITOREO INTELIGENTE DE CAMBIO DE SESIÓN
     const intervaloAutoGuardado = setInterval(async () => {
       try {
         const headers = { 'Authorization': `Bearer ${TOKEN}`, 'Accept': 'application/json' };
-        
+
         const resServidor = await fetch(`${API_BASE}/server`, { headers }).catch(() => null);
         if (!resServidor || !resServidor.ok) return;
         const datosServ = await resServidor.json();
-        
+
         const tipoSesionActual = String(
-          datosServ?.session?.type || 
-          datosServ?.session?.name || 
-          datosServ?.session || 
+          datosServ?.session?.type ||
+          datosServ?.session?.name ||
+          datosServ?.session ||
           'PRACTICE'
         ).toUpperCase();
-        
+
         const pistaNombre = datosServ?.track?.name || datosServ?.track || 'AUTÓDROMO';
 
         const resJugadores = await fetch(`${API_BASE}/players`, { headers }).catch(() => null);
@@ -60,10 +59,7 @@ export default function Resultados() {
           return;
         }
 
-        // SI CAMBIA DE SESIÓN (Ej: Practice -> Qualifying)
         if (ultimaSesionDetectada !== tipoSesionActual) {
-          console.log(`[AutoGuardado] Transición detectada: ${ultimaSesionDetectada} ➔ ${tipoSesionActual}`);
-
           if (datosUltimosJugadores.length > 0) {
             const datosProcesados = datosUltimosJugadores.map((j, idx) => ({
               pos: idx + 1,
@@ -75,7 +71,6 @@ export default function Resultados() {
               posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
             }));
 
-            // Guardamos automáticamente la sesión que acaba de terminar
             const { error } = await supabase.from('resultados_sesiones').insert([{
               sesion_tipo: ultimaSesionDetectada,
               pista: pistaNombre,
@@ -84,7 +79,6 @@ export default function Resultados() {
 
             if (!error) {
               cargarResultadosSupabase();
-              console.log(`[AutoGuardado] ¡Sesión ${ultimaSesionDetectada} archivada con éxito en Supabase!`);
             }
           }
 
@@ -130,7 +124,6 @@ export default function Resultados() {
     setCargando(false);
   }
 
-  // GUARDADO MANUAL RÁPIDO
   async function guardarResultadosManualmente() {
     try {
       setGuardandoManual(true);
@@ -207,7 +200,7 @@ export default function Resultados() {
     <div className="space-y-6 max-w-5xl mx-auto font-wrc text-white uppercase">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">RESULTADOS DE SESIONES</h2>
+          <h2 className="font-wrc text-3xl text-[#38bdf8] tracking-wide">RESULTADOS DE SESIONES</h2>
           <p className="text-neutral-300 text-xs font-wrc">HISTORIAL AUTOMÁTICO DE PRÁCTICAS, CLASIFICACIONES Y CARRERAS.</p>
         </div>
 
@@ -215,7 +208,7 @@ export default function Resultados() {
           <button
             onClick={guardarResultadosManualmente}
             disabled={guardandoManual}
-            className={`bg-emerald-500 hover:bg-emerald-400 text-black font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase ${guardandoManual ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-xs font-black px-4 py-2.5 rounded-xl transition shadow cursor-pointer uppercase ${guardandoManual ? 'opacity-50 pointer-events-none' : ''}`}
           >
             {guardandoManual ? 'GUARDANDO...' : '📥 FORZAR GUARDAR SESIÓN ACTUAL'}
           </button>
@@ -223,9 +216,8 @@ export default function Resultados() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* LISTA DE SESIONES GUARDADAS */}
         <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl space-y-2.5">
-          <h3 className="text-amber-400 text-xs font-black tracking-wider border-b border-white/10 pb-2">
+          <h3 className="text-[#38bdf8] text-xs font-black tracking-wider border-b border-white/10 pb-2">
             SESIONES ARCHIVADAS ({resultadosGuardados.length})
           </h3>
 
@@ -244,11 +236,11 @@ export default function Resultados() {
                     key={sesion.id}
                     onClick={() => setSesionSeleccionada(sesion)}
                     className={`p-3 rounded-xl border transition cursor-pointer flex flex-col gap-1 ${
-                      esActiva ? 'bg-amber-500/20 border-amber-500/80 shadow-md' : 'bg-neutral-950/50 border-white/5 hover:border-white/20'
+                      esActiva ? 'bg-[#38bdf8]/20 border-[#38bdf8]/80 shadow-md' : 'bg-neutral-950/50 border-white/5 hover:border-white/20'
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-amber-400 font-black text-xs">{sesion.sesion_tipo}</span>
+                      <span className="text-[#38bdf8] font-black text-xs">{sesion.sesion_tipo}</span>
                       <span className="text-[9px] text-neutral-400">{fechaLegible}</span>
                     </div>
                     <span className="text-[11px] text-white truncate">🏁 {sesion.pista}</span>
@@ -259,7 +251,6 @@ export default function Resultados() {
           )}
         </div>
 
-        {/* DETALLE DE LA SESIÓN SELECCIONADA */}
         <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
           {!sesionSeleccionada ? (
             <div className="p-10 text-center text-neutral-400 text-xs">
@@ -267,16 +258,16 @@ export default function Resultados() {
             </div>
           ) : (
             <div>
-              <div className="bg-gradient-to-r from-amber-500/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-amber-500/30 flex justify-between items-center">
+              <div className="bg-gradient-to-r from-[#38bdf8]/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-[#38bdf8]/30 flex justify-between items-center">
                 <div>
-                  <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded">
+                  <span className="bg-[#38bdf8] text-slate-950 text-[10px] font-black px-2 py-0.5 rounded">
                     {sesionSeleccionada.sesion_tipo}
                   </span>
                   <h3 className="text-white text-xs tracking-wider font-black mt-1">
                     🏁 {sesionSeleccionada.pista}
                   </h3>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-neutral-400">
                     {new Date(sesionSeleccionada.fecha).toLocaleString()}
@@ -295,7 +286,7 @@ export default function Resultados() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                   <thead>
-                    <tr className="border-b border-white/15 text-amber-400 tracking-wider bg-black/70">
+                    <tr className="border-b border-white/15 text-[#38bdf8] tracking-wider bg-black/70">
                       <th className="py-2.5 px-3 text-center w-10">POS</th>
                       {sesionSeleccionada.sesion_tipo.toUpperCase().includes('RACE') && (
                         <th className="py-2.5 px-2 text-center" title="Posiciones ganadas / perdidas">+/-</th>
@@ -314,8 +305,8 @@ export default function Resultados() {
 
                       return (
                         <tr key={idx} className="hover:bg-white/5 transition">
-                          <td className="py-2.5 px-3 text-center font-bold text-amber-400">#{posActual}</td>
-                          
+                          <td className="py-2.5 px-3 text-center font-bold text-[#38bdf8]">#{posActual}</td>
+
                           {sesionSeleccionada.sesion_tipo.toUpperCase().includes('RACE') && (
                             <td className="py-2.5 px-2 text-center font-mono">
                               {diferenciaPos > 0 ? (

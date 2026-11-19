@@ -49,7 +49,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
   const [vistaPrincipal, setVistaPrincipal] = useState('rally');
   const [subVistaRally, setSubVistaRally] = useState('tramo1');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('TODAS');
-  
+
   const [sesionesServidor, setSesionesServidor] = useState([]);
   const [sesionActivaId, setSesionActivaId] = useState(null);
   const [guardandoManual, setGuardandoManual] = useState(false);
@@ -147,7 +147,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
   async function forzarGuardadoManual() {
     try {
       setGuardandoManual(true);
-      const headers = { 
+      const headers = {
         'Authorization': `Bearer ${TOKEN_ST}`,
         'Accept': 'application/json'
       };
@@ -160,9 +160,9 @@ export default function ResultadosRallyServer({ esAdmin }) {
       const datosServ = await resServidor.json();
 
       const tipoSesionActual = extraerTexto(
-        datosServ?.session?.type || 
-        datosServ?.session?.name || 
-        datosServ?.session, 
+        datosServ?.session?.type ||
+        datosServ?.session?.name ||
+        datosServ?.session,
         'PRACTICE'
       ).toUpperCase();
 
@@ -193,17 +193,9 @@ export default function ResultadosRallyServer({ esAdmin }) {
         return;
       }
 
-      console.log("DATOS CRUDOS /players:", jugadoresFiltrados);
-
       const datosProcesados = jugadoresFiltrados.map((j, idx) => {
         const nombreAuto = extraerTexto(j?.car?.name || j?.car, 'AUTO');
         const categoriaDetectada = detectarCategoria(j, nombreAuto);
-
-        console.log("CATEGORÍA DETECTADA:", {
-          piloto: extraerTexto(j?.name, 'PILOTO'),
-          auto: nombreAuto,
-          categoria: categoriaDetectada
-        });
 
         return {
           pos: idx + 1,
@@ -378,10 +370,8 @@ export default function ResultadosRallyServer({ esAdmin }) {
       const difAnt = idx === 0 ? 0 : totalSeg - convertirMsASegundos(listaGen[idx - 1].totalMs);
 
       return {
+        ...p,
         pos: idx + 1,
-        piloto: p.piloto,
-        auto: p.auto,
-        categoria: p.categoria,
         tiempoTotal: formatearMilisegundos(p.totalMs),
         difLider: idx === 0 ? '0.0' : `+${difLider.toFixed(2)}`,
         difAnterior: idx === 0 ? '-' : `+${difAnt.toFixed(2)}`
@@ -395,14 +385,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-wrc text-white uppercase p-4">
-      
+
       <div className="flex flex-wrap justify-between items-center gap-4 bg-neutral-900/60 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setVistaPrincipal('server')}
             className={`px-6 py-2.5 rounded-xl font-black text-xs tracking-wider transition cursor-pointer ${
               vistaPrincipal === 'server'
-                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                ? 'bg-[#38bdf8] text-slate-950 shadow-lg shadow-[#38bdf8]/20'
                 : 'bg-neutral-950/80 text-neutral-400 hover:text-white border border-white/5'
             }`}
           >
@@ -412,7 +402,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
             onClick={() => setVistaPrincipal('rally')}
             className={`px-6 py-2.5 rounded-xl font-black text-xs tracking-wider transition cursor-pointer ${
               vistaPrincipal === 'rally'
-                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                ? 'bg-[#38bdf8] text-slate-950 shadow-lg shadow-[#38bdf8]/20'
                 : 'bg-neutral-950/80 text-neutral-400 hover:text-white border border-white/5'
             }`}
           >
@@ -445,7 +435,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
       {vistaPrincipal === 'server' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-neutral-950/90 border border-white/10 rounded-2xl p-5 shadow-2xl">
           <div className="space-y-3 bg-neutral-900/50 p-4 rounded-xl border border-white/5">
-            <h3 className="text-xs text-amber-400 font-bold">SESIONES GUARDADAS ({sesionesServidor.length})</h3>
+            <h3 className="text-xs text-[#38bdf8] font-bold">SESIONES GUARDADAS ({sesionesServidor.length})</h3>
             <div className="space-y-2 max-h-[350px] overflow-y-auto">
               {sesionesServidor.map(s => (
                 <div
@@ -453,12 +443,12 @@ export default function ResultadosRallyServer({ esAdmin }) {
                   onClick={() => setSesionActivaId(s.id)}
                   className={`p-3 rounded-xl cursor-pointer border transition flex justify-between items-start gap-2 ${
                     sesionActivaId === s.id
-                      ? 'bg-amber-500/15 border-amber-500 text-white'
+                      ? 'bg-[#38bdf8]/15 border-[#38bdf8] text-white'
                       : 'bg-neutral-950 border-white/5 text-neutral-400 hover:bg-white/5'
                   }`}
                 >
                   <div className="min-w-0">
-                    <span className="text-[10px] text-amber-400 font-bold">[{s.sesion_tipo}]</span>
+                    <span className="text-[10px] text-[#38bdf8] font-bold">[{s.sesion_tipo}]</span>
                     <p className="text-xs font-bold text-white truncate">{s.pista}</p>
                     <span className="text-[9px] text-neutral-500">{formatearFechaSesion(s)}</span>
                   </div>
@@ -483,7 +473,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-white/10 pb-3">
                   <div>
-                    <span className="text-xs text-amber-400 font-bold">{sesionActualObj.sesion_tipo}</span>
+                    <span className="text-xs text-[#38bdf8] font-bold">{sesionActualObj.sesion_tipo}</span>
                     <h3 className="text-sm font-black text-white">{sesionActualObj.pista}</h3>
                   </div>
                   <span className="text-[10px] text-neutral-400 font-mono">{formatearFechaSesion(sesionActualObj)}</span>
@@ -503,11 +493,11 @@ export default function ResultadosRallyServer({ esAdmin }) {
                     <tbody className="divide-y divide-white/5 font-mono">
                       {sesionActualObj.datos_json?.map((j, idx) => (
                         <tr key={idx} className="hover:bg-white/5">
-                          <td className="py-2 px-2 text-amber-400 font-bold">#{j.pos || idx + 1}</td>
+                          <td className="py-2 px-2 text-[#38bdf8] font-bold">#{j.pos || idx + 1}</td>
                           <td className="py-2 px-2 font-bold text-white">{j.nombre || j.driver}</td>
                           <td className="py-2 px-2 text-neutral-300">{j.auto || j.car || 'AUTO'}</td>
                           <td className="py-2 px-2 text-center">{j.vueltas || j.laps || '-'}</td>
-                          <td className="py-2 px-2 text-right text-amber-300">{formatearMilisegundos(j.bestLapMs || j.tiempoMs)}</td>
+                          <td className="py-2 px-2 text-right text-sky-300">{formatearMilisegundos(j.bestLapMs || j.tiempoMs)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -524,14 +514,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
       )}
 
       {vistaPrincipal === 'rally' && (
-        <div className="bg-neutral-950/90 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
+        <div className="bg-neutral-950/90 border border-[#38bdf8]/40 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
           <div className="bg-neutral-900/90 p-3 border-b border-white/10 flex flex-wrap justify-between items-center gap-2">
-            
+
             <div className="flex items-center gap-2">
               <select
                 value={categoriaSeleccionada}
                 onChange={(e) => setCategoriaSeleccionada(e.target.value)}
-                className="bg-neutral-950 border border-amber-500/60 text-amber-400 text-xs font-bold rounded-xl px-3 py-2 outline-none cursor-pointer shadow"
+                className="bg-neutral-950 border border-[#38bdf8]/60 text-[#38bdf8] text-xs font-bold rounded-xl px-3 py-2 outline-none cursor-pointer shadow"
               >
                 {categoriasDisponibles.map(cat => (
                   <option key={cat} value={cat} className="bg-neutral-900 text-white">
@@ -551,7 +541,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
                     onClick={() => setSubVistaRally(tramoKey)}
                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition cursor-pointer ${
                       activo
-                        ? 'bg-amber-500 text-black shadow'
+                        ? 'bg-[#38bdf8] text-slate-950 shadow'
                         : 'text-neutral-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -563,10 +553,10 @@ export default function ResultadosRallyServer({ esAdmin }) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/10">
-            
+
             <div className="p-4 space-y-3 bg-neutral-900/20">
-              <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
-                <h4 className="text-amber-400 text-xs font-black">
+              <div className="flex justify-between items-center border-b border-[#38bdf8]/30 pb-2">
+                <h4 className="text-[#38bdf8] text-xs font-black">
                   ⏱️ TIEMPO {subVistaRally === 'general' ? `TRAMO ${Math.max(1, sesionesCronologicas.length)} (ÚLTIMO)` : subVistaRally.toUpperCase()}
                 </h4>
                 <span className="text-[10px] text-neutral-400">FILTRO: {categoriaSeleccionada}</span>
@@ -593,13 +583,13 @@ export default function ResultadosRallyServer({ esAdmin }) {
                     ) : (
                       datosTramo.map((dt, idx) => (
                         <tr key={idx} className="hover:bg-white/5">
-                          <td className="py-2.5 px-1 text-center font-bold text-amber-400">#{dt.pos}</td>
+                          <td className="py-2.5 px-1 text-center font-bold text-[#38bdf8]">#{dt.pos}</td>
                           <td className="py-2 px-2">
                             <p className="font-bold text-white">{dt.piloto}</p>
-                            <span className="text-[9px] text-amber-400">{dt.auto} — [{dt.categoria}]</span>
+                            <span className="text-[9px] text-[#38bdf8]">{dt.auto} — [{dt.categoria}]</span>
                           </td>
                           <td className="py-2 px-2 text-center text-white font-bold">{dt.tiempoStr}</td>
-                          <td className="py-2 px-2 text-right text-amber-300">{dt.difLider}</td>
+                          <td className="py-2 px-2 text-right text-sky-300">{dt.difLider}</td>
                           <td className="py-2 px-2 text-right text-neutral-400">{dt.difAnterior}</td>
                         </tr>
                       ))
@@ -610,8 +600,8 @@ export default function ResultadosRallyServer({ esAdmin }) {
             </div>
 
             <div className="p-4 space-y-3 bg-neutral-900/40">
-              <div className="flex justify-between items-center border-b border-amber-500/30 pb-2">
-                <h4 className="text-amber-400 text-xs font-black">
+              <div className="flex justify-between items-center border-b border-[#38bdf8]/30 pb-2">
+                <h4 className="text-[#38bdf8] text-xs font-black">
                   🏆 CLASIFICACIÓN GENERAL ACUMULADA
                 </h4>
                 <span className="text-[10px] text-neutral-400">
@@ -641,14 +631,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
                       datosGeneral.map((dg, idx) => {
                         const esPodio = idx < 3;
                         return (
-                          <tr key={idx} className={`hover:bg-white/5 ${esPodio ? 'bg-amber-500/5' : ''}`}>
-                            <td className="py-2.5 px-1 text-center font-black text-amber-400">#{dg.pos}</td>
+                          <tr key={idx} className={`hover:bg-white/5 ${esPodio ? 'bg-[#38bdf8]/5' : ''}`}>
+                            <td className="py-2.5 px-1 text-center font-black text-[#38bdf8]">#{dg.pos}</td>
                             <td className="py-2 px-2">
                               <p className="font-bold text-white">{dg.piloto}</p>
-                              <span className="text-[9px] text-amber-400">{dg.auto} — [{dg.categoria}]</span>
+                              <span className="text-[9px] text-[#38bdf8]">{dg.auto} — [{dg.categoria}]</span>
                             </td>
-                            <td className="py-2 px-2 text-center text-amber-400 font-bold">{dg.tiempoTotal}</td>
-                            <td className="py-2 px-2 text-right text-amber-300">{dg.difLider}</td>
+                            <td className="py-2 px-2 text-center text-[#38bdf8] font-bold">{dg.tiempoTotal}</td>
+                            <td className="py-2 px-2 text-right text-sky-300">{dg.difLider}</td>
                             <td className="py-2 px-2 text-right text-neutral-400">{dg.difAnterior}</td>
                           </tr>
                         );
