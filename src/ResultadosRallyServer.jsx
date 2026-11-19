@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
+// CONFIGURACIÓN OFICIAL FIJA PARA EVITAR ERRORES DE ENTORNO
 const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
-const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
+const TOKEN_ST = "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
 
 const extraerTexto = (valor, porDefecto = '---') => {
   if (valor === null || valor === undefined || valor === '') return porDefecto;
@@ -27,10 +28,15 @@ export default function ResultadosRallyServer({ esAdmin }) {
   }, []);
 
   async function cargarSesionesServidor() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('resultados_sesiones')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error al cargar de Supabase:", error.message);
+      return;
+    }
 
     if (data && data.length > 0) {
       setSesionesServidor(data);
@@ -43,7 +49,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
     }
   }
 
-  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL (MÉTODO LIMPIO Y ROBUSTO)
+  // FUNCIÓN PARA FORZAR EL GUARDADO MANUAL CON LAS CREDENCIALES FIJAS
   async function forzarGuardadoManual() {
     try {
       setGuardandoManual(true);
@@ -115,7 +121,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         alert('Error al guardar en Supabase: ' + error.message);
       } else {
         alert('¡Sesión y tiempos guardados exitosamente en la base de datos!');
-        await cargarSesionesServidor(); // Recarga inmediata para reflejar los cambios en pantalla
+        await cargarSesionesServidor(); 
       }
     } catch (err) {
       console.error("Error al forzar guardado:", err);
@@ -261,7 +267,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-wrc text-white uppercase p-4">
       
-      {/* BOTONES SUPERIORES PRINCIPALES */}
       <div className="flex flex-wrap justify-between items-center gap-4 bg-neutral-900/60 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <button
@@ -286,7 +291,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
           </button>
         </div>
 
-        {/* BOTÓN DE FORZAR GUARDADO MANUAL */}
         {esAdmin && (
           <button
             onClick={forzarGuardadoManual}
@@ -298,7 +302,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
         )}
       </div>
 
-      {/* VISTA 1: RESULTADOS AUTOMÁTICOS DEL SERVIDOR */}
       {vistaPrincipal === 'server' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-neutral-950/90 border border-white/10 rounded-2xl p-5 shadow-2xl">
           <div className="space-y-3 bg-neutral-900/50 p-4 rounded-xl border border-white/5">
@@ -367,7 +370,6 @@ export default function ResultadosRallyServer({ esAdmin }) {
         </div>
       )}
 
-      {/* VISTA 2: RESULTADOS RALLY CON DOBLE COLUMNA Y FILTROS */}
       {vistaPrincipal === 'rally' && (
         <div className="bg-neutral-950/90 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
           <div className="bg-neutral-900/90 p-3 border-b border-white/10 flex flex-wrap justify-between items-center gap-2">
