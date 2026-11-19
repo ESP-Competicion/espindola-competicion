@@ -3,7 +3,6 @@ import { supabase } from './supabaseClient';
 import PerfilModal from './PerfilModal';
 import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
-import SubirImagen from './SubirImagen';
 import LiveTiming from './LiveTiming';
 import ResultadosRallyServer from './ResultadosRallyServer';
 import Campeonatos from './Campeonatos';
@@ -70,15 +69,6 @@ export default function App() {
   });
   const [editandoConfig, setEditandoConfig] = useState(false);
 
-  const [albumes, setAlbumes] = useState([]);
-  const [albumSeleccionado, setAlbumSeleccionado] = useState(null);
-  const [fotosAlbumActual, setFotosAlbumActual] = useState([]);
-  const [fotoAmpliada, setFotoAmpliada] = useState(null);
-
-  const [nuevoAlbumNombre, setNuevoAlbumNombre] = useState('');
-  const [portadaAlbumUrl, setPortadaAlbumUrl] = useState('');
-  const [subiendoFotosMasivo, setSubiendoFotosMasivo] = useState(false);
-
   const [eventos, setEventos] = useState([]);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
   const [calendario, setCalendario] = useState([]);
@@ -134,7 +124,6 @@ export default function App() {
 
     obtenerDatosSesion();
     cargarConfiguracion();
-    cargarAlbumes();
     cargarEventos();
     cargarCampeonatosSelect();
     cargarCalendario();
@@ -176,16 +165,6 @@ export default function App() {
     if (data && data.historia_texto) {
       setConfig(prev => ({ ...prev, ...data }));
     }
-  }
-
-  async function cargarAlbumes() {
-    const { data } = await supabase.from('albumes_galeria').select('*').order('created_at', { ascending: false });
-    if (data) setAlbumes(data);
-  }
-
-  async function cargarFotosDeAlbum(albumId) {
-    const { data } = await supabase.from('fotos_galeria').select('*').eq('album_id', albumId).order('created_at', { ascending: false });
-    if (data) setFotosAlbumActual(data);
   }
 
   async function cargarEventos() {
@@ -258,79 +237,6 @@ export default function App() {
       alert('¡Historia guardada exitosamente!');
       setEditandoConfig(false);
     }
-  };
-
-  const handleCrearAlbum = async (e) => {
-    e.preventDefault();
-    if (!nuevoAlbumNombre.trim() || !portadaAlbumUrl) {
-      alert('Por favor ingresa el nombre del evento y selecciona una foto de portada.');
-      return;
-    }
-
-    const { error } = await supabase.from('albumes_galeria').insert([{
-      nombre: nuevoAlbumNombre,
-      portada_url: portadaAlbumUrl
-    }]);
-
-    if (error) {
-      alert('Error al crear álbum: ' + error.message);
-    } else {
-      setNuevoAlbumNombre('');
-      setPortadaAlbumUrl('');
-      cargarAlbumes();
-    }
-  };
-
-  const handleEliminarAlbum = async (id, e) => {
-    e.stopPropagation();
-    if (!confirm('¿Seguro que deseas eliminar este álbum y todas sus fotos?')) return;
-    await supabase.from('fotos_galeria').delete().eq('album_id', id);
-    const { error } = await supabase.from('albumes_galeria').delete().eq('id', id);
-    if (!error) cargarAlbumes();
-  };
-
-  const handleSubirFotosMultiples = async (e) => {
-    try {
-      const files = Array.from(e.target.files);
-      if (files.length === 0) return;
-
-      setSubiendoFotosMasivo(true);
-
-      for (const file of files) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `album_${albumSeleccionado.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('imagenes')
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage
-          .from('imagenes')
-          .getPublicUrl(fileName);
-
-        const { error: dbError } = await supabase.from('fotos_galeria').insert([{
-          album_id: albumSeleccionado.id,
-          imagen_url: data.publicUrl
-        }]);
-
-        if (dbError) throw dbError;
-      }
-
-      cargarFotosDeAlbum(albumSeleccionado.id);
-      alert(`¡Se subieron ${files.length} fotos exitosamente al álbum!`);
-    } catch (error) {
-      alert('Error al subir las fotos: ' + error.message);
-    } finally {
-      setSubiendoFotosMasivo(false);
-    }
-  };
-
-  const handleEliminarFotoAlbum = async (fotoId) => {
-    if (!confirm('¿Eliminar esta foto del álbum?')) return;
-    const { error } = await supabase.from('fotos_galeria').delete().eq('id', fotoId);
-    if (!error) cargarFotosDeAlbum(albumSeleccionado.id);
   };
 
   const handleCrearEvento = async (e) => {
@@ -548,7 +454,7 @@ export default function App() {
       <header className="relative z-50 w-full max-w-[1400px] mx-auto px-4 pt-4 flex flex-wrap items-center justify-between gap-3">
         
         <button 
-          onClick={() => { setPestanaActiva('inicio'); setAlbumSeleccionado(null); }}
+          onClick={() => { setPestanaActiva('inicio'); }}
           className="cursor-pointer group flex items-center focus:outline-none"
           title="Ir al inicio"
         >
@@ -566,11 +472,12 @@ export default function App() {
               { id: 'historia', label: 'HISTORIA' },
               { id: 'eventos', label: `EVENTOS${esAdmin ? ' ⚙️' : ''}` },
               { id: 'livetiming', label: 'LIVETIMING' },
-              { id: 'fama', label: 'SALON DE LA FAMA' }
+              { id: 'resultados', label: 'RESULTADOS' },
+              { id: 'calendario', label: 'CALENDARIO' }
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => { setPestanaActiva(item.id); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                onClick={() => { setPestanaActiva(item.id); setMenuPrincipalAbierto(false); }}
                 className={`text-[11px] md:text-xs font-wrc tracking-wider transition cursor-pointer ${
                   pestanaActiva === item.id ? 'text-amber-400' : 'text-white hover:text-white/75'
                 }`}
@@ -594,33 +501,21 @@ export default function App() {
           </nav>
 
           {menuPrincipalAbierto && (
-            <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/85 backdrop-blur-xl border border-white/30 shadow-2xl py-3 px-4 flex flex-col items-center gap-2.5 z-50">
+            <div className="absolute right-0 mt-2 w-52 rounded-xl bg-black/85 backdrop-blur-xl border border-white/30 shadow-2xl py-3 px-4 flex flex-col items-center gap-2.5 z-50">
               <button
-                onClick={() => { setPestanaActiva('resultados'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
-                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'resultados' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
+                onClick={() => { setPestanaActiva('fama'); setMenuPrincipalAbierto(false); }}
+                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'fama' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
-                RESULTADOS
+                SALON DE LA FAMA
               </button>
               <button
-                onClick={() => { setPestanaActiva('campeonato'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                onClick={() => { setPestanaActiva('campeonato'); setMenuPrincipalAbierto(false); }}
                 className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'campeonato' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
-                CAMPEONATOS 🏆
+                PUNTOS CAMPEONATOS 🏆
               </button>
               <button
-                onClick={() => { setPestanaActiva('calendario'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
-                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'calendario' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
-              >
-                CALENDARIO
-              </button>
-              <button
-                onClick={() => { setPestanaActiva('galeria'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
-                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'galeria' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
-              >
-                GALERIA
-              </button>
-              <button
-                onClick={() => { setPestanaActiva('miembros'); setAlbumSeleccionado(null); setMenuPrincipalAbierto(false); }}
+                onClick={() => { setPestanaActiva('miembros'); setMenuPrincipalAbierto(false); }}
                 className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'miembros' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
               >
                 MIEMBROS
@@ -796,6 +691,44 @@ export default function App() {
               </div>
             </div>
 
+            {esAdmin && (
+              <form onSubmit={handleCrearCalendario} className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/30 rounded-2xl p-5 shadow-xl space-y-3">
+                <h3 className="font-wrc text-sm text-amber-400 tracking-wider">⚙️ AGREGAR FECHA AL CALENDARIO (ADMIN)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    placeholder="TÍTULO DE LA FECHA"
+                    value={nuevoCalendario.titulo}
+                    onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                    required
+                  />
+                  <input
+                    type="date"
+                    value={nuevoCalendario.fecha}
+                    onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, fecha: e.target.value })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="DESCRIPCIÓN / TRAMO"
+                    value={nuevoCalendario.descripcion}
+                    onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, descripcion: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black px-5 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    + GUARDAR FECHA
+                  </button>
+                </div>
+              </form>
+            )}
+
             <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5 md:p-6 shadow-2xl space-y-3">
               <div className="grid grid-cols-7 gap-1.5 text-center font-wrc text-amber-400 text-xs border-b border-white/10 pb-2">
                 <span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span>
@@ -842,63 +775,24 @@ export default function App() {
                 })}
               </div>
             </div>
-          </div>
-        )}
 
-        {pestanaActiva === 'galeria' && (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            {!albumSeleccionado ? (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">ÁLBUMES DE EVENTOS</h2>
-                  <p className="text-neutral-300 text-xs font-wrc">SELECCIONA UNA CARPETA PARA VER LAS FOTOGRAFÍAS OFICIALES.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {albumes.map((album) => (
-                    <div
-                      key={album.id}
-                      onClick={() => { setAlbumSeleccionado(album); cargarFotosDeAlbum(album.id); }}
-                      className="group relative bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:border-amber-500/50 transition duration-300"
-                    >
-                      <div className="h-40 overflow-hidden relative">
-                        <img
-                          src={album.portada_url}
-                          alt={album.nombre}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+            {esAdmin && calendario.length > 0 && (
+              <div className="bg-neutral-900/60 border border-white/10 rounded-2xl p-4 space-y-2">
+                <h3 className="font-wrc text-xs text-amber-400">FECHAS CARGADAS EN CALENDARIO</h3>
+                <div className="divide-y divide-white/10">
+                  {calendario.map((c) => (
+                    <div key={c.id} className="py-2 flex justify-between items-center gap-3 text-xs">
+                      <div>
+                        <span className="text-amber-400 font-mono mr-2">{c.fecha}</span>
+                        <span className="font-bold text-white">{c.titulo}</span>
+                        {c.descripcion && <span className="text-neutral-400 ml-2 text-[11px]">— {c.descripcion}</span>}
                       </div>
-                      <div className="p-4 flex justify-between items-center">
-                        <h3 className="font-wrc text-base text-white group-hover:text-amber-400 transition">{album.nombre}</h3>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-white/10 pb-3">
-                  <div>
-                    <button
-                      onClick={() => setAlbumSeleccionado(null)}
-                      className="text-[11px] font-wrc text-amber-400 hover:underline mb-1 inline-block cursor-pointer"
-                    >
-                      ← VOLVER A ÁLBUMES
-                    </button>
-                    <h2 className="font-wrc text-3xl text-white">{albumSeleccionado.nombre}</h2>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
-                  {fotosAlbumActual.map((foto) => (
-                    <div key={foto.id} className="relative group bg-neutral-900 rounded-xl overflow-hidden border border-white/10 aspect-video">
-                      <img
-                        src={foto.imagen_url}
-                        alt="Foto competencia"
-                        onClick={() => setFotoAmpliada(foto.imagen_url)}
-                        className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition duration-300"
-                      />
+                      <button
+                        onClick={() => handleEliminarCalendario(c.id)}
+                        className="text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-lg text-[10px] cursor-pointer"
+                      >
+                        ELIMINAR
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -917,6 +811,68 @@ export default function App() {
               <h2 className="font-wrc text-3xl text-amber-400 tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
               <p className="text-neutral-300 text-xs font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR Y VINCULAR AL TORNEO.</p>
             </div>
+
+            {esAdmin && (
+              <form onSubmit={handleCrearEvento} className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/30 rounded-2xl p-5 shadow-xl space-y-3">
+                <h3 className="font-wrc text-sm text-amber-400 tracking-wider">⚙️ CREAR NUEVO EVENTO (ADMIN)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    placeholder="TÍTULO DEL EVENTO"
+                    value={nuevoEvento.titulo}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                    required
+                  />
+                  <input
+                    type="date"
+                    value={nuevoEvento.fecha}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, fecha: e.target.value })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="HORARIO (EJ: 21:00 HS)"
+                    value={nuevoEvento.horario}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="CATEGORÍAS (EJ: RC2 / AYGO)"
+                    value={nuevoEvento.categorias}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="MODELOS DE AUTOS"
+                    value={nuevoEvento.modelos_autos}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  />
+                  <select
+                    value={nuevoEvento.campeonato_id}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  >
+                    <option value="">SIN CAMPEONATO VINCULADO</option>
+                    {campeonatosDisponibles.map((camp) => (
+                      <option key={camp.id} value={camp.id}>{camp.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black px-5 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    + PUBLICAR EVENTO
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="space-y-3">
               {eventos.map((ev) => (
@@ -938,6 +894,14 @@ export default function App() {
                     >
                       INSCRIBIRSE
                     </button>
+                    {esAdmin && (
+                      <button
+                        onClick={() => handleEliminarEvento(ev.id)}
+                        className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-xs px-3 py-2 rounded-xl transition cursor-pointer"
+                      >
+                        ELIMINAR
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -972,6 +936,66 @@ export default function App() {
               </div>
             </div>
 
+            {esAdmin && (
+              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/30 rounded-2xl p-5 shadow-xl space-y-3">
+                <h3 className="font-wrc text-sm text-amber-400 tracking-wider">
+                  ⚙️ {editandoId !== null ? 'EDITAR PILOTO DEL SALÓN DE LA FAMA' : 'AGREGAR PILOTO AL SALÓN DE LA FAMA'} (ADMIN)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <input
+                    type="text"
+                    placeholder="NOMBRE DEL PILOTO"
+                    value={nuevoPilotoFama.nombre}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="CATEGORÍA"
+                    value={nuevoPilotoFama.categoria}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value.toUpperCase() })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="CAMPEONATOS"
+                    value={nuevoPilotoFama.campeonatos}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="URL FOTO (OPCIONAL)"
+                    value={nuevoPilotoFama.foto}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: e.target.value })}
+                    className="bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  {editandoId !== null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditandoId(null);
+                        setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' });
+                      }}
+                      className="bg-neutral-800 text-neutral-300 font-wrc text-xs px-4 py-2 rounded-xl cursor-pointer"
+                    >
+                      CANCELAR
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black px-5 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    {editandoId !== null ? 'GUARDAR CAMBIOS' : '+ AGREGAR AL SALÓN'}
+                  </button>
+                </div>
+              </form>
+            )}
+
             {hallFama.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center pt-6 pb-2">
                 {hallFama[1] && (
@@ -989,6 +1013,22 @@ export default function App() {
                     <div className="mt-3 bg-white/5 border border-white/15 rounded-lg px-4 py-1.5 font-wrc text-xs tracking-wider text-neutral-200">
                       TÍTULOS: <span className="text-white text-sm ml-1">{hallFama[1].campeonatos}</span> 🏆
                     </div>
+                    {esAdmin && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => handleEditarPilotoFama(hallFama[1])}
+                          className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded cursor-pointer"
+                        >
+                          EDITAR
+                        </button>
+                        <button
+                          onClick={() => handleEliminarPilotoFama(hallFama[1].id)}
+                          className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2.5 py-1 rounded cursor-pointer"
+                        >
+                          BORRAR
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1007,6 +1047,22 @@ export default function App() {
                     <div className="mt-3 bg-amber-500/15 border border-amber-400/50 rounded-lg px-5 py-2 font-wrc text-sm tracking-wider text-amber-300">
                       TÍTULOS ABSOLUTOS: <span className="text-amber-400 text-base ml-1">{hallFama[0].campeonatos}</span> 🏆
                     </div>
+                    {esAdmin && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => handleEditarPilotoFama(hallFama[0])}
+                          className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded cursor-pointer"
+                        >
+                          EDITAR
+                        </button>
+                        <button
+                          onClick={() => handleEliminarPilotoFama(hallFama[0].id)}
+                          className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2.5 py-1 rounded cursor-pointer"
+                        >
+                          BORRAR
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1025,8 +1081,72 @@ export default function App() {
                     <div className="mt-3 bg-white/5 border border-amber-700/40 rounded-lg px-4 py-1.5 font-wrc text-xs tracking-wider text-neutral-200">
                       TÍTULOS: <span className="text-amber-500 text-sm ml-1">{hallFama[2].campeonatos}</span> 🏆
                     </div>
+                    {esAdmin && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => handleEditarPilotoFama(hallFama[2])}
+                          className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded cursor-pointer"
+                        >
+                          EDITAR
+                        </button>
+                        <button
+                          onClick={() => handleEliminarPilotoFama(hallFama[2].id)}
+                          className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2.5 py-1 rounded cursor-pointer"
+                        >
+                          BORRAR
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {restoPilotos.length > 0 && (
+              <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                <div className="px-5 py-3 bg-white/5 border-b border-white/10 flex justify-between items-center">
+                  <h3 className="font-wrc text-sm text-amber-400 tracking-wider">RANKING COMPLETO DEL SALÓN DE LA FAMA</h3>
+                  <span className="text-[11px] text-neutral-400 font-mono">{hallFama.length} PILOTOS</span>
+                </div>
+                <div className="divide-y divide-white/10">
+                  {restoPilotos.map((piloto, idx) => (
+                    <div key={piloto.id || idx} className="px-5 py-3 flex flex-wrap justify-between items-center gap-3 hover:bg-white/5 transition">
+                      <div className="flex items-center gap-3">
+                        <span className="font-wrc text-amber-400 text-base w-8 text-center">#{idx + 4}</span>
+                        <img
+                          src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'}
+                          alt={piloto.nombre}
+                          className="w-9 h-9 rounded-full object-cover border border-white/20 bg-neutral-900"
+                        />
+                        <div>
+                          <p className="font-wrc text-base text-white">{piloto.nombre}</p>
+                          <span className="text-[10px] text-neutral-400">{piloto.categoria || 'CATEGORÍA GENERAL'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs text-amber-300 font-bold">
+                          {piloto.campeonatos} TÍTULOS 🏆
+                        </span>
+                        {esAdmin && (
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => handleEditarPilotoFama(piloto)}
+                              className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded cursor-pointer"
+                            >
+                              EDITAR
+                            </button>
+                            <button
+                              onClick={() => handleEliminarPilotoFama(piloto.id)}
+                              className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/40 px-2.5 py-1 rounded cursor-pointer"
+                            >
+                              BORRAR
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1096,14 +1216,12 @@ export default function App() {
 
       </main>
 
-      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex flex-col md:flex-row items-center justify-between gap-3 mt-8 text-xs">
-        <div className="hidden md:block w-20" />
-
-        <div className="flex items-center justify-center">
+      <footer className="relative z-40 w-full max-w-[1400px] mx-auto px-6 pb-4 flex items-center justify-center mt-8 text-xs">
+        <div className="flex items-center justify-center w-full">
           <img 
             src="/sponsor.svg" 
             alt="Sponsors Espíndola Competición" 
-            className="h-4 md:h-5 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md"
+            className="h-4 md:h-5 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md mx-auto"
           />
         </div>
       </footer>
