@@ -27,10 +27,11 @@ export default function ResultadosRallyServer({ esAdmin }) {
   }, []);
 
   async function cargarSesionesServidor() {
+    // Ordenamos por 'fecha' que es la columna real que tienes en Supabase
     const { data, error } = await supabase
       .from('resultados_sesiones')
       .select('*')
-      .order('id', { ascending: false });
+      .order('fecha', { ascending: false });
 
     if (error) {
       console.error("Error al cargar de Supabase:", error.message);
@@ -143,7 +144,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
   }
 
   function formatearFechaSesion(s) {
-    const fechaRaw = s.created_at || s.fecha || s.inserted_at;
+    const fechaRaw = s.fecha || s.created_at || s.inserted_at;
     if (!fechaRaw) return `SESIÓN #${s.id}`;
     return new Date(fechaRaw).toLocaleString();
   }
