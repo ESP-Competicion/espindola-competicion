@@ -27,7 +27,7 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
   else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
   else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
-  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
+  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p === 'EEUU' || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
 
@@ -369,9 +369,14 @@ export default function App() {
   ];
 
   const restoPilotos = hallFama.slice(3);
+  const inicialUsuario = perfil?.nombre_piloto
+    ? perfil.nombre_piloto.charAt(0).toUpperCase()
+    : usuario?.email
+      ? usuario.email.charAt(0).toUpperCase()
+      : 'E';
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-amber-500 selection:text-black flex flex-col justify-between uppercase text-xs md:text-sm">
+    <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
       
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
@@ -425,7 +430,7 @@ export default function App() {
                 key={item.id}
                 onClick={() => { setPestanaActiva(item.id); setMenuPrincipalAbierto(false); }}
                 className={`text-[11px] md:text-xs font-wrc tracking-wider transition cursor-pointer ${
-                  pestanaActiva === item.id ? 'text-amber-400' : 'text-white hover:text-white/75'
+                  pestanaActiva === item.id ? 'text-[#38bdf8]' : 'text-white hover:text-white/75'
                 }`}
               >
                 {item.label}
@@ -437,7 +442,7 @@ export default function App() {
                 setMenuPrincipalAbierto(!menuPrincipalAbierto);
                 setMenuUsuarioAbierto(false);
               }}
-              className="pl-1 text-white hover:text-amber-400 transition cursor-pointer focus:outline-none"
+              className="pl-1 text-white hover:text-[#38bdf8] transition cursor-pointer focus:outline-none"
               aria-label="Más secciones"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -450,19 +455,19 @@ export default function App() {
             <div className="absolute right-0 mt-2 w-52 rounded-xl bg-black/85 backdrop-blur-xl border border-white/30 shadow-2xl py-3 px-4 flex flex-col items-center gap-2.5 z-50">
               <button
                 onClick={() => { setPestanaActiva('fama'); setMenuPrincipalAbierto(false); }}
-                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'fama' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
+                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'fama' ? 'text-[#38bdf8]' : 'text-white hover:text-sky-300'}`}
               >
                 SALON DE LA FAMA
               </button>
               <button
                 onClick={() => { setPestanaActiva('campeonato'); setMenuPrincipalAbierto(false); }}
-                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'campeonato' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
+                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'campeonato' ? 'text-[#38bdf8]' : 'text-white hover:text-sky-300'}`}
               >
                 PUNTOS CAMPEONATOS 🏆
               </button>
               <button
                 onClick={() => { setPestanaActiva('miembros'); setMenuPrincipalAbierto(false); }}
-                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'miembros' ? 'text-amber-400' : 'text-white hover:text-amber-300'}`}
+                className={`text-xs font-wrc tracking-wider transition cursor-pointer ${pestanaActiva === 'miembros' ? 'text-[#38bdf8]' : 'text-white hover:text-sky-300'}`}
               >
                 MIEMBROS
               </button>
@@ -477,14 +482,28 @@ export default function App() {
                 onClick={() => setMostrarPerfilModal(true)}
                 className="flex items-center gap-2 group cursor-pointer focus:outline-none"
               >
-                <div className="w-7 h-7 rounded-full bg-neutral-900 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc text-amber-400 text-[11px]">
+                <div className="w-7 h-7 rounded-full bg-neutral-900 border border-[#38bdf8]/50 flex items-center justify-center overflow-hidden font-wrc text-[#38bdf8] text-[11px]">
                   {perfil?.avatar_url ? (
-                    <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
-                  )}
+                    <img
+                      src={perfil.avatar_url}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextSibling) {
+                          e.currentTarget.nextSibling.style.display = 'flex';
+                        }
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
+                  <span
+                    style={{ display: perfil?.avatar_url ? 'none' : 'flex' }}
+                    className="w-full h-full items-center justify-center"
+                  >
+                    {inicialUsuario}
+                  </span>
                 </div>
-                <span className="font-wrc text-[11px] md:text-xs tracking-wider text-white group-hover:text-amber-400 transition">
+                <span className="font-wrc text-[11px] md:text-xs tracking-wider text-white group-hover:text-[#38bdf8] transition">
                   {(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}
                 </span>
               </button>
@@ -494,7 +513,7 @@ export default function App() {
                   setMenuUsuarioAbierto(!menuUsuarioAbierto);
                   setMenuPrincipalAbierto(false);
                 }}
-                className="pl-1 text-white hover:text-amber-400 transition cursor-pointer focus:outline-none"
+                className="pl-1 text-white hover:text-[#38bdf8] transition cursor-pointer focus:outline-none"
                 aria-label="Menú de usuario"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -505,7 +524,7 @@ export default function App() {
           ) : (
             <button 
               onClick={() => setMostrarAuthModal(true)}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs px-4 py-2 rounded-full transition shadow-md shadow-amber-500/20 tracking-wider cursor-pointer font-black"
+              className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-xs px-4 py-2 rounded-full transition shadow-md shadow-[#38bdf8]/20 tracking-wider cursor-pointer font-black"
             >
               ACCEDER
             </button>
@@ -515,13 +534,13 @@ export default function App() {
             <div className="absolute right-0 mt-2 w-48 rounded-xl bg-black/85 backdrop-blur-xl border border-white/30 shadow-2xl py-3 px-4 flex flex-col items-center gap-2.5 z-50">
               <button
                 onClick={() => { setPestanaActiva('perfil'); setMenuUsuarioAbierto(false); }}
-                className="text-xs font-wrc tracking-wider transition text-white hover:text-amber-300 cursor-pointer"
+                className="text-xs font-wrc tracking-wider transition text-white hover:text-sky-300 cursor-pointer"
               >
                 MI PERFIL
               </button>
               <button
                 onClick={() => { setMostrarPerfilModal(true); setMenuUsuarioAbierto(false); }}
-                className="text-xs font-wrc tracking-wider transition text-white hover:text-amber-300 cursor-pointer"
+                className="text-xs font-wrc tracking-wider transition text-white hover:text-sky-300 cursor-pointer"
               >
                 CONFIGURACION
               </button>
@@ -542,12 +561,12 @@ export default function App() {
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[55vh] flex flex-col items-center justify-center">
             <div className="max-w-lg mx-auto text-center space-y-3 py-6">
-              <span className="inline-block bg-amber-500/20 text-amber-400 font-wrc text-[11px] tracking-widest px-3 py-1 rounded-full border border-amber-500/40 uppercase backdrop-blur-md shadow-md">
+              <span className="inline-block bg-[#38bdf8]/20 text-[#38bdf8] font-wrc text-[11px] tracking-widest px-3 py-1 rounded-full border border-[#38bdf8]/40 uppercase backdrop-blur-md shadow-md">
                 TEMPORADA OFICIAL 2027 • ESPÍNDOLA COMPETICIÓN {esAdmin && '• MODO ADMIN'}
               </span>
 
               <h1 className="font-wrc text-3xl md:text-5xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)]">
-                PRECISIÓN, VELOCIDAD Y <span className="text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]">GLORIA</span>
+                PRECISIÓN, VELOCIDAD Y <span className="text-[#38bdf8] drop-shadow-[0_0_20px_rgba(56,189,248,0.55)]">GLORIA</span>
               </h1>
             </div>
           </div>
@@ -565,11 +584,11 @@ export default function App() {
           <div className="space-y-4 max-w-2xl mx-auto">
             <div className="bg-neutral-900/65 backdrop-blur-md border border-white/10 rounded-xl p-4 md:p-5 shadow-2xl space-y-3">
               <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <h2 className="font-wrc text-xl md:text-2xl text-amber-400 tracking-wide">HISTORIA DEL EQUIPO</h2>
+                <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">HISTORIA DEL EQUIPO</h2>
                 {esAdmin && !editandoConfig && (
                   <button
                     onClick={() => setEditandoConfig(true)}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer font-black"
+                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer font-black"
                   >
                     ✏️ EDITAR HISTORIA
                   </button>
@@ -582,12 +601,12 @@ export default function App() {
                 </div>
               ) : (
                 <form onSubmit={handleGuardarConfig} className="space-y-2.5">
-                  <p className="text-[10px] text-amber-400 font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
+                  <p className="text-[10px] text-[#38bdf8] font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
                   <textarea
                     rows={12}
                     value={config.historia_texto}
                     onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
-                    className="w-full bg-neutral-950 border border-amber-500/50 rounded-xl p-3 text-[11px] text-white focus:border-amber-500 outline-none font-wrc uppercase leading-snug"
+                    className="w-full bg-neutral-950 border border-[#38bdf8]/50 rounded-xl p-3 text-[11px] text-white focus:border-[#38bdf8] outline-none font-wrc uppercase leading-snug"
                   />
                   <div className="flex justify-end gap-2">
                     <button
@@ -599,7 +618,7 @@ export default function App() {
                     </button>
                     <button
                       type="submit"
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[10px] font-black px-4 py-1.5 rounded-lg transition shadow cursor-pointer"
+                      className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] font-black px-4 py-1.5 rounded-lg transition shadow cursor-pointer"
                     >
                       💾 GUARDAR CAMBIOS
                     </button>
@@ -614,14 +633,14 @@ export default function App() {
           <div className="space-y-4 max-w-3xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
               <div>
-                <h2 className="font-wrc text-xl md:text-2xl text-amber-400 tracking-wide">CALENDARIO DE CARRERAS</h2>
+                <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">CALENDARIO DE CARRERAS</h2>
                 <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">NAVEGA POR LOS MESES DEL 2027 EN ADELANTE Y CONFIRMA TU PARTICIPACIÓN.</p>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-neutral-900/80 border border-amber-500/40 px-2.5 py-1 rounded-lg shadow-lg">
+              <div className="flex items-center gap-1.5 bg-neutral-900/80 border border-[#38bdf8]/40 px-2.5 py-1 rounded-lg shadow-lg">
                 <button
                   onClick={() => cambiarMes(-1)}
-                  className="text-amber-400 hover:text-white font-wrc text-[10px] px-2 py-0.5 bg-neutral-950 rounded border border-neutral-800 transition cursor-pointer"
+                  className="text-[#38bdf8] hover:text-white font-wrc text-[10px] px-2 py-0.5 bg-neutral-950 rounded border border-neutral-800 transition cursor-pointer"
                 >
                   ◀ ANTERIOR
                 </button>
@@ -630,7 +649,7 @@ export default function App() {
                 </span>
                 <button
                   onClick={() => cambiarMes(1)}
-                  className="text-amber-400 hover:text-white font-wrc text-[10px] px-2 py-0.5 bg-neutral-950 rounded border border-neutral-800 transition cursor-pointer"
+                  className="text-[#38bdf8] hover:text-white font-wrc text-[10px] px-2 py-0.5 bg-neutral-950 rounded border border-neutral-800 transition cursor-pointer"
                 >
                   SIGUIENTE ▶
                 </button>
@@ -638,22 +657,22 @@ export default function App() {
             </div>
 
             {esAdmin && (
-              <form onSubmit={handleCrearCalendario} className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/30 rounded-xl p-3.5 shadow-xl space-y-2">
-                <h3 className="font-wrc text-xs text-amber-400 tracking-wider">⚙️ AGREGAR FECHA AL CALENDARIO (ADMIN)</h3>
+              <form onSubmit={handleCrearCalendario} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2">
+                <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">⚙️ AGREGAR FECHA AL CALENDARIO (ADMIN)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <input
                     type="text"
                     placeholder="TÍTULO DE LA FECHA"
                     value={nuevoCalendario.titulo}
                     onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, titulo: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
                     type="date"
                     value={nuevoCalendario.fecha}
                     onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, fecha: e.target.value })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
@@ -661,13 +680,13 @@ export default function App() {
                     placeholder="DESCRIPCIÓN / TRAMO"
                     value={nuevoCalendario.descripcion}
                     onChange={(e) => setNuevoCalendario({ ...nuevoCalendario, descripcion: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                 </div>
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[10px] font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer"
+                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer"
                   >
                     + GUARDAR FECHA
                   </button>
@@ -676,7 +695,7 @@ export default function App() {
             )}
 
             <div className="bg-neutral-900/65 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-2xl space-y-2">
-              <div className="grid grid-cols-7 gap-1 text-center font-wrc text-amber-400 text-[10px] border-b border-white/10 pb-1.5">
+              <div className="grid grid-cols-7 gap-1 text-center font-wrc text-[#38bdf8] text-[10px] border-b border-white/10 pb-1.5">
                 <span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span>
               </div>
 
@@ -700,16 +719,16 @@ export default function App() {
                       }}
                       className={`h-11 md:h-14 rounded-lg p-1.5 flex flex-col justify-between transition border relative overflow-hidden ${
                         tieneCarrera 
-                          ? 'bg-amber-500/15 border-amber-500/60 shadow-[0_0_10px_rgba(251,191,36,0.25)] cursor-pointer hover:bg-amber-500/25' 
+                          ? 'bg-[#38bdf8]/15 border-[#38bdf8]/60 shadow-[0_0_10px_rgba(56,189,248,0.22)] cursor-pointer hover:bg-[#38bdf8]/25' 
                           : 'bg-neutral-950/40 border-white/5 hover:border-white/20'
                       }`}
                     >
-                      <span className={`font-wrc text-[11px] md:text-xs leading-none ${tieneCarrera ? 'text-amber-400 font-black' : 'text-neutral-400'}`}>
+                      <span className={`font-wrc text-[11px] md:text-xs leading-none ${tieneCarrera ? 'text-[#38bdf8] font-black' : 'text-neutral-400'}`}>
                         {item.dia}
                       </span>
 
                       {tieneCarrera && (
-                        <div className="flex items-center gap-0.5 text-[8px] font-wrc text-amber-300 uppercase bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/30 truncate leading-none">
+                        <div className="flex items-center gap-0.5 text-[8px] font-wrc text-sky-200 uppercase bg-[#38bdf8]/20 px-1 py-0.5 rounded border border-[#38bdf8]/35 truncate leading-none">
                           <span>🏁</span>
                           <span className="truncate">{item.eventos[0].titulo}</span>
                         </div>
@@ -722,12 +741,12 @@ export default function App() {
 
             {esAdmin && calendario.length > 0 && (
               <div className="bg-neutral-900/60 border border-white/10 rounded-xl p-3 space-y-1.5">
-                <h3 className="font-wrc text-[11px] text-amber-400">FECHAS CARGADAS EN CALENDARIO</h3>
+                <h3 className="font-wrc text-[11px] text-[#38bdf8]">FECHAS CARGADAS EN CALENDARIO</h3>
                 <div className="divide-y divide-white/10">
                   {calendario.map((c) => (
                     <div key={c.id} className="py-1.5 flex justify-between items-center gap-2 text-[11px]">
                       <div className="truncate">
-                        <span className="text-amber-400 font-mono mr-2">{c.fecha}</span>
+                        <span className="text-[#38bdf8] font-mono mr-2">{c.fecha}</span>
                         <span className="font-bold text-white">{c.titulo}</span>
                         {c.descripcion && <span className="text-neutral-400 ml-2 text-[10px]">— {c.descripcion}</span>}
                       </div>
@@ -752,27 +771,27 @@ export default function App() {
         {pestanaActiva === 'eventos' && (
           <div className="space-y-4 max-w-3xl mx-auto">
             <div>
-              <h2 className="font-wrc text-xl md:text-2xl text-amber-400 tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
+              <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
               <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR Y VINCULAR AL TORNEO.</p>
             </div>
 
             {esAdmin && (
-              <form onSubmit={handleCrearEvento} className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/30 rounded-xl p-3.5 shadow-xl space-y-2.5">
-                <h3 className="font-wrc text-xs text-amber-400 tracking-wider">⚙️ CREAR NUEVO EVENTO (ADMIN)</h3>
+              <form onSubmit={handleCrearEvento} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2.5">
+                <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">⚙️ CREAR NUEVO EVENTO (ADMIN)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <input
                     type="text"
                     placeholder="TÍTULO DEL EVENTO"
                     value={nuevoEvento.titulo}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, titulo: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
                     type="date"
                     value={nuevoEvento.fecha}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, fecha: e.target.value })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
@@ -780,26 +799,26 @@ export default function App() {
                     placeholder="HORARIO (EJ: 21:00 HS)"
                     value={nuevoEvento.horario}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, horario: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                   <input
                     type="text"
                     placeholder="CATEGORÍAS (EJ: RC2 / AYGO)"
                     value={nuevoEvento.categorias}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                   <input
                     type="text"
                     placeholder="MODELOS DE AUTOS"
                     value={nuevoEvento.modelos_autos}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, modelos_autos: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                   <select
                     value={nuevoEvento.campeonato_id}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   >
                     <option value="">SIN CAMPEONATO VINCULADO</option>
                     {campeonatosDisponibles.map((camp) => (
@@ -810,7 +829,7 @@ export default function App() {
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[10px] font-black px-4 py-1.5 rounded-lg transition cursor-pointer"
+                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] font-black px-4 py-1.5 rounded-lg transition cursor-pointer"
                   >
                     + PUBLICAR EVENTO
                   </button>
@@ -822,7 +841,7 @@ export default function App() {
               {eventos.map((ev) => (
                 <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                   <div className="space-y-0.5">
-                    <span className="text-amber-400 font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
+                    <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
                     <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
                     <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
                   </div>
@@ -834,7 +853,7 @@ export default function App() {
                         setModoModalEvento('formulario');
                         cargarAsistentesEventoEquipo(ev.id);
                       }}
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
+                      className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
                     >
                       INSCRIBIRSE
                     </button>
@@ -857,7 +876,7 @@ export default function App() {
           <div className="space-y-5 max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
               <div>
-                <h2 className="font-wrc text-xl md:text-2xl text-amber-400 tracking-wide">
+                <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">
                   SALÓN DE LA FAMA - PODIO DE CAMPEONES
                 </h2>
                 <p className="text-neutral-200 text-[10px] md:text-xs font-wrc mt-0.5 uppercase">
@@ -865,15 +884,15 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="bg-black/65 backdrop-blur-md border border-amber-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-xl">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-sm">
+              <div className="bg-black/65 backdrop-blur-md border border-[#38bdf8]/40 px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-xl">
+                <div className="w-7 h-7 rounded-lg bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-sm">
                   🏆
                 </div>
                 <div>
                   <span className="block text-[9px] font-wrc text-neutral-400 uppercase tracking-widest">
                     CAMPEONATOS EN TOTAL
                   </span>
-                  <span className="font-wrc text-base md:text-lg text-amber-400 leading-none">
+                  <span className="font-wrc text-base md:text-lg text-[#38bdf8] leading-none">
                     {totalCampeonatosEquipo} TÍTULOS
                   </span>
                 </div>
@@ -881,8 +900,8 @@ export default function App() {
             </div>
 
             {esAdmin && (
-              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-amber-500/30 rounded-xl p-3.5 shadow-xl space-y-2">
-                <h3 className="font-wrc text-xs text-amber-400 tracking-wider">
+              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2">
+                <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">
                   ⚙️ {editandoId !== null ? 'EDITAR PILOTO DEL SALÓN DE LA FAMA' : 'AGREGAR PILOTO AL SALÓN DE LA FAMA'} (ADMIN)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -891,7 +910,7 @@ export default function App() {
                     placeholder="NOMBRE DEL PILOTO"
                     value={nuevoPilotoFama.nombre}
                     onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
@@ -899,14 +918,14 @@ export default function App() {
                     placeholder="CATEGORÍA"
                     value={nuevoPilotoFama.categoria}
                     onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                   <input
                     type="number"
                     placeholder="CAMPEONATOS"
                     value={nuevoPilotoFama.campeonatos}
                     onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
@@ -914,7 +933,7 @@ export default function App() {
                     placeholder="URL FOTO (OPCIONAL)"
                     value={nuevoPilotoFama.foto}
                     onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: e.target.value })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500"
+                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                 </div>
                 <div className="flex justify-end gap-2">
@@ -932,7 +951,7 @@ export default function App() {
                   )}
                   <button
                     type="submit"
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-wrc text-[10px] font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer"
+                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] font-black px-3.5 py-1.5 rounded-lg transition cursor-pointer"
                   >
                     {editandoId !== null ? 'GUARDAR CAMBIOS' : '+ AGREGAR AL SALÓN'}
                   </button>
@@ -944,7 +963,7 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-center pt-4 pb-1">
                 {hallFama[1] && (
                   <div className="order-2 md:order-1 relative bg-black/70 backdrop-blur-md border border-neutral-400/50 rounded-xl p-3.5 text-center shadow-xl flex flex-col items-center justify-between">
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-neutral-200 text-black font-wrc text-[9px] px-2.5 py-0.5 rounded-full shadow tracking-wider flex items-center gap-1 whitespace-nowrap">
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-neutral-200 text-slate-950 font-wrc text-[9px] px-2.5 py-0.5 rounded-full shadow tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥈</span> 2º PUESTO
                     </div>
                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-neutral-300 mt-2.5 mb-1.5 shadow bg-neutral-900">
@@ -961,7 +980,7 @@ export default function App() {
                       <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => handleEditarPilotoFama(hallFama[1])}
-                          className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded cursor-pointer"
+                          className="text-[9px] bg-[#38bdf8]/20 text-sky-300 border border-[#38bdf8]/40 px-2 py-0.5 rounded cursor-pointer"
                         >
                           EDITAR
                         </button>
@@ -977,25 +996,25 @@ export default function App() {
                 )}
 
                 {hallFama[0] && (
-                  <div className="order-1 md:order-2 relative bg-gradient-to-b from-amber-500/20 via-black/80 to-black/85 backdrop-blur-md border-2 border-amber-400 rounded-xl p-4 text-center shadow-[0_0_25px_rgba(251,191,36,0.22)] flex flex-col items-center justify-between md:-translate-y-2">
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-black font-wrc text-[10px] px-3 py-0.5 rounded-full shadow tracking-wider flex items-center gap-1 whitespace-nowrap">
+                  <div className="order-1 md:order-2 relative bg-gradient-to-b from-[#38bdf8]/20 via-black/80 to-black/85 backdrop-blur-md border-2 border-[#38bdf8] rounded-xl p-4 text-center shadow-[0_0_25px_rgba(56,189,248,0.22)] flex flex-col items-center justify-between md:-translate-y-2">
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#38bdf8] text-slate-950 font-wrc text-[10px] px-3 py-0.5 rounded-full shadow tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥇</span> 1º PUESTO
                     </div>
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 mt-2.5 mb-1.5 shadow-[0_0_12px_rgba(251,191,36,0.35)] bg-neutral-900">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#38bdf8] mt-2.5 mb-1.5 shadow-[0_0_12px_rgba(56,189,248,0.35)] bg-neutral-900">
                       <img src={hallFama[0].foto} alt={hallFama[0].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
-                      <h3 className="font-wrc text-lg md:text-xl text-amber-400 tracking-wide leading-tight">{hallFama[0].nombre}</h3>
+                      <h3 className="font-wrc text-lg md:text-xl text-[#38bdf8] tracking-wide leading-tight">{hallFama[0].nombre}</h3>
                       <p className="text-neutral-200 text-[10px] font-wrc uppercase">{hallFama[0].categoria}</p>
                     </div>
-                    <div className="mt-2 bg-amber-500/15 border border-amber-400/50 rounded-lg px-3.5 py-1 font-wrc text-xs tracking-wider text-amber-300">
-                      TÍTULOS ABSOLUTOS: <span className="text-amber-400 text-sm ml-1">{hallFama[0].campeonatos}</span> 🏆
+                    <div className="mt-2 bg-[#38bdf8]/15 border border-[#38bdf8]/50 rounded-lg px-3.5 py-1 font-wrc text-xs tracking-wider text-sky-200">
+                      TÍTULOS ABSOLUTOS: <span className="text-[#38bdf8] text-sm ml-1">{hallFama[0].campeonatos}</span> 🏆
                     </div>
                     {esAdmin && (
                       <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => handleEditarPilotoFama(hallFama[0])}
-                          className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded cursor-pointer"
+                          className="text-[9px] bg-[#38bdf8]/20 text-sky-300 border border-[#38bdf8]/40 px-2 py-0.5 rounded cursor-pointer"
                         >
                           EDITAR
                         </button>
@@ -1011,25 +1030,25 @@ export default function App() {
                 )}
 
                 {hallFama[2] && (
-                  <div className="order-3 relative bg-black/70 backdrop-blur-md border border-amber-700/60 rounded-xl p-3.5 text-center shadow-xl flex flex-col items-center justify-between">
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-700 text-white font-wrc text-[9px] px-2.5 py-0.5 rounded-full shadow tracking-wider flex items-center gap-1 whitespace-nowrap">
+                  <div className="order-3 relative bg-black/70 backdrop-blur-md border border-sky-700/60 rounded-xl p-3.5 text-center shadow-xl flex flex-col items-center justify-between">
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-sky-700 text-white font-wrc text-[9px] px-2.5 py-0.5 rounded-full shadow tracking-wider flex items-center gap-1 whitespace-nowrap">
                       <span>🥉</span> 3º PUESTO
                     </div>
-                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-amber-600 mt-2.5 mb-1.5 shadow bg-neutral-900">
+                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-sky-500 mt-2.5 mb-1.5 shadow bg-neutral-900">
                       <img src={hallFama[2].foto} alt={hallFama[2].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
                       <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[2].nombre}</h3>
                       <p className="text-neutral-300 text-[10px] font-wrc uppercase">{hallFama[2].categoria}</p>
                     </div>
-                    <div className="mt-2 bg-white/5 border border-amber-700/40 rounded-lg px-3 py-1 font-wrc text-[11px] tracking-wider text-neutral-200">
-                      TÍTULOS: <span className="text-amber-500 text-xs ml-1">{hallFama[2].campeonatos}</span> 🏆
+                    <div className="mt-2 bg-white/5 border border-sky-700/40 rounded-lg px-3 py-1 font-wrc text-[11px] tracking-wider text-neutral-200">
+                      TÍTULOS: <span className="text-sky-300 text-xs ml-1">{hallFama[2].campeonatos}</span> 🏆
                     </div>
                     {esAdmin && (
                       <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => handleEditarPilotoFama(hallFama[2])}
-                          className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded cursor-pointer"
+                          className="text-[9px] bg-[#38bdf8]/20 text-sky-300 border border-[#38bdf8]/40 px-2 py-0.5 rounded cursor-pointer"
                         >
                           EDITAR
                         </button>
@@ -1049,14 +1068,14 @@ export default function App() {
             {restoPilotos.length > 0 && (
               <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-xl">
                 <div className="px-4 py-2 bg-white/5 border-b border-white/10 flex justify-between items-center">
-                  <h3 className="font-wrc text-xs text-amber-400 tracking-wider">RANKING COMPLETO DEL SALÓN DE LA FAMA</h3>
+                  <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">RANKING COMPLETO DEL SALÓN DE LA FAMA</h3>
                   <span className="text-[10px] text-neutral-400 font-mono">{hallFama.length} PILOTOS</span>
                 </div>
                 <div className="divide-y divide-white/10">
                   {restoPilotos.map((piloto, idx) => (
                     <div key={piloto.id || idx} className="px-4 py-2 flex flex-wrap justify-between items-center gap-2 hover:bg-white/5 transition">
                       <div className="flex items-center gap-2.5">
-                        <span className="font-wrc text-amber-400 text-xs w-6 text-center">#{idx + 4}</span>
+                        <span className="font-wrc text-[#38bdf8] text-xs w-6 text-center">#{idx + 4}</span>
                         <img
                           src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'}
                           alt={piloto.nombre}
@@ -1068,14 +1087,14 @@ export default function App() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5">
-                        <span className="font-mono text-[11px] text-amber-300 font-bold">
+                        <span className="font-mono text-[11px] text-sky-300 font-bold">
                           {piloto.campeonatos} TÍTULOS 🏆
                         </span>
                         {esAdmin && (
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleEditarPilotoFama(piloto)}
-                              className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded cursor-pointer"
+                              className="text-[9px] bg-[#38bdf8]/20 text-sky-300 border border-[#38bdf8]/40 px-2 py-0.5 rounded cursor-pointer"
                             >
                               EDITAR
                             </button>
@@ -1099,7 +1118,7 @@ export default function App() {
         {pestanaActiva === 'miembros' && (
           <div className="space-y-4 max-w-4xl mx-auto">
             <div>
-              <h2 className="font-wrc text-xl md:text-2xl text-amber-400 tracking-wide">PILOTOS REGISTRADOS</h2>
+              <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">PILOTOS REGISTRADOS</h2>
               <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">COMUNIDAD DE PILOTOS Y MIEMBROS DE ESPÍNDOLA COMPETICIÓN.</p>
             </div>
 
@@ -1108,24 +1127,44 @@ export default function App() {
                 <p className="text-neutral-400 col-span-full text-center py-6 font-wrc text-xs">NO HAY MIEMBROS REGISTRADOS TODAVÍA.</p>
               ) : (
                 miembros.map((m) => {
+                  const nombrePiloto = (m.nombre_piloto || 'PILOTO SIN NOMBRE').toUpperCase();
+                  const inicial = m.nombre_piloto ? m.nombre_piloto.charAt(0).toUpperCase() : 'E';
                   const provinciaTexto = (m.provincia || '').toString().trim().toUpperCase();
+
                   return (
                     <div key={m.id} className="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-lg flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-full bg-neutral-800 border border-amber-500/50 flex items-center justify-center overflow-hidden font-wrc text-amber-400 text-sm flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-neutral-800 border border-[#38bdf8]/50 flex items-center justify-center overflow-hidden font-wrc text-[#38bdf8] text-sm flex-shrink-0">
                         {m.avatar_url ? (
-                          <img src={m.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                        ) : (
-                          m.nombre_piloto ? m.nombre_piloto.charAt(0).toUpperCase() : 'E'
-                        )}
+                          <img
+                            src={m.avatar_url}
+                            alt=""
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextSibling) {
+                                e.currentTarget.nextSibling.style.display = 'flex';
+                              }
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : null}
+                        <span
+                          style={{ display: m.avatar_url ? 'none' : 'flex' }}
+                          className="w-full h-full items-center justify-center"
+                        >
+                          {inicial}
+                        </span>
                       </div>
+
                       <div className="space-y-0.5 overflow-hidden leading-tight">
-                        <h3 className="font-wrc text-sm text-white truncate">{(m.nombre_piloto || 'PILOTO SIN NOMBRE').toUpperCase()}</h3>
+                        <h3 className="font-wrc text-sm text-white truncate">{nombrePiloto}</h3>
                         <p className="text-[10px] font-wrc uppercase truncate">
-                          <span className="text-amber-400">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
-                          {provinciaTexto && (
-                            <span className="text-neutral-300"> • <span className="text-amber-400">PROV:</span> {provinciaTexto}</span>
-                          )}
+                          <span className="text-[#38bdf8]">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
                         </p>
+                        {provinciaTexto && (
+                          <p className="text-[10px] font-wrc uppercase truncate">
+                            <span className="text-[#38bdf8]">PROVINCIA:</span> <span className="text-neutral-200">{provinciaTexto}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -1137,15 +1176,29 @@ export default function App() {
 
         {pestanaActiva === 'perfil' && usuario && (
           <div className="max-w-md mx-auto bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5 shadow-2xl space-y-4">
-            <h2 className="font-wrc text-xl text-amber-400">MI PERFIL DE PILOTO</h2>
+            <h2 className="font-wrc text-xl text-[#38bdf8]">MI PERFIL DE PILOTO</h2>
             
             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-              <div className="w-14 h-14 rounded-full bg-neutral-800 border-2 border-amber-500 overflow-hidden flex items-center justify-center font-wrc text-amber-400 text-lg flex-shrink-0">
+              <div className="w-14 h-14 rounded-full bg-neutral-800 border-2 border-[#38bdf8] overflow-hidden flex items-center justify-center font-wrc text-[#38bdf8] text-lg flex-shrink-0">
                 {perfil?.avatar_url ? (
-                  <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  perfil?.nombre_piloto ? perfil.nombre_piloto.charAt(0).toUpperCase() : 'E'
-                )}
+                  <img
+                    src={perfil.avatar_url}
+                    alt=""
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextSibling) {
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
+                <span
+                  style={{ display: perfil?.avatar_url ? 'none' : 'flex' }}
+                  className="w-full h-full items-center justify-center"
+                >
+                  {inicialUsuario}
+                </span>
               </div>
               <div className="overflow-hidden">
                 <h3 className="font-wrc text-lg text-white truncate">{(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}</h3>
@@ -1156,7 +1209,7 @@ export default function App() {
             <div className="space-y-2 pt-1">
               <button
                 onClick={() => setMostrarPerfilModal(true)}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-wrc text-xs font-black uppercase py-2 rounded-xl transition shadow cursor-pointer"
+                className="w-full bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-xs font-black uppercase py-2 rounded-xl transition shadow cursor-pointer"
               >
                 EDITAR DATOS PERSONALES
               </button>
