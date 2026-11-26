@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { api } from './api';
 
-const ADMINS_EMAILS = [
-  'leosimracingok@gmail.com',
-  'lucashutter6@gmail.com'
-];
-
 async function hashearPassword(password) {
   const data = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -32,13 +27,31 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
     setCargando(true);
 
     try {
+      if (modo === 'login') {
+        const { data, error } = await api.login(emailNormalizado, password);
+        if (error || !data?.user) {
+          alert(error?.message || 'Correo o contraseña incorrectos.');
+          setCargando(false);
+          return;
+        }
+
+        if (onLoginExitoso) {
+          onLoginExitoso({
+            id: data.user.id,
+            email: data.user.email || emailNormalizado,
+            isAdmin: Boolean(data.isAdmin)
+          });
+        }
+        onClose();
+        return;
+      }
+
       const { data: existentes, error: errBuscar } = await api.from('perfiles').select({
         eq_email: emailNormalizado
       });
       if (errBuscar) throw errBuscar;
 
       const piloto = Array.isArray(existentes) && existentes.length > 0 ? existentes[0] : null;
-      const esAdminEmail = ADMINS_EMAILS.includes(emailNormalizado);
 
       if (modo === 'registro') {
         if (password.length < 6) {
@@ -51,61 +64,39 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
           setCargando(false);
           return;
         }
-        if (piloto && piloto.password_hash) {
-          alert('Ya existe una cuenta registrada con ese correo. Iniciá sesión.');
+        if (piloto) {
+          alert('Ya existe un perfil registrado con ese correo. Iniciá sesión o usá "Cambiar clave".');
           setModo('login');
           setCargando(false);
           return;
         }
 
         const hash = await hashearPassword(password);
-        const idNuevo = piloto?.id || crypto.randomUUID();
+        const idNuevo = crypto.randomUUID();
 
-        const { data: creado, error } = await api.from('perfiles').insert(
-          {
-            id: idNuevo,
-            email: emailNormalizado,
-            nombre_piloto: (nombrePiloto || piloto?.nombre_piloto || emailNormalizado.split('@')[0]).trim(),
-            password_hash: hash
-          },
-          { upsert: true }
-        );
+        const { data: creado, error } = await api.from('perfiles').insert({
+          id: idNuevo,
+          email: emailNormalizado,
+          nombre_piloto: (nombrePiloto || emailNormalizado.split('@')[0]).trim(),
+          password_hash: hash
+        });
         if (error) throw error;
 
-        const cuenta = creado || { id: idNuevo, email: emailNormalizado };
+        // Intentamos iniciar sesión en el Worker para obtener el adminToken si corresponde
+        const loginResp = await api.login(emailNormalizado, password);
+        const cuenta = loginResp?.data?.user || creado || { id: idNuevo, email: emailNormalizado };
+
         if (onLoginExitoso) {
           onLoginExitoso({
             id: cuenta.id,
             email: emailNormalizado,
-            isAdmin: Boolean(cuenta.isAdmin ?? esAdminEmail)
+            isAdmin: Boolean(loginResp?.data?.isAdmin)
           });
         }
         alert('¡Cuenta creada con éxito! Ya iniciaste sesión.');
         onClose();
-      } else if (modo === 'login') {
-        if (!piloto || !piloto.password_hash) {
-          alert('No se encontró una cuenta con contraseña para ese correo. Registrate primero.');
-          setCargando(false);
-          return;
-        }
-
-        const hashIngresado = await hashearPassword(password);
-        if (hashIngresado !== piloto.password_hash) {
-          alert('Contraseña incorrecta.');
-          setCargando(false);
-          return;
-        }
-
-        if (onLoginExitoso) {
-          onLoginExitoso({
-            id: piloto.id,
-            email: emailNormalizado,
-            isAdmin: Boolean(piloto.isAdmin ?? esAdminEmail)
-          });
-        }
-        onClose();
       } else if (modo === 'cambiar') {
-        if (!piloto || !piloto.password_hash) {
+        if (!piloto) {
           alert('No existe una cuenta registrada con ese correo.');
           setCargando(false);
           return;
@@ -116,8 +107,9 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
           return;
         }
 
-        const hashActual = await hashearPassword(password);
-        if (hashActual !== piloto.password_hash) {
+        // Validamos la contraseña actual contra el Worker antes de cambiarla
+        const checkLogin = await api.login(emailNormalizado, password);
+        if (checkLogin.error || !checkLogin.data?.user) {
           alert('La contraseña actual no es correcta.');
           setCargando(false);
           return;
@@ -130,6 +122,7 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
         );
         if (error) throw error;
 
+        api.logout();
         alert('¡Contraseña actualizada con éxito! Ahora iniciá sesión con tu nueva clave.');
         setPassword('');
         setNuevaPassword('');
