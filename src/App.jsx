@@ -148,19 +148,16 @@ export default function App() {
 
   const [hallFama, setHallFama] = useState([]);
   const [nuevoPilotoFama, setNuevoPilotoFama] = useState({
-    piloto: '',
-    categoria: '',
-    campeonato: '',
-    anio: '',
-    orden: '1',
-    imagen_url: '',
-    descripcion: ''
+    nombre: '',
+    nacionalidad: 'ARGENTINA',
+    campeonatos: '',
+    foto: ''
   });
   const [editandoId, setEditandoId] = useState(null);
 
   const [miembros, setMiembros] = useState([]);
 
-  const totalEntradasSalonFama = hallFama.length;
+  const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos, 10) || 0), 0);
 
   useEffect(() => {
     const intervaloFondo = setInterval(() => {
@@ -240,10 +237,10 @@ export default function App() {
 
   async function cargarSalónDeLaFama() {
     const { data, error } = await api.from('salon_fama').select({
-      order: 'orden.asc'
+      order: 'campeonatos.desc'
     });
     if (error) {
-      console.error('Error cargando salón de la fama:', error);
+      alert('Error al cargar Salón de la Fama: ' + error.message);
       return;
     }
     if (Array.isArray(data)) {
@@ -433,21 +430,13 @@ export default function App() {
 
   const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
-    if (!nuevoPilotoFama.piloto.trim()) return;
+    if (!nuevoPilotoFama.nombre.trim()) return;
 
-    const ordenNum = parseInt(nuevoPilotoFama.orden, 10);
     const datosPiloto = {
-      id: editandoId || crypto.randomUUID(),
-      titulo: (nuevoPilotoFama.campeonato || nuevoPilotoFama.categoria || 'CAMPEÓN').trim().toUpperCase(),
-      subtitulo: nuevoPilotoFama.anio ? `TEMPORADA ${nuevoPilotoFama.anio.trim()}` : '',
-      piloto: nuevoPilotoFama.piloto.trim().toUpperCase(),
-      categoria: (nuevoPilotoFama.categoria || 'CATEGORÍA GENERAL').trim().toUpperCase(),
-      campeonato: (nuevoPilotoFama.campeonato || '').trim().toUpperCase(),
-      anio: (nuevoPilotoFama.anio || '').trim(),
-      imagen_url: (nuevoPilotoFama.imagen_url || '').trim() || 'https://files.catbox.moe/f3xmld.png',
-      descripcion: (nuevoPilotoFama.descripcion || '').trim(),
-      orden: Number.isNaN(ordenNum) ? 99 : ordenNum,
-      created_at: new Date().toISOString()
+      nombre: nuevoPilotoFama.nombre.trim().toUpperCase(),
+      nacionalidad: (nuevoPilotoFama.nacionalidad || 'ARGENTINA').trim().toUpperCase(),
+      campeonatos: parseInt(nuevoPilotoFama.campeonatos, 10) || 0,
+      foto: (nuevoPilotoFama.foto || '').trim() || 'https://files.catbox.moe/f3xmld.png'
     };
 
     const { error } = editandoId !== null
@@ -460,28 +449,17 @@ export default function App() {
     }
 
     setEditandoId(null);
-    setNuevoPilotoFama({
-      piloto: '',
-      categoria: '',
-      campeonato: '',
-      anio: '',
-      orden: String((hallFama.length || 0) + 1),
-      imagen_url: '',
-      descripcion: ''
-    });
+    setNuevoPilotoFama({ nombre: '', nacionalidad: 'ARGENTINA', campeonatos: '', foto: '' });
     await cargarSalónDeLaFama();
   };
 
   const handleEditarPilotoFama = (piloto) => {
     setEditandoId(piloto.id);
     setNuevoPilotoFama({
-      piloto: piloto.piloto || '',
-      categoria: piloto.categoria || '',
-      campeonato: piloto.campeonato || piloto.titulo || '',
-      anio: piloto.anio || '',
-      orden: String(piloto.orden ?? 1),
-      imagen_url: piloto.imagen_url || '',
-      descripcion: piloto.descripcion || ''
+      nombre: piloto.nombre || '',
+      nacionalidad: piloto.nacionalidad || 'ARGENTINA',
+      campeonatos: piloto.campeonatos ?? '',
+      foto: piloto.foto || ''
     });
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
@@ -1055,87 +1033,59 @@ export default function App() {
                 </div>
                 <div>
                   <span className="block text-[9px] font-wrc text-neutral-400 uppercase tracking-widest">
-                    REGISTROS EN SALÓN
+                    CAMPEONATOS EN TOTAL
                   </span>
                   <span className="font-wrc text-base md:text-lg text-[#38bdf8] leading-none">
-                    {totalEntradasSalonFama} {totalEntradasSalonFama === 1 ? 'PILOTO' : 'PILOTOS'}
+                    {totalCampeonatosEquipo} TÍTULOS
                   </span>
                 </div>
               </div>
             </div>
 
             {esAdminEfectivo && (
-              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2.5">
+              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2">
                 <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">
                   ⚙️ {editandoId !== null ? 'EDITAR PILOTO DEL SALÓN DE LA FAMA' : 'AGREGAR PILOTO AL SALÓN DE LA FAMA'} (ADMIN)
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                   <input
                     type="text"
-                    placeholder="NOMBRE DEL PILOTO"
-                    value={nuevoPilotoFama.piloto}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, piloto: e.target.value.toUpperCase() })}
+                    placeholder="NOMBRE"
+                    value={nuevoPilotoFama.nombre}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nombre: e.target.value.toUpperCase() })}
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
                   <input
                     type="text"
-                    placeholder="CATEGORÍA (EJ: RALLY5 / RC2)"
-                    value={nuevoPilotoFama.categoria}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, categoria: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
-                  />
-                  <input
-                    type="text"
-                    placeholder="CAMPEONATO O TÍTULO"
-                    value={nuevoPilotoFama.campeonato}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonato: e.target.value.toUpperCase() })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
-                  />
-                  <input
-                    type="text"
-                    placeholder="AÑO / TEMPORADA (EJ: 2026)"
-                    value={nuevoPilotoFama.anio}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, anio: e.target.value.toUpperCase() })}
+                    placeholder="NACIONALIDAD"
+                    value={nuevoPilotoFama.nacionalidad}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, nacionalidad: e.target.value.toUpperCase() })}
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                   <input
                     type="number"
-                    placeholder="ORDEN PODIO (1, 2, 3...)"
-                    value={nuevoPilotoFama.orden}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, orden: e.target.value })}
+                    placeholder="TÍTULOS"
+                    value={nuevoPilotoFama.campeonatos}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, campeonatos: e.target.value })}
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
+                    required
                   />
                   <input
                     type="text"
-                    placeholder="URL FOTO (OPCIONAL)"
-                    value={nuevoPilotoFama.imagen_url}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, imagen_url: e.target.value })}
+                    placeholder="URL FOTO"
+                    value={nuevoPilotoFama.foto}
+                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: e.target.value })}
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   />
                 </div>
-                <input
-                  type="text"
-                  placeholder="DESCRIPCIÓN / LOGRO DESTACADO (OPCIONAL)"
-                  value={nuevoPilotoFama.descripcion}
-                  onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, descripcion: e.target.value })}
-                  className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
-                />
                 <div className="flex justify-end gap-2">
                   {editandoId !== null && (
                     <button
                       type="button"
                       onClick={() => {
                         setEditandoId(null);
-                        setNuevoPilotoFama({
-                          piloto: '',
-                          categoria: '',
-                          campeonato: '',
-                          anio: '',
-                          orden: String((hallFama.length || 0) + 1),
-                          imagen_url: '',
-                          descripcion: ''
-                        });
+                        setNuevoPilotoFama({ nombre: '', nacionalidad: 'ARGENTINA', campeonatos: '', foto: '' });
                       }}
                       className="bg-neutral-800 text-neutral-300 font-wrc text-[10px] px-3 py-1 rounded-lg cursor-pointer"
                     >
@@ -1152,11 +1102,7 @@ export default function App() {
               </form>
             )}
 
-            {hallFama.length === 0 ? (
-              <div className="bg-black/65 backdrop-blur-md border border-white/10 rounded-xl p-6 text-center font-wrc text-xs text-neutral-300">
-                NO HAY PILOTOS CARGADOS EN EL SALÓN DE LA FAMA TODAVÍA.
-              </div>
-            ) : (
+            {hallFama.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-center pt-4 pb-1">
                 {hallFama[1] && (
                   <div className="order-2 md:order-1 relative bg-black/70 backdrop-blur-md border border-neutral-400/50 rounded-xl p-3.5 text-center shadow-xl flex flex-col items-center justify-between">
@@ -1164,18 +1110,15 @@ export default function App() {
                       <span>🥈</span> 2º PUESTO
                     </div>
                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-neutral-300 mt-2.5 mb-1.5 shadow bg-neutral-900">
-                      <img src={hallFama[1].imagen_url || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[1].piloto} className="w-full h-full object-cover" />
+                      <img src={hallFama[1].foto || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[1].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
-                      <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[1].piloto}</h3>
-                      <p className="text-neutral-300 text-[10px] font-wrc uppercase">{hallFama[1].categoria || hallFama[1].campeonato || 'CATEGORÍA GENERAL'}</p>
+                      <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[1].nombre}</h3>
+                      <p className="text-neutral-300 text-[10px] font-wrc uppercase">{obtenerBanderaPais(hallFama[1].nacionalidad)}</p>
                     </div>
                     <div className="mt-2 bg-white/5 border border-white/15 rounded-lg px-3 py-1 font-wrc text-[11px] tracking-wider text-neutral-200">
-                      {hallFama[1].campeonato || hallFama[1].anio || 'CAMPEÓN'} 🏆
+                      TÍTULOS: <span className="text-white text-xs ml-1">{hallFama[1].campeonatos}</span> 🏆
                     </div>
-                    {hallFama[1].descripcion && (
-                      <p className="mt-1.5 text-[10px] text-neutral-300 normal-case">{hallFama[1].descripcion}</p>
-                    )}
                     {esAdminEfectivo && (
                       <div className="mt-2 flex gap-1.5">
                         <button
@@ -1201,18 +1144,15 @@ export default function App() {
                       <span>🥇</span> 1º PUESTO
                     </div>
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#38bdf8] mt-2.5 mb-1.5 shadow-[0_0_12px_rgba(56,189,248,0.35)] bg-neutral-900">
-                      <img src={hallFama[0].imagen_url || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[0].piloto} className="w-full h-full object-cover" />
+                      <img src={hallFama[0].foto || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[0].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
-                      <h3 className="font-wrc text-lg md:text-xl text-[#38bdf8] tracking-wide leading-tight">{hallFama[0].piloto}</h3>
-                      <p className="text-neutral-200 text-[10px] font-wrc uppercase">{hallFama[0].categoria || hallFama[0].campeonato || 'CATEGORÍA GENERAL'}</p>
+                      <h3 className="font-wrc text-lg md:text-xl text-[#38bdf8] tracking-wide leading-tight">{hallFama[0].nombre}</h3>
+                      <p className="text-neutral-200 text-[10px] font-wrc uppercase">{obtenerBanderaPais(hallFama[0].nacionalidad)}</p>
                     </div>
                     <div className="mt-2 bg-[#38bdf8]/15 border border-[#38bdf8]/50 rounded-lg px-3.5 py-1 font-wrc text-xs tracking-wider text-sky-200">
-                      {hallFama[0].campeonato || hallFama[0].anio || 'CAMPEÓN'} 🏆
+                      TÍTULOS ABSOLUTOS: <span className="text-[#38bdf8] text-sm ml-1">{hallFama[0].campeonatos}</span> 🏆
                     </div>
-                    {hallFama[0].descripcion && (
-                      <p className="mt-1.5 text-[10px] text-neutral-200 normal-case">{hallFama[0].descripcion}</p>
-                    )}
                     {esAdminEfectivo && (
                       <div className="mt-2 flex gap-1.5">
                         <button
@@ -1238,18 +1178,15 @@ export default function App() {
                       <span>🥉</span> 3º PUESTO
                     </div>
                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-sky-500 mt-2.5 mb-1.5 shadow bg-neutral-900">
-                      <img src={hallFama[2].imagen_url || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[2].piloto} className="w-full h-full object-cover" />
+                      <img src={hallFama[2].foto || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[2].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
-                      <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[2].piloto}</h3>
-                      <p className="text-neutral-300 text-[10px] font-wrc uppercase">{hallFama[2].categoria || hallFama[2].campeonato || 'CATEGORÍA GENERAL'}</p>
+                      <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[2].nombre}</h3>
+                      <p className="text-neutral-300 text-[10px] font-wrc uppercase">{obtenerBanderaPais(hallFama[2].nacionalidad)}</p>
                     </div>
                     <div className="mt-2 bg-white/5 border border-sky-700/40 rounded-lg px-3 py-1 font-wrc text-[11px] tracking-wider text-neutral-200">
-                      {hallFama[2].campeonato || hallFama[2].anio || 'CAMPEÓN'} 🏆
+                      TÍTULOS: <span className="text-sky-300 text-xs ml-1">{hallFama[2].campeonatos}</span> 🏆
                     </div>
-                    {hallFama[2].descripcion && (
-                      <p className="mt-1.5 text-[10px] text-neutral-300 normal-case">{hallFama[2].descripcion}</p>
-                    )}
                     {esAdminEfectivo && (
                       <div className="mt-2 flex gap-1.5">
                         <button
@@ -1283,18 +1220,18 @@ export default function App() {
                       <div className="flex items-center gap-2.5">
                         <span className="font-wrc text-[#38bdf8] text-xs w-6 text-center">#{idx + 4}</span>
                         <img
-                          src={piloto.imagen_url || 'https://files.catbox.moe/f3xmld.png'}
-                          alt={piloto.piloto}
+                          src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'}
+                          alt={piloto.nombre}
                           className="w-7 h-7 rounded-full object-cover border border-white/20 bg-neutral-900"
                         />
                         <div className="leading-tight">
-                          <p className="font-wrc text-xs md:text-sm text-white">{piloto.piloto}</p>
-                          <span className="text-[9px] text-neutral-400">{piloto.categoria || piloto.campeonato || 'CATEGORÍA GENERAL'}</span>
+                          <p className="font-wrc text-xs md:text-sm text-white">{piloto.nombre}</p>
+                          <span className="text-[9px] text-neutral-400">{obtenerBanderaPais(piloto.nacionalidad)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5">
                         <span className="font-mono text-[11px] text-sky-300 font-bold">
-                          {piloto.campeonato || piloto.anio || 'CAMPEÓN'} 🏆
+                          {piloto.campeonatos} TÍTULOS 🏆
                         </span>
                         {esAdminEfectivo && (
                           <div className="flex gap-1">
