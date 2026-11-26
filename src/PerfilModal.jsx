@@ -9,6 +9,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
   const [telefono, setTelefono] = useState(perfil?.telefono || '');
   const [avatarUrl, setAvatarUrl] = useState(perfil?.avatar_url || '');
   const [guardando, setGuardando] = useState(false);
+  const [passwordHash, setPasswordHash] = useState(perfil?.password_hash || null);
 
   useEffect(() => {
     async function cargar() {
@@ -22,6 +23,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
         setProvincia(data.provincia || '');
         setTelefono(data.telefono || '');
         setAvatarUrl(data.avatar_url || '');
+        setPasswordHash(data.password_hash || null);
       }
     }
     cargar();
@@ -33,6 +35,8 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
     setGuardando(true);
 
     const urlLimpia = avatarUrl.trim();
+    const { data: actual } = await api.from('perfiles').getById(usuario.id);
+    const hashFinal = actual?.password_hash || passwordHash || null;
 
     const { error } = await api.from('perfiles').insert(
       {
@@ -43,6 +47,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
         provincia: provincia.trim(),
         telefono: telefono.trim(),
         avatar_url: urlLimpia || null,
+        password_hash: hashFinal,
         updated_at: new Date().toISOString()
       },
       { upsert: true }
