@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { api } from './api';
 
+const ADMINS_EMAILS = [
+  'leosimracingok@gmail.com',
+  'lucashutter6@gmail.com'
+];
+
 async function hashearPassword(password) {
   const data = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -33,6 +38,7 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
       if (errBuscar) throw errBuscar;
 
       const piloto = Array.isArray(existentes) && existentes.length > 0 ? existentes[0] : null;
+      const esAdminEmail = ADMINS_EMAILS.includes(emailNormalizado);
 
       if (modo === 'registro') {
         if (password.length < 6) {
@@ -67,7 +73,13 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
         if (error) throw error;
 
         const cuenta = creado || { id: idNuevo, email: emailNormalizado };
-        if (onLoginExitoso) onLoginExitoso({ id: cuenta.id, email: emailNormalizado });
+        if (onLoginExitoso) {
+          onLoginExitoso({
+            id: cuenta.id,
+            email: emailNormalizado,
+            isAdmin: Boolean(cuenta.isAdmin ?? esAdminEmail)
+          });
+        }
         alert('¡Cuenta creada con éxito! Ya iniciaste sesión.');
         onClose();
       } else if (modo === 'login') {
@@ -84,7 +96,13 @@ export default function AuthModal({ onClose, onLoginExitoso }) {
           return;
         }
 
-        if (onLoginExitoso) onLoginExitoso({ id: piloto.id, email: emailNormalizado });
+        if (onLoginExitoso) {
+          onLoginExitoso({
+            id: piloto.id,
+            email: emailNormalizado,
+            isAdmin: Boolean(piloto.isAdmin ?? esAdminEmail)
+          });
+        }
         onClose();
       } else if (modo === 'cambiar') {
         if (!piloto || !piloto.password_hash) {

@@ -95,8 +95,14 @@ export default function App() {
   const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
   const [mostrarCambiarPasswordModal, setMostrarCambiarPasswordModal] = useState(false);
   const [pestanaActiva, setPestanaActiva] = useState('inicio');
-  const [esAdmin, setEsAdmin] = useState(false);
-  const [vistaAdminActiva, setVistaAdminActiva] = useState(true);
+  const [esAdmin, setEsAdmin] = useState(() => {
+    const u = leerSesionGuardada();
+    return Boolean(u?.isAdmin || ADMINS_EMAILS.includes((u?.email || '').toLowerCase().trim()));
+  });
+  const [vistaAdminActiva, setVistaAdminActiva] = useState(() => {
+    const u = leerSesionGuardada();
+    return Boolean(u?.isAdmin || ADMINS_EMAILS.includes((u?.email || '').toLowerCase().trim()));
+  });
 
   const esAdminEfectivo = esAdmin && vistaAdminActiva;
 
@@ -271,7 +277,7 @@ export default function App() {
   async function verificarAdminYPerfil(user) {
     if (!user) return;
     const emailNormalizado = (user.email || '').toLowerCase().trim();
-    const tienePermisoAdmin = ADMINS_EMAILS.includes(emailNormalizado);
+    const tienePermisoAdmin = Boolean(user.isAdmin) || ADMINS_EMAILS.includes(emailNormalizado);
 
     if (tienePermisoAdmin) {
       setEsAdmin(true);
@@ -298,6 +304,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    if (typeof api.logout === 'function') {
+      api.logout();
+    }
     try {
       localStorage.removeItem(SESION_STORAGE_KEY);
     } catch {
