@@ -66,8 +66,8 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('COLOMBIA') || p === 'CO') codigoIso = 'co';
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
   else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
-  else if (p.includes('ESPAÑA') || p === 'SPAIN') codigoIso = 'es';
-  else if (p.includes('ESTADOS UNIDOS') || p === 'USA' || p === 'EEUU' || p === 'US') codigoIso = 'us';
+  else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
+  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
 
@@ -119,12 +119,14 @@ export default function App() {
   const [editandoConfig, setEditandoConfig] = useState(false);
 
   const [eventos, setEventos] = useState([]);
+  const [inscripciones, setInscripciones] = useState([]);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
 
   const [diaSeleccionadoModal, setDiaSeleccionadoModal] = useState(null);
   const [asistentesEvento, setAsistentesEvento] = useState([]);
+  const [enviandoParticipacionCalendario, setEnviandoParticipacionCalendario] = useState(false);
 
   const [eventoModalActivo, setEventoModalActivo] = useState(null);
   const [modoModalEvento, setModoModalEvento] = useState('formulario');
@@ -182,6 +184,7 @@ export default function App() {
   useEffect(() => {
     if (pestanaActiva === 'eventos') {
       cargarEventos();
+      cargarInscripciones();
       if (esAdminEfectivo) {
         cargarCampeonatosSelect();
       }
@@ -195,6 +198,15 @@ export default function App() {
       cargarConfiguracion();
     }
   }, [pestanaActiva, esAdminEfectivo]);
+
+  const exigirSesion = (mensaje = 'Tenés que iniciar sesión con tu cuenta de piloto para inscribirte o marcar asistencia.') => {
+    if (!usuario) {
+      alert(mensaje);
+      setMostrarAuthModal(true);
+      return false;
+    }
+    return true;
+  };
 
   async function cargarConfiguracion(forzar = false) {
     if (!forzar) {
@@ -225,6 +237,13 @@ export default function App() {
       limit: 30
     });
     if (data) setEventos(data);
+  }
+
+  async function cargarInscripciones() {
+    const { data } = await api.from('inscripciones').select({
+      order: 'created_at.desc'
+    });
+    if (Array.isArray(data)) setInscripciones(data);
   }
 
   async function cargarCampeonatosSelect() {
@@ -264,7 +283,7 @@ export default function App() {
     const { data } = await api.from('asistencias_calendario').select({
       eq_calendario_id: calendarioId
     });
-    if (data) setAsistentesEvento(data);
+    if (Array.isArray(data)) setAsistentesEvento(data);
   }
 
   async function cargarAsistentesEventoEquipo(eventoId) {
@@ -382,6 +401,9 @@ export default function App() {
   };
 
   const abrirModalEvento = (ev) => {
+    if (!exigirSesion('Tenés que iniciar sesión con tu cuenta de piloto para inscribirte a un evento.')) {
+      return;
+    }
     const categoriasLista = ev.categorias ? ev.categorias.split(',').map(c => c.trim()).filter(Boolean) : [];
     const autosLista = ev.modelos_autos ? ev.modelos_autos.split(',').map(m => m.trim()).filter(Boolean) : [];
     setEventoModalActivo(ev);
@@ -398,6 +420,9 @@ export default function App() {
 
   const handleEnviarInscripcion = async (e) => {
     e.preventDefault();
+    if (!exigirSesion('Tenés que iniciar sesión con tu cuenta de piloto para confirmar la inscripción.')) {
+      return;
+    }
     if (!eventoModalActivo || !formInscripcion.nombre_piloto.trim()) return;
     setEnviandoInscripcion(true);
     const { error } = await api.from('inscripciones').insert([{
@@ -414,6 +439,48 @@ export default function App() {
     } else {
       alert('¡Inscripción confirmada con éxito! 🏁');
       setEventoModalActivo(null);
+      cargarInscripciones();
+    }
+  };
+
+  const handleToggleParticipoCalendario = async () => {
+    if (!exigirSesion('Tenés que iniciar sesión con tu cuenta de piloto para marcar "PARTICIPO" en el calendario.')) {
+      return;
+    }
+    if (!diaSeleccionadoModal) return;
+
+    const nombrePilotoActual = (
+      perfil?.nombre_piloto ||
+      usuario?.email?.split('@')[0] ||
+      'PILOTO'
+    ).trim().toUpperCase();
+
+    const yaParticipa = asistentesEvento.find(
+      (a) => String(a.piloto_nombre || '').trim().toUpperCase() === nombrePilotoActual
+    );
+
+    setEnviandoParticipacionCalendario(true);
+    try {
+      if (yaParticipa) {
+        const { error } = await api.from('asistencias_calendario').delete({ eq_id: yaParticipa.id });
+        if (error) {
+          alert('No se pudo quitar la participación: ' + error.message);
+          return;
+        }
+      } else {
+        const { error } = await api.from('asistencias_calendario').insert([{
+          calendario_id: diaSeleccionadoModal.id,
+          piloto_nombre: nombrePilotoActual,
+          estado: 'participo'
+        }]);
+        if (error) {
+          alert('No se pudo registrar la participación: ' + error.message);
+          return;
+        }
+      }
+      await cargarAsistentesCalendario(diaSeleccionadoModal.id);
+    } finally {
+      setEnviandoParticipacionCalendario(false);
     }
   };
 
@@ -523,6 +590,19 @@ export default function App() {
     : usuario?.email
       ? usuario.email.charAt(0).toUpperCase()
       : 'E';
+
+  const nombrePilotoActualNormalizado = (
+    perfil?.nombre_piloto ||
+    usuario?.email?.split('@')[0] ||
+    ''
+  ).trim().toUpperCase();
+
+  const usuarioYaParticipaEnDia = Boolean(
+    usuario &&
+    asistentesEvento.some(
+      (a) => String(a.piloto_nombre || '').trim().toUpperCase() === nombrePilotoActualNormalizado
+    )
+  );
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
@@ -994,32 +1074,63 @@ export default function App() {
             )}
 
             <div className="space-y-2.5">
-              {eventos.map((ev) => (
-                <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                  <div className="space-y-0.5">
-                    <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
-                    <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
-                    <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
-                  </div>
+              {eventos.map((ev) => {
+                const inscriptosDelEvento = inscripciones.filter(
+                  (ins) => String(ins.evento_id) === String(ev.id)
+                );
 
-                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                    <button
-                      onClick={() => abrirModalEvento(ev)}
-                      className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
-                    >
-                      INSCRIBIRSE
-                    </button>
-                    {esAdminEfectivo && (
-                      <button
-                        onClick={() => handleEliminarEvento(ev.id)}
-                        className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
-                      >
-                        ELIMINAR
-                      </button>
-                    )}
+                return (
+                  <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg space-y-3">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                      <div className="space-y-0.5">
+                        <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
+                        <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
+                        <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                        <button
+                          onClick={() => abrirModalEvento(ev)}
+                          className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
+                        >
+                          {usuario ? 'INSCRIBIRSE' : 'INICIÁ SESIÓN PARA INSCRIBIRTE'}
+                        </button>
+                        {esAdminEfectivo && (
+                          <button
+                            onClick={() => handleEliminarEvento(ev.id)}
+                            className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                          >
+                            ELIMINAR
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-white/10">
+                      <p className="text-[10px] font-wrc text-[#38bdf8] tracking-wider mb-1.5">
+                        PILOTOS INSCRIPTOS ({inscriptosDelEvento.length})
+                      </p>
+                      {inscriptosDelEvento.length === 0 ? (
+                        <p className="text-[10px] text-neutral-400 font-wrc">AÚN NO HAY PILOTOS INSCRIPTOS EN ESTE EVENTO.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {inscriptosDelEvento.map((ins) => (
+                            <div
+                              key={ins.id}
+                              className="bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 text-[10px]"
+                            >
+                              <span className="font-wrc text-white truncate">{ins.nombre_piloto}</span>
+                              <span className="text-sky-300 font-mono truncate">
+                                {[ins.categoria_seleccionada, ins.auto_seleccionado].filter(Boolean).join(' • ')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -1541,7 +1652,7 @@ export default function App() {
 
       {diaSeleccionadoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-3">
+          <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <div>
                 <span className="text-[10px] text-[#38bdf8] font-mono">{diaSeleccionadoModal.fecha}</span>
@@ -1554,16 +1665,56 @@ export default function App() {
                 ✕
               </button>
             </div>
+
             <p className="text-xs text-neutral-300">
               {diaSeleccionadoModal.descripcion || 'FECHA OFICIAL EN EL CALENDARIO DEL EQUIPO.'}
             </p>
-            <p className="text-[10px] text-neutral-400 font-mono">
-              ASISTENCIAS REGISTRADAS: {asistentesEvento.length}
-            </p>
-            <div className="flex justify-end pt-2">
+
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-wrc text-[#38bdf8] tracking-wider">
+                  PILOTOS QUE PARTICIPAN ({asistentesEvento.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleParticipoCalendario}
+                  disabled={enviandoParticipacionCalendario}
+                  className={`font-wrc text-[10px] font-black px-3 py-1 rounded-lg transition cursor-pointer ${
+                    usuarioYaParticipaEnDia
+                      ? 'bg-red-500/20 hover:bg-red-500/35 text-red-300 border border-red-500/40'
+                      : 'bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950'
+                  }`}
+                >
+                  {enviandoParticipacionCalendario
+                    ? 'GUARDANDO...'
+                    : !usuario
+                      ? 'INICIÁ SESIÓN PARA PARTICIPAR'
+                      : usuarioYaParticipaEnDia
+                        ? 'QUITAR PARTICIPACIÓN'
+                        : 'PARTICIPO'}
+                </button>
+              </div>
+
+              {asistentesEvento.length === 0 ? (
+                <p className="text-[10px] text-neutral-400 font-wrc">NADIE MARCÓ PARTICIPACIÓN TODAVÍA.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-1">
+                  {asistentesEvento.map((asistente) => (
+                    <span
+                      key={asistente.id}
+                      className="text-[10px] font-wrc bg-neutral-950 border border-white/15 text-neutral-200 px-2.5 py-1 rounded-full"
+                    >
+                      🏁 {asistente.piloto_nombre}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-white/10">
               <button
                 onClick={() => setDiaSeleccionadoModal(null)}
-                className="bg-[#38bdf8] text-slate-950 font-black text-xs px-4 py-1.5 rounded-xl cursor-pointer"
+                className="bg-neutral-800 hover:bg-neutral-700 text-white font-black text-xs px-4 py-1.5 rounded-xl cursor-pointer"
               >
                 CERRAR
               </button>
