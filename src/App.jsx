@@ -120,6 +120,7 @@ export default function App() {
 
   const [eventos, setEventos] = useState([]);
   const [inscripciones, setInscripciones] = useState([]);
+  const [eventoListaModal, setEventoListaModal] = useState(null);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
@@ -604,6 +605,10 @@ export default function App() {
     )
   );
 
+  const inscriptosModalEvento = eventoListaModal
+    ? inscripciones.filter((ins) => String(ins.evento_id) === String(eventoListaModal.id))
+    : [];
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
 
@@ -1075,57 +1080,41 @@ export default function App() {
 
             <div className="space-y-2.5">
               {eventos.map((ev) => {
-                const inscriptosDelEvento = inscripciones.filter(
+                const cantidadInscriptos = inscripciones.filter(
                   (ins) => String(ins.evento_id) === String(ev.id)
-                );
+                ).length;
 
                 return (
-                  <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg space-y-3">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                      <div className="space-y-0.5">
-                        <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
-                        <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
-                        <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                        <button
-                          onClick={() => abrirModalEvento(ev)}
-                          className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
-                        >
-                          {usuario ? 'INSCRIBIRSE' : 'INICIÁ SESIÓN PARA INSCRIBIRTE'}
-                        </button>
-                        {esAdminEfectivo && (
-                          <button
-                            onClick={() => handleEliminarEvento(ev.id)}
-                            className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
-                          >
-                            ELIMINAR
-                          </button>
-                        )}
-                      </div>
+                  <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
+                      <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
+                      <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
                     </div>
 
-                    <div className="pt-2.5 border-t border-white/10">
-                      <p className="text-[10px] font-wrc text-[#38bdf8] tracking-wider mb-1.5">
-                        PILOTOS INSCRIPTOS ({inscriptosDelEvento.length})
-                      </p>
-                      {inscriptosDelEvento.length === 0 ? (
-                        <p className="text-[10px] text-neutral-400 font-wrc">AÚN NO HAY PILOTOS INSCRIPTOS EN ESTE EVENTO.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                          {inscriptosDelEvento.map((ins) => (
-                            <div
-                              key={ins.id}
-                              className="bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 text-[10px]"
-                            >
-                              <span className="font-wrc text-white truncate">{ins.nombre_piloto}</span>
-                              <span className="text-sky-300 font-mono truncate">
-                                {[ins.categoria_seleccionada, ins.auto_seleccionado].filter(Boolean).join(' • ')}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setEventoListaModal(ev)}
+                        className="bg-neutral-900/90 hover:bg-neutral-800 text-[#38bdf8] border border-[#38bdf8]/40 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
+                      >
+                        LISTA DE INSCRIPTOS ({cantidadInscriptos})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => abrirModalEvento(ev)}
+                        className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
+                      >
+                        {usuario ? 'INSCRIBIRSE' : 'INICIÁ SESIÓN PARA INSCRIBIRTE'}
+                      </button>
+                      {esAdminEfectivo && (
+                        <button
+                          type="button"
+                          onClick={() => handleEliminarEvento(ev.id)}
+                          className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                        >
+                          ELIMINAR
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1558,6 +1547,61 @@ export default function App() {
           )}
         </div>
       </footer>
+
+      {eventoListaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] text-[#38bdf8] font-bold">LISTA DE INSCRIPTOS ({inscriptosModalEvento.length})</span>
+                <h3 className="font-wrc text-xl text-white">{eventoListaModal.titulo}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEventoListaModal(null)}
+                className="text-neutral-400 hover:text-white text-sm px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {inscriptosModalEvento.length === 0 ? (
+              <p className="text-xs text-neutral-400 font-wrc py-4 text-center">
+                AÚN NO HAY PILOTOS INSCRIPTOS EN ESTE EVENTO.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {inscriptosModalEvento.map((ins, idx) => (
+                  <div
+                    key={ins.id}
+                    className="bg-neutral-950 border border-white/10 rounded-xl px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#38bdf8] font-wrc text-xs">#{idx + 1}</span>
+                      <span className="font-wrc text-sm text-white">{ins.nombre_piloto}</span>
+                    </div>
+                    <div className="text-[10px] text-sky-300 font-mono flex flex-wrap gap-2">
+                      {ins.categoria_seleccionada && <span>{ins.categoria_seleccionada}</span>}
+                      {ins.auto_seleccionado && <span>• {ins.auto_seleccionado}</span>}
+                      {ins.pais_origen && <span className="text-neutral-400">• {ins.pais_origen}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setEventoListaModal(null)}
+                className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-4 py-1.5 rounded-xl cursor-pointer"
+              >
+                CERRAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {eventoModalActivo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
