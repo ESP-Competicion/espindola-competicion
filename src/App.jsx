@@ -19,6 +19,9 @@ const ADMINS_EMAILS = [
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 const SESION_STORAGE_KEY = 'esp_sesion_usuario';
 
+const DEFAULT_INICIO_BADGE = 'TEMPORADA OFICIAL 2027 • 10 AÑOS DE ESPÍNDOLA COMPETICIÓN';
+const DEFAULT_INICIO_TITULO = '10 AÑOS DE PASIÓN, VELOCIDAD Y GLORIA';
+
 const leerCache = (clave) => {
   try {
     const raw = sessionStorage.getItem(clave);
@@ -110,12 +113,15 @@ export default function App() {
   const [menuPrincipalAbierto, setMenuPrincipalAbierto] = useState(false);
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
 
-  const [config, setConfig] = useState(() => leerCache('esp_config') || {
+  const [config, setConfig] = useState(() => ({
     instagram: 'https://instagram.com',
     discord: 'https://discord.gg',
     tiktok: 'https://tiktok.com',
-    historia_texto: ''
-  });
+    historia_texto: '',
+    inicio_badge: DEFAULT_INICIO_BADGE,
+    inicio_titulo: DEFAULT_INICIO_TITULO,
+    ...(leerCache('esp_config') || {})
+  }));
   const [editandoConfig, setEditandoConfig] = useState(false);
 
   const [eventos, setEventos] = useState([]);
@@ -225,7 +231,9 @@ export default function App() {
         instagram: data.instagram || 'https://instagram.com',
         discord: data.discord || 'https://discord.gg',
         tiktok: data.tiktok || 'https://tiktok.com',
-        historia_texto: data.historia_texto || ''
+        historia_texto: data.historia_texto || '',
+        inicio_badge: data.inicio_badge || DEFAULT_INICIO_BADGE,
+        inicio_titulo: data.inicio_titulo || DEFAULT_INICIO_TITULO
       };
       setConfig(nuevaConfig);
       guardarCache('esp_config', nuevaConfig);
@@ -333,12 +341,25 @@ export default function App() {
 
   const handleGuardarConfig = async (e) => {
     e.preventDefault();
+    const normalizarUrl = (url, fallback) => {
+      const limpio = (url || '').trim();
+      if (!limpio) return '';
+      if (limpio.startsWith('http://') || limpio.startsWith('https://')) return limpio;
+      return `https://${limpio}`;
+    };
+
+    const configLimpia = {
+      instagram: normalizarUrl(config.instagram, 'https://instagram.com'),
+      discord: normalizarUrl(config.discord, 'https://discord.gg'),
+      tiktok: normalizarUrl(config.tiktok, 'https://tiktok.com'),
+      historia_texto: config.historia_texto,
+      inicio_badge: (config.inicio_badge || '').trim().toUpperCase() || DEFAULT_INICIO_BADGE,
+      inicio_titulo: (config.inicio_titulo || '').trim().toUpperCase() || DEFAULT_INICIO_TITULO
+    };
+
     const payload = {
       id: 1,
-      instagram: config.instagram,
-      discord: config.discord,
-      tiktok: config.tiktok,
-      historia_texto: config.historia_texto,
+      ...configLimpia,
       updated_at: new Date().toISOString()
     };
 
@@ -347,13 +368,9 @@ export default function App() {
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
     } else {
-      guardarCache('esp_config', {
-        instagram: config.instagram,
-        discord: config.discord,
-        tiktok: config.tiktok,
-        historia_texto: config.historia_texto
-      });
-      alert('¡Historia guardada exitosamente!');
+      setConfig(configLimpia);
+      guardarCache('esp_config', configLimpia);
+      alert('¡Cambios guardados exitosamente!');
       setEditandoConfig(false);
     }
   };
@@ -631,6 +648,10 @@ export default function App() {
     return found?.nombre || null;
   };
 
+  const tituloInicioActual = (config.inicio_titulo || DEFAULT_INICIO_TITULO).toUpperCase();
+  const tienePalabraGloria = tituloInicioActual.includes('GLORIA');
+  const partesGloria = tienePalabraGloria ? tituloInicioActual.split('GLORIA') : [tituloInicioActual];
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
 
@@ -826,11 +847,19 @@ export default function App() {
           <div className="min-h-[55vh] flex flex-col items-center justify-center">
             <div className="max-w-xl mx-auto text-center space-y-3 py-6">
               <span className="inline-block bg-[#38bdf8]/20 text-[#38bdf8] font-wrc text-[11px] tracking-widest px-3 py-1 rounded-full border border-[#38bdf8]/40 uppercase backdrop-blur-md shadow-md">
-                TEMPORADA OFICIAL 2027 • 10 AÑOS DE ESPÍNDOLA COMPETICIÓN {esAdminEfectivo && '• MODO ADMIN'}
+                {config.inicio_badge || DEFAULT_INICIO_BADGE} {esAdminEfectivo && '• MODO ADMIN'}
               </span>
 
               <h1 className="font-wrc text-3xl md:text-5xl font-black tracking-tight text-white uppercase drop-shadow-[0_3px_15px_rgba(0,0,0,0.95)]">
-                10 AÑOS DE PASIÓN, VELOCIDAD Y <span className="text-[#38bdf8] drop-shadow-[0_0_20px_rgba(56,189,248,0.55)]">GLORIA</span>
+                {tienePalabraGloria ? (
+                  <>
+                    {partesGloria[0]}
+                    <span className="text-[#38bdf8] drop-shadow-[0_0_20px_rgba(56,189,248,0.55)]">GLORIA</span>
+                    {partesGloria.slice(1).join('GLORIA')}
+                  </>
+                ) : (
+                  tituloInicioActual
+                )}
               </h1>
             </div>
           </div>
@@ -854,7 +883,7 @@ export default function App() {
                     onClick={() => setEditandoConfig(true)}
                     className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer font-black"
                   >
-                    ✏️ EDITAR HISTORIA
+                    ✏️ EDITAR HISTORIA, REDES Y PORTADA
                   </button>
                 )}
               </div>
@@ -864,14 +893,79 @@ export default function App() {
                   {config.historia_texto || "HISTORIA NO DEFINIDA. PUEDES AGREGARLA DESDE EL PANEL DE ADMINISTRACIÓN."}
                 </div>
               ) : (
-                <form onSubmit={handleGuardarConfig} className="space-y-2.5">
-                  <p className="text-[10px] text-[#38bdf8] font-wrc">MODIFICA EL TEXTO COMPLETO DE LA HISTORIA A TU GUSTO:</p>
-                  <textarea
-                    rows={12}
-                    value={config.historia_texto}
-                    onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
-                    className="w-full bg-neutral-950 border border-[#38bdf8]/50 rounded-xl p-3 text-[11px] text-white focus:border-[#38bdf8] outline-none font-wrc uppercase leading-snug"
-                  />
+                <form onSubmit={handleGuardarConfig} className="space-y-3">
+                  <div className="space-y-2 border-b border-white/10 pb-3">
+                    <p className="text-[10px] text-[#38bdf8] font-wrc">PANTALLA PRINCIPAL (INICIO):</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] text-neutral-300 mb-1">ETIQUETA SUPERIOR (BADGE)</label>
+                        <input
+                          type="text"
+                          value={config.inicio_badge || ''}
+                          onChange={(e) => setConfig({ ...config, inicio_badge: e.target.value })}
+                          placeholder={DEFAULT_INICIO_BADGE}
+                          className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] text-neutral-300 mb-1">TÍTULO PRINCIPAL</label>
+                        <input
+                          type="text"
+                          value={config.inicio_titulo || ''}
+                          onChange={(e) => setConfig({ ...config, inicio_titulo: e.target.value })}
+                          placeholder={DEFAULT_INICIO_TITULO}
+                          className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-b border-white/10 pb-3">
+                    <p className="text-[10px] text-[#38bdf8] font-wrc">LINKS DE REDES SOCIALES:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[9px] text-neutral-300 mb-1">INSTAGRAM</label>
+                        <input
+                          type="text"
+                          value={config.instagram || ''}
+                          onChange={(e) => setConfig({ ...config, instagram: e.target.value })}
+                          placeholder="https://instagram.com/tu_cuenta"
+                          className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white lowercase outline-none focus:border-[#38bdf8]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] text-neutral-300 mb-1">TIKTOK</label>
+                        <input
+                          type="text"
+                          value={config.tiktok || ''}
+                          onChange={(e) => setConfig({ ...config, tiktok: e.target.value })}
+                          placeholder="https://tiktok.com/@tu_cuenta"
+                          className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white lowercase outline-none focus:border-[#38bdf8]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] text-neutral-300 mb-1">DISCORD</label>
+                        <input
+                          type="text"
+                          value={config.discord || ''}
+                          onChange={(e) => setConfig({ ...config, discord: e.target.value })}
+                          placeholder="https://discord.gg/tu_invitacion"
+                          className="w-full bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white lowercase outline-none focus:border-[#38bdf8]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-[#38bdf8] font-wrc">TEXTO DE LA HISTORIA:</p>
+                    <textarea
+                      rows={10}
+                      value={config.historia_texto}
+                      onChange={(e) => setConfig({ ...config, historia_texto: e.target.value.toUpperCase() })}
+                      className="w-full bg-neutral-950 border border-[#38bdf8]/50 rounded-xl p-3 text-[11px] text-white focus:border-[#38bdf8] outline-none font-wrc uppercase leading-snug"
+                    />
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
