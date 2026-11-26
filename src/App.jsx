@@ -67,7 +67,7 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
   else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
   else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
-  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
+  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p === 'EEUU' || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
 
@@ -121,6 +121,7 @@ export default function App() {
   const [eventos, setEventos] = useState([]);
   const [inscripciones, setInscripciones] = useState([]);
   const [eventoListaModal, setEventoListaModal] = useState(null);
+  const [eventoHistorialModal, setEventoHistorialModal] = useState(null);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
@@ -1095,6 +1096,13 @@ export default function App() {
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
                       <button
                         type="button"
+                        onClick={() => setEventoHistorialModal(ev)}
+                        className="bg-neutral-900/90 hover:bg-neutral-800 text-sky-200 border border-white/20 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
+                      >
+                        HISTORIAL / TIEMPOS
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setEventoListaModal(ev)}
                         className="bg-neutral-900/90 hover:bg-neutral-800 text-[#38bdf8] border border-[#38bdf8]/40 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
                       >
@@ -1547,6 +1555,33 @@ export default function App() {
           )}
         </div>
       </footer>
+
+      {eventoHistorialModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-5">
+          <div className="bg-neutral-950 border border-[#38bdf8]/40 rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-4 sm:p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] text-[#38bdf8] font-wrc tracking-widest">HISTORIAL DE RALLY DEL EVENTO</span>
+                <h3 className="font-wrc text-xl sm:text-2xl text-white">{eventoHistorialModal.titulo}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEventoHistorialModal(null)}
+                className="bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/10 cursor-pointer"
+              >
+                ✕ CERRAR
+              </button>
+            </div>
+
+            <ResultadosRallyServer
+              esAdmin={esAdminEfectivo}
+              eventoId={eventoHistorialModal.id}
+              campeonatoId={eventoHistorialModal.campeonato_id}
+              tituloEvento={eventoHistorialModal.titulo}
+            />
+          </div>
+        </div>
+      )}
 
       {eventoListaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">

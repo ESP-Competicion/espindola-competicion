@@ -64,7 +64,12 @@ function formatearFechaSesion(s) {
   return new Date(fechaRaw).toLocaleString();
 }
 
-export default function ResultadosRallyServer({ esAdmin }) {
+export default function ResultadosRallyServer({
+  esAdmin,
+  eventoId = null,
+  campeonatoId = null,
+  tituloEvento = ''
+}) {
   const [vistaPrincipal, setVistaPrincipal] = useState('rally');
   const [subVistaRally, setSubVistaRally] = useState('tramo1');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('TODAS');
@@ -76,23 +81,31 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
   useEffect(() => {
     cargarSesionesServidor();
-  }, []);
+  }, [eventoId]);
 
   async function cargarSesionesServidor() {
-    const { data, error } = await api.from('resultados_sesiones').select({
-      order: 'fecha.desc'
-    });
+    const filtros = eventoId
+      ? { eq_evento_id: String(eventoId), order: 'fecha.desc' }
+      : { order: 'fecha.desc' };
+
+    const { data, error } = await api.from('resultados_sesiones').select(filtros);
 
     if (error) {
       console.error("Error al cargar desde API:", error.message);
       return;
     }
 
-    if (data && data.length > 0) {
-      setSesionesServidor(data);
+    const filas = Array.isArray(data)
+      ? (eventoId
+          ? data.filter(s => String(s.evento_id) === String(eventoId))
+          : data)
+      : [];
+
+    if (filas.length > 0) {
+      setSesionesServidor(filas);
       setSesionActivaId((prevId) => {
-        if (prevId && data.some(s => s.id === prevId)) return prevId;
-        return data[0].id;
+        if (prevId && filas.some(s => s.id === prevId)) return prevId;
+        return filas[0].id;
       });
     } else {
       setSesionesServidor([]);
@@ -128,10 +141,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
   async function resetearTodosLosResultados() {
     if (!esAdmin) return;
 
-    const confirmar1 = window.confirm('⚠️ ¿Seguro que querés borrar TODOS los resultados y sesiones guardadas para empezar de cero?');
+    const confirmar1 = window.confirm(
+      eventoId
+        ? `¿Seguro que querés borrar TODOS los tramos/resultados guardados de "${tituloEvento || 'este evento'}"?`
+        : '⚠️ ¿Seguro que querés borrar TODOS los resultados y sesiones guardadas para empezar de cero?'
+    );
     if (!confirmar1) return;
 
-    const confirmar2 = window.confirm('Última confirmación: se eliminarán todos los registros de la tabla resultados_sesiones.');
+    const confirmar2 = window.confirm('Última confirmación: se eliminarán estos registros de la tabla resultados_sesiones.');
     if (!confirmar2) return;
 
     try {
@@ -148,7 +165,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
         }
       }
 
-      alert('¡Todos los resultados se borraron y la tabla quedó reseteada!');
+      alert('¡Resultados borrados correctamente!');
       setSesionesServidor([]);
       setSesionActivaId(null);
     } catch (err) {
@@ -225,11 +242,15 @@ export default function ResultadosRallyServer({ esAdmin }) {
         };
       });
 
-      const { error } = await api.from('resultados_sesiones').insert([{
+      const payload = {
         sesion_tipo: tipoSesionActual,
         pista: pistaNombre,
         datos_json: datosProcesados
-      }]);
+      };
+      if (eventoId) payload.evento_id = String(eventoId);
+      if (campeonatoId) payload.campeonato_id = String(campeonatoId);
+
+      const { error } = await api.from('resultados_sesiones').insert([payload]);
 
       if (error) {
         alert('Error al guardar en la API: ' + error.message);
@@ -376,6 +397,18 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-wrc text-white uppercase p-4">
+
+      {eventoId && (
+        <div className="bg-[#38bdf8]/10 border border-[#38bdf8]/40 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span className="text-[10px] text-[#38bdf8] tracking-widest block">HISTORIAL DE TIEMPOS DEL EVENTO</span>
+            <h3 className="text-base md:text-lg text-white font-black">{tituloEvento || `EVENTO #${eventoId}`}</h3>
+          </div>
+          <span className="text-[10px] font-mono text-sky-300">
+            TRAMOS GUARDADOS: {sesionesCronologicas.length}
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-wrap justify-between items-center gap-4 bg-neutral-900/60 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
         <div className="flex items-center gap-2">
