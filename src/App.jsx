@@ -123,6 +123,9 @@ export default function App() {
   const [eventoListaModal, setEventoListaModal] = useState(null);
   const [eventoHistorialModal, setEventoHistorialModal] = useState(null);
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
+  const [subVistaEventos, setSubVistaEventos] = useState('activos');
+  const [filtroCampeonatoEvento, setFiltroCampeonatoEvento] = useState('TODOS');
+
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
 
@@ -131,8 +134,6 @@ export default function App() {
   const [enviandoParticipacionCalendario, setEnviandoParticipacionCalendario] = useState(false);
 
   const [eventoModalActivo, setEventoModalActivo] = useState(null);
-  const [modoModalEvento, setModoModalEvento] = useState('formulario');
-  const [asistentesEventoEquipo, setAsistentesEventoEquipo] = useState([]);
   const [formInscripcion, setFormInscripcion] = useState({
     nombre_piloto: '',
     categoria_seleccionada: '',
@@ -187,9 +188,7 @@ export default function App() {
     if (pestanaActiva === 'eventos') {
       cargarEventos();
       cargarInscripciones();
-      if (esAdminEfectivo) {
-        cargarCampeonatosSelect();
-      }
+      cargarCampeonatosSelect();
     } else if (pestanaActiva === 'calendario') {
       cargarCalendario();
     } else if (pestanaActiva === 'fama') {
@@ -236,7 +235,7 @@ export default function App() {
   async function cargarEventos() {
     const { data } = await api.from('eventos').select({
       order: 'created_at.desc',
-      limit: 30
+      limit: 60
     });
     if (data) setEventos(data);
   }
@@ -286,13 +285,6 @@ export default function App() {
       eq_calendario_id: calendarioId
     });
     if (Array.isArray(data)) setAsistentesEvento(data);
-  }
-
-  async function cargarAsistentesEventoEquipo(eventoId) {
-    const { data } = await api.from('asistencias_eventos').select({
-      eq_evento_id: eventoId
-    });
-    if (data) setAsistentesEventoEquipo(data);
   }
 
   async function verificarAdminYPerfil(user) {
@@ -376,7 +368,8 @@ export default function App() {
       horario: nuevoEvento.horario,
       categorias: nuevoEvento.categorias,
       modelos_autos: nuevoEvento.modelos_autos,
-      campeonato_id: nuevoEvento.campeonato_id ? nuevoEvento.campeonato_id : null
+      campeonato_id: nuevoEvento.campeonato_id ? nuevoEvento.campeonato_id : null,
+      archivado: 0
     };
 
     const { error } = await api.from('eventos').insert([datosInsertar]);
@@ -392,8 +385,23 @@ export default function App() {
         modelos_autos: '',
         campeonato_id: ''
       });
+      setSubVistaEventos('activos');
       cargarEventos();
     }
+  };
+
+  const handleToggleArchivarEvento = async (ev) => {
+    if (!esAdminEfectivo) return;
+    const nuevoEstado = Number(ev.archivado) === 1 ? 0 : 1;
+    const { error } = await api.from('eventos').update(
+      { archivado: nuevoEstado },
+      { eq_id: ev.id }
+    );
+    if (error) {
+      alert('Error al actualizar estado del evento: ' + error.message);
+      return;
+    }
+    await cargarEventos();
   };
 
   const handleEliminarEvento = async (id) => {
@@ -409,7 +417,6 @@ export default function App() {
     const categoriasLista = ev.categorias ? ev.categorias.split(',').map(c => c.trim()).filter(Boolean) : [];
     const autosLista = ev.modelos_autos ? ev.modelos_autos.split(',').map(m => m.trim()).filter(Boolean) : [];
     setEventoModalActivo(ev);
-    setModoModalEvento('formulario');
     setFormInscripcion({
       nombre_piloto: perfil?.nombre_piloto || usuario?.email?.split('@')[0] || '',
       categoria_seleccionada: categoriasLista[0] || 'GENERAL',
@@ -417,7 +424,6 @@ export default function App() {
       pais_origen: perfil?.nacionalidad || 'ARGENTINA',
       steam_id: perfil?.steam_id || ''
     });
-    cargarAsistentesEventoEquipo(ev.id);
   };
 
   const handleEnviarInscripcion = async (e) => {
@@ -609,6 +615,21 @@ export default function App() {
   const inscriptosModalEvento = eventoListaModal
     ? inscripciones.filter((ins) => String(ins.evento_id) === String(eventoListaModal.id))
     : [];
+
+  const eventosActivos = eventos.filter((ev) => Number(ev.archivado) !== 1);
+  const eventosArchivados = eventos.filter((ev) => Number(ev.archivado) === 1);
+
+  const eventosFiltrados = (subVistaEventos === 'activos' ? eventosActivos : eventosArchivados).filter((ev) => {
+    if (filtroCampeonatoEvento === 'TODOS') return true;
+    if (filtroCampeonatoEvento === 'SIN_CAMPEONATO') return !ev.campeonato_id;
+    return String(ev.campeonato_id) === String(filtroCampeonatoEvento);
+  });
+
+  const obtenerNombreCampeonato = (campeonatoId) => {
+    if (!campeonatoId) return null;
+    const found = campeonatosDisponibles.find((c) => String(c.id) === String(campeonatoId));
+    return found?.nombre || null;
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
@@ -1012,9 +1033,36 @@ export default function App() {
 
         {pestanaActiva === 'eventos' && (
           <div className="space-y-4 max-w-3xl mx-auto">
-            <div>
-              <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
-              <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">FECHAS ACTIVAS PARA ANOTARTE A COMPETIR Y VINCULAR AL TORNEO.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+              <div>
+                <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">INSCRIPCIONES Y CAMPEONATOS</h2>
+                <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">FECHAS ACTIVAS PARA CORRER Y ARCHIVO ORDENADO POR EVENTO O CAMPEONATO.</p>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-neutral-900/80 p-1 rounded-xl border border-white/15">
+                <button
+                  type="button"
+                  onClick={() => setSubVistaEventos('activos')}
+                  className={`px-3 py-1.5 rounded-lg font-wrc text-[10px] tracking-wider transition cursor-pointer ${
+                    subVistaEventos === 'activos'
+                      ? 'bg-[#38bdf8] text-slate-950 font-black'
+                      : 'text-neutral-300 hover:text-white'
+                  }`}
+                >
+                  EVENTOS ACTIVOS ({eventosActivos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubVistaEventos('historial')}
+                  className={`px-3 py-1.5 rounded-lg font-wrc text-[10px] tracking-wider transition cursor-pointer ${
+                    subVistaEventos === 'historial'
+                      ? 'bg-[#38bdf8] text-slate-950 font-black'
+                      : 'text-neutral-300 hover:text-white'
+                  }`}
+                >
+                  ARCHIVO / HISTORIAL ({eventosArchivados.length})
+                </button>
+              </div>
             </div>
 
             {esAdminEfectivo && (
@@ -1079,55 +1127,100 @@ export default function App() {
               </form>
             )}
 
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-neutral-900/50 border border-white/10 rounded-xl px-3.5 py-2">
+              <span className="text-[10px] font-wrc text-neutral-300">
+                {subVistaEventos === 'activos' ? 'FECHAS DISPONIBLES PARA INSCRIBIRSE' : 'FECHAS ARCHIVADAS PARA CONSULTAR HISTORIAL'}
+              </span>
+              <select
+                value={filtroCampeonatoEvento}
+                onChange={(e) => setFiltroCampeonatoEvento(e.target.value)}
+                className="bg-neutral-950 border border-[#38bdf8]/40 text-[#38bdf8] text-[10px] font-wrc rounded-lg px-2.5 py-1 outline-none cursor-pointer"
+              >
+                <option value="TODOS">CAMPEONATO: TODOS</option>
+                <option value="SIN_CAMPEONATO">EVENTOS SUELTOS</option>
+                {campeonatosDisponibles.map((camp) => (
+                  <option key={camp.id} value={camp.id}>{camp.nombre}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2.5">
-              {eventos.map((ev) => {
-                const cantidadInscriptos = inscripciones.filter(
-                  (ins) => String(ins.evento_id) === String(ev.id)
-                ).length;
+              {eventosFiltrados.length === 0 ? (
+                <div className="bg-neutral-900/50 border border-white/10 rounded-xl p-6 text-center text-neutral-400 font-wrc text-xs">
+                  {subVistaEventos === 'activos'
+                    ? 'NO HAY EVENTOS ACTIVOS EN ESTE FILTRO.'
+                    : 'NO HAY EVENTOS ARCHIVADOS EN ESTE FILTRO.'}
+                </div>
+              ) : (
+                eventosFiltrados.map((ev) => {
+                  const cantidadInscriptos = inscripciones.filter(
+                    (ins) => String(ins.evento_id) === String(ev.id)
+                  ).length;
+                  const nombreCamp = obtenerNombreCampeonato(ev.campeonato_id);
+                  const estaArchivado = Number(ev.archivado) === 1;
 
-                return (
-                  <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                    <div className="space-y-0.5">
-                      <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
-                      <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
-                      <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
-                    </div>
+                  return (
+                    <div key={ev.id} className="bg-neutral-900/50 backdrop-blur-md border border-white/10 rounded-xl p-3.5 md:p-4 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                      <div className="space-y-0.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
+                          {nombreCamp && (
+                            <span className="text-[9px] font-wrc bg-[#38bdf8]/15 text-sky-200 border border-[#38bdf8]/35 px-2 py-0.5 rounded-full">
+                              🏆 {nombreCamp}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-wrc text-base md:text-lg text-white leading-tight">{ev.titulo}</h3>
+                        <p className="text-neutral-300 text-[10px] font-wrc uppercase">CATEGORÍAS: {ev.categorias || 'GENERAL'} | AUTOS: {ev.modelos_autos || 'LIBRE'}</p>
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setEventoHistorialModal(ev)}
-                        className="bg-neutral-900/90 hover:bg-neutral-800 text-sky-200 border border-white/20 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
-                      >
-                        HISTORIAL / TIEMPOS
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEventoListaModal(ev)}
-                        className="bg-neutral-900/90 hover:bg-neutral-800 text-[#38bdf8] border border-[#38bdf8]/40 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
-                      >
-                        LISTA DE INSCRIPTOS ({cantidadInscriptos})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => abrirModalEvento(ev)}
-                        className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
-                      >
-                        {usuario ? 'INSCRIBIRSE' : 'INICIÁ SESIÓN PARA INSCRIBIRTE'}
-                      </button>
-                      {esAdminEfectivo && (
+                      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
                         <button
                           type="button"
-                          onClick={() => handleEliminarEvento(ev.id)}
-                          className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                          onClick={() => setEventoHistorialModal(ev)}
+                          className="bg-neutral-900/90 hover:bg-neutral-800 text-sky-200 border border-white/20 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
                         >
-                          ELIMINAR
+                          HISTORIAL / TIEMPOS
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => setEventoListaModal(ev)}
+                          className="bg-neutral-900/90 hover:bg-neutral-800 text-[#38bdf8] border border-[#38bdf8]/40 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition tracking-wider cursor-pointer uppercase"
+                        >
+                          LISTA DE INSCRIPTOS ({cantidadInscriptos})
+                        </button>
+                        {!estaArchivado && (
+                          <button
+                            type="button"
+                            onClick={() => abrirModalEvento(ev)}
+                            className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
+                          >
+                            {usuario ? 'INSCRIBIRSE' : 'INICIÁ SESIÓN PARA INSCRIBIRTE'}
+                          </button>
+                        )}
+                        {esAdminEfectivo && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleArchivarEvento(ev)}
+                              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-white/15 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                            >
+                              {estaArchivado ? 'RESTAURAR' : 'ARCHIVAR'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarEvento(ev.id)}
+                              className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 font-wrc text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                            >
+                              ELIMINAR
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         )}
