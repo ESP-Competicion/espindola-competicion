@@ -54,6 +54,24 @@ function formatearMilisegundos(ms) {
   return `${mins}:${secsFormatted}`;
 }
 
+function parsearTiempoAMilisegundos(textoTiempo) {
+  const limpio = String(textoTiempo || '').trim().replace(',', '.');
+  if (!limpio) return 0;
+
+  if (limpio.includes(':')) {
+    const partes = limpio.split(':');
+    if (partes.length !== 2) return NaN;
+    const mins = Number(partes[0]);
+    const segs = Number(partes[1]);
+    if (isNaN(mins) || isNaN(segs) || mins < 0 || segs < 0) return NaN;
+    return Math.round((mins * 60 + segs) * 1000);
+  }
+
+  const segsDirectos = Number(limpio);
+  if (isNaN(segsDirectos) || segsDirectos < 0) return NaN;
+  return Math.round(segsDirectos * 1000);
+}
+
 function convertirMsASegundos(ms) {
   return (Number(ms) || 0) / 1000;
 }
@@ -77,7 +95,17 @@ export default function ResultadosRallyServer({
   const [sesionesServidor, setSesionesServidor] = useState([]);
   const [sesionActivaId, setSesionActivaId] = useState(null);
   const [guardandoManual, setGuardandoManual] = useState(false);
+  const [guardandoTiempoManual, setGuardandoTiempoManual] = useState(false);
   const [borrando, setBorrando] = useState(false);
+
+  const [mostrarFormManual, setMostrarFormManual] = useState(false);
+  const [formTiempoManual, setFormTiempoManual] = useState({
+    tramoIndex: '0',
+    piloto: '',
+    auto: '',
+    categoria: 'RC2',
+    tiempoTexto: ''
+  });
 
   useEffect(() => {
     cargarSesionesServidor();
@@ -110,6 +138,99 @@ export default function ResultadosRallyServer({
     } else {
       setSesionesServidor([]);
       setSesionActivaId(null);
+    }
+  }
+
+  const sesionesCronologicas = useMemo(() => [...sesionesServidor].reverse(), [sesionesServidor]);
+
+  async function handleGuardarTiempoManual(e) {
+    e.preventDefault();
+    if (!esAdmin) return;
+
+    const pilotoLimpio = formTiempoManual.piloto.trim().toUpperCase();
+    if (!pilotoLimpio) {
+      alert('Ingresá el nombre del piloto.');
+      return;
+    }
+
+    const ms = parsearTiempoAMilisegundos(formTiempoManual.tiempoTexto);
+    if (isNaN(ms) || ms <= 0) {
+      alert('Formato de tiempo inválido. Usá por ejemplo 04:18.420 o 258.42');
+      return;
+    }
+
+    const autoLimpio = (formTiempoManual.auto || 'AUTO').trim().toUpperCase();
+    const categoriaLimpia = (formTiempoManual.categoria || 'GENERAL').trim().toUpperCase();
+    const tramoIdx = Math.max(0, Number(formTiempoManual.tramoIndex) || 0);
+    const nombreTramo = `TRAMO ${tramoIdx + 1}`;
+
+    try {
+      setGuardandoTiempoManual(true);
+      const sesionExistente = sesionesCronologicas[tramoIdx] || null;
+
+      const nuevoRegistroPiloto = {
+        pos: 1,
+        nombre: pilotoLimpio,
+        auto: autoLimpio,
+        categoria: categoriaLimpia,
+        bestLapMs: ms,
+        lastLapMs: ms,
+        vueltas: 1
+      };
+
+      if (sesionExistente && Array.isArray(sesionExistente.datos_json)) {
+        const listaActual = [...sesionExistente.datos_json];
+        const idxExistente = listaActual.findIndex(
+          (j) => String(j.nombre || j.driver || j.name || '').trim().toUpperCase() === pilotoLimpio
+        );
+
+        if (idxExistente >= 0) {
+          listaActual[idxExistente] = {
+            ...listaActual[idxExistente],
+            nombre: pilotoLimpio,
+            auto: autoLimpio,
+            categoria: categoriaLimpia,
+            bestLapMs: ms,
+            lastLapMs: ms
+          };
+        } else {
+          listaActual.push(nuevoRegistroPiloto);
+        }
+
+        const { error } = await api.from('resultados_sesiones').update(
+          { datos_json: listaActual },
+          { eq_id: sesionExistente.id }
+        );
+
+        if (error) {
+          alert('Error al actualizar el tramo: ' + error.message);
+          return;
+        }
+      } else {
+        const payload = {
+          sesion_tipo: 'RALLY_MANUAL',
+          pista: tituloEvento ? `${tituloEvento} - ${nombreTramo}` : nombreTramo,
+          datos_json: [nuevoRegistroPiloto]
+        };
+        if (eventoId) payload.evento_id = String(eventoId);
+        if (campeonatoId) payload.campeonato_id = String(campeonatoId);
+
+        const { error } = await api.from('resultados_sesiones').insert([payload]);
+        if (error) {
+          alert('Error al guardar el tiempo del tramo: ' + error.message);
+          return;
+        }
+      }
+
+      setFormTiempoManual((prev) => ({
+        ...prev,
+        piloto: '',
+        tiempoTexto: ''
+      }));
+      await cargarSesionesServidor();
+      alert(`Tiempo guardado en ${nombreTramo} para ${pilotoLimpio}.`);
+    } finally {
+      setGuardandoTiempoManual(false);
     }
   }
 
@@ -265,8 +386,6 @@ export default function ResultadosRallyServer({
       setGuardandoManual(false);
     }
   }
-
-  const sesionesCronologicas = useMemo(() => [...sesionesServidor].reverse(), [sesionesServidor]);
 
   const categoriasDisponibles = useMemo(() => {
     const categoriasSet = new Set();
@@ -437,6 +556,14 @@ export default function ResultadosRallyServer({
         {esAdmin && (
           <div className="flex flex-wrap items-center gap-2">
             <button
+              type="button"
+              onClick={() => setMostrarFormManual((prev) => !prev)}
+              className="bg-[#38bdf8]/15 hover:bg-[#38bdf8]/25 text-[#38bdf8] border border-[#38bdf8]/50 font-black text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2 cursor-pointer"
+            >
+              ✍️ {mostrarFormManual ? 'OCULTAR CARGA MANUAL' : 'CARGAR TIEMPO MANUAL'}
+            </button>
+
+            <button
               onClick={forzarGuardadoManual}
               disabled={guardandoManual || borrando}
               className="bg-red-600 hover:bg-red-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
@@ -455,6 +582,94 @@ export default function ResultadosRallyServer({
           </div>
         )}
       </div>
+
+      {esAdmin && mostrarFormManual && (
+        <form
+          onSubmit={handleGuardarTiempoManual}
+          className="bg-neutral-900/80 border border-[#38bdf8]/40 rounded-2xl p-4 shadow-xl space-y-3"
+        >
+          <div className="flex flex-wrap justify-between items-center gap-2 border-b border-white/10 pb-2">
+            <h4 className="text-xs font-black text-[#38bdf8] tracking-wider">
+              ✍️ CARGAR TIEMPO DE TRAMO MANUALMENTE (SIN SERVIDOR EN VIVO)
+            </h4>
+            <span className="text-[10px] font-mono text-neutral-400">
+              FORMATO: MM:SS.MS (EJ: 04:18.420) O SEGUNDOS (EJ: 258.42)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">TRAMO</label>
+              <select
+                value={formTiempoManual.tramoIndex}
+                onChange={(e) => setFormTiempoManual({ ...formTiempoManual, tramoIndex: e.target.value })}
+                className="w-full bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+              >
+                <option value="0">TRAMO 1</option>
+                <option value="1">TRAMO 2</option>
+                <option value="2">TRAMO 3</option>
+                <option value="3">TRAMO 4</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">PILOTO</label>
+              <input
+                type="text"
+                placeholder="EJ: LEO ESPINDOLA"
+                value={formTiempoManual.piloto}
+                onChange={(e) => setFormTiempoManual({ ...formTiempoManual, piloto: e.target.value })}
+                className="w-full bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">AUTO</label>
+              <input
+                type="text"
+                placeholder="EJ: PEUGEOT 208 RALLY4"
+                value={formTiempoManual.auto}
+                onChange={(e) => setFormTiempoManual({ ...formTiempoManual, auto: e.target.value })}
+                className="w-full bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">CATEGORÍA</label>
+              <input
+                type="text"
+                placeholder="EJ: RC2 / RALLY4"
+                value={formTiempoManual.categoria}
+                onChange={(e) => setFormTiempoManual({ ...formTiempoManual, categoria: e.target.value })}
+                className="w-full bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">TIEMPO DEL TRAMO</label>
+              <input
+                type="text"
+                placeholder="04:18.420"
+                value={formTiempoManual.tiempoTexto}
+                onChange={(e) => setFormTiempoManual({ ...formTiempoManual, tiempoTexto: e.target.value })}
+                className="w-full bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button
+              type="submit"
+              disabled={guardandoTiempoManual}
+              className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-5 py-2 rounded-xl transition cursor-pointer disabled:opacity-50"
+            >
+              {guardandoTiempoManual ? 'GUARDANDO TIEMPO...' : '💾 GUARDAR TIEMPO EN TRAMO'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {vistaPrincipal === 'server' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-neutral-950/90 border border-white/10 rounded-2xl p-5 shadow-2xl">
