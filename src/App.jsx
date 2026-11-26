@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { api } from './api';
 import PerfilModal from './PerfilModal';
 import AuthModal from './AuthModal';
 import CambiarPasswordModal from './CambiarPasswordModal';
@@ -17,6 +17,7 @@ const ADMINS_EMAILS = [
 ];
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+const SESION_STORAGE_KEY = 'esp_sesion_usuario';
 
 const leerCache = (clave) => {
   try {
@@ -41,9 +42,18 @@ const guardarCache = (clave, data) => {
   }
 };
 
+const leerSesionGuardada = () => {
+  try {
+    const raw = localStorage.getItem(SESION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 const obtenerBanderaPais = (pais) => {
   if (!pais) return <span className="inline-flex items-center gap-1.5">ARGENTINA <img src="https://flagcdn.com/w20/ar.png" alt="AR" className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle" /></span>;
-  
+
   const p = pais.toUpperCase().trim();
   let codigoIso = 'ar';
 
@@ -69,17 +79,17 @@ const obtenerBanderaPais = (pais) => {
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
       <span>{nombreLimpio}</span>
-      <img 
-        src={`https://flagcdn.com/w40/${codigoIso}.png`} 
-        alt={codigoIso} 
-        className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle border border-white/20" 
+      <img
+        src={`https://flagcdn.com/w40/${codigoIso}.png`}
+        alt={codigoIso}
+        className="w-4 h-3 object-cover rounded-[2px] shadow-sm inline-block align-middle border border-white/20"
       />
     </span>
   );
 };
 
 export default function App() {
-  const [usuario, setUsuario] = useState(null);
+  const [usuario, setUsuario] = useState(() => leerSesionGuardada());
   const [perfil, setPerfil] = useState(null);
   const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
   const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
@@ -106,16 +116,21 @@ export default function App() {
   const [campeonatosDisponibles, setCampeonatosDisponibles] = useState([]);
   const [calendario, setCalendario] = useState([]);
   const [fechaActualCalendario, setFechaActualCalendario] = useState(new Date(2027, 0, 1));
-  
+
   const [diaSeleccionadoModal, setDiaSeleccionadoModal] = useState(null);
-  const [modoModalCalendario, setModoModalCalendario] = useState('detalle'); 
   const [asistentesEvento, setAsistentesEvento] = useState([]);
-  const [formAsistencia, setFormAsistencia] = useState({ categoria: '', modelo_auto: '' });
 
   const [eventoModalActivo, setEventoModalActivo] = useState(null);
   const [modoModalEvento, setModoModalEvento] = useState('formulario');
   const [asistentesEventoEquipo, setAsistentesEventoEquipo] = useState([]);
-  const [formAsistenciaEvento, setFormAsistenciaEvento] = useState({ categoria: '', modelo_auto: '' });
+  const [formInscripcion, setFormInscripcion] = useState({
+    nombre_piloto: '',
+    categoria_seleccionada: '',
+    auto_seleccionado: '',
+    pais_origen: 'ARGENTINA',
+    steam_id: ''
+  });
+  const [enviandoInscripcion, setEnviandoInscripcion] = useState(false);
 
   const [nuevoEvento, setNuevoEvento] = useState({
     titulo: '',
@@ -147,37 +162,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    async function obtenerDatosSesion() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUsuario(session.user);
-        verificarAdminYPerfil(session.user);
-      }
-    }
-
-    obtenerDatosSesion();
     cargarConfiguracion();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMostrarCambiarPasswordModal(true);
-      }
-      setUsuario(session?.user || null);
-      if (session?.user) {
-        verificarAdminYPerfil(session.user);
-      } else {
-        setPerfil(null);
-        setEsAdmin(false);
-        setVistaAdminActiva(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    if (usuario) {
+      verificarAdminYPerfil(usuario);
+    }
   }, []);
 
-  // Carga bajo demanda según la pestaña activa para no gastar Egress al abrir el inicio
   useEffect(() => {
     if (pestanaActiva === 'eventos') {
       cargarEventos();
@@ -204,11 +194,7 @@ export default function App() {
       }
     }
 
-    const { data } = await supabase
-      .from('configuracion_equipo')
-      .select('instagram, discord, tiktok, historia_texto')
-      .eq('id', 1)
-      .single();
+    const { data } = await api.from('configuracion_equipo').getById(1);
 
     if (data) {
       const nuevaConfig = {
@@ -223,35 +209,31 @@ export default function App() {
   }
 
   async function cargarEventos() {
-    const { data } = await supabase
-      .from('eventos')
-      .select('id, titulo, fecha, horario, categorias, modelos_autos, campeonato_id')
-      .order('created_at', { ascending: false })
-      .limit(30);
+    const { data } = await api.from('eventos').select({
+      order: 'created_at.desc',
+      limit: 30
+    });
     if (data) setEventos(data);
   }
 
   async function cargarCampeonatosSelect() {
-    const { data } = await supabase
-      .from('campeonatos')
-      .select('id, nombre')
-      .order('nombre', { ascending: true });
+    const { data } = await api.from('campeonatos').select({
+      order: 'nombre.asc'
+    });
     if (data) setCampeonatosDisponibles(data);
   }
 
   async function cargarCalendario() {
-    const { data } = await supabase
-      .from('calendario')
-      .select('id, titulo, fecha, descripcion')
-      .order('fecha', { ascending: true });
+    const { data } = await api.from('calendario').select({
+      order: 'fecha.asc'
+    });
     if (data) setCalendario(data);
   }
 
   async function cargarSalónDeLaFama() {
-    const { data } = await supabase
-      .from('salon_fama')
-      .select('id, nombre, categoria, campeonatos, foto')
-      .order('campeonatos', { ascending: false });
+    const { data } = await api.from('salon_fama').select({
+      order: 'campeonatos.desc'
+    });
     if (data) {
       const listaConPuestos = data.map((p, idx) => ({ ...p, puesto: idx + 1 }));
       setHallFama(listaConPuestos);
@@ -259,23 +241,26 @@ export default function App() {
   }
 
   async function cargarMiembros() {
-    const { data } = await supabase
-      .from('perfiles')
-      .select('id, nombre_piloto, nacionalidad, provincia, avatar_url');
+    const { data } = await api.from('perfiles').select();
     if (data) setMiembros(data);
   }
 
   async function cargarAsistentesCalendario(calendarioId) {
-    const { data } = await supabase.from('asistencias_calendario').select('*').eq('calendario_id', calendarioId);
+    const { data } = await api.from('asistencias_calendario').select({
+      eq_calendario_id: calendarioId
+    });
     if (data) setAsistentesEvento(data);
   }
 
   async function cargarAsistentesEventoEquipo(eventoId) {
-    const { data } = await supabase.from('asistencias_eventos').select('*').eq('evento_id', eventoId);
+    const { data } = await api.from('asistencias_eventos').select({
+      eq_evento_id: eventoId
+    });
     if (data) setAsistentesEventoEquipo(data);
   }
 
   async function verificarAdminYPerfil(user) {
+    if (!user) return;
     const emailNormalizado = (user.email || '').toLowerCase().trim();
     const tienePermisoAdmin = ADMINS_EMAILS.includes(emailNormalizado);
 
@@ -287,17 +272,32 @@ export default function App() {
       setVistaAdminActiva(false);
     }
 
-    const { data } = await supabase
-      .from('perfiles')
-      .select('id, nombre_piloto, nacionalidad, provincia, avatar_url, steam_id')
-      .eq('id', user.id)
-      .single();
-
-    if (data) setPerfil(data);
+    if (user.id) {
+      const { data } = await api.from('perfiles').getById(user.id);
+      if (data) setPerfil(data);
+    }
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleSesionConfirmada = (userObj) => {
+    try {
+      localStorage.setItem(SESION_STORAGE_KEY, JSON.stringify(userObj));
+    } catch {
+      // ignorar error de storage
+    }
+    setUsuario(userObj);
+    verificarAdminYPerfil(userObj);
+  };
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem(SESION_STORAGE_KEY);
+    } catch {
+      // ignorar error de storage
+    }
+    setUsuario(null);
+    setPerfil(null);
+    setEsAdmin(false);
+    setVistaAdminActiva(false);
   };
 
   const handleGuardarConfig = async (e) => {
@@ -308,12 +308,10 @@ export default function App() {
       discord: config.discord,
       tiktok: config.tiktok,
       historia_texto: config.historia_texto,
-      updated_at: new Date()
+      updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase
-      .from('configuracion_equipo')
-      .upsert(payload);
+    const { error } = await api.from('configuracion_equipo').insert(payload, { upsert: true });
 
     if (error) {
       alert('Error al guardar configuración: ' + error.message);
@@ -342,7 +340,7 @@ export default function App() {
       campeonato_id: nuevoEvento.campeonato_id ? nuevoEvento.campeonato_id : null
     };
 
-    const { error } = await supabase.from('eventos').insert([datosInsertar]);
+    const { error } = await api.from('eventos').insert([datosInsertar]);
 
     if (error) {
       alert('Error al crear evento: ' + error.message);
@@ -361,15 +359,51 @@ export default function App() {
 
   const handleEliminarEvento = async (id) => {
     if (!confirm('¿Seguro de eliminar este evento?')) return;
-    const { error } = await supabase.from('eventos').delete().eq('id', id);
+    const { error } = await api.from('eventos').delete({ eq_id: id });
     if (!error) cargarEventos();
+  };
+
+  const abrirModalEvento = (ev) => {
+    const categoriasLista = ev.categorias ? ev.categorias.split(',').map(c => c.trim()).filter(Boolean) : [];
+    const autosLista = ev.modelos_autos ? ev.modelos_autos.split(',').map(m => m.trim()).filter(Boolean) : [];
+    setEventoModalActivo(ev);
+    setModoModalEvento('formulario');
+    setFormInscripcion({
+      nombre_piloto: perfil?.nombre_piloto || usuario?.email?.split('@')[0] || '',
+      categoria_seleccionada: categoriasLista[0] || 'GENERAL',
+      auto_seleccionado: autosLista[0] || 'LIBRE',
+      pais_origen: perfil?.nacionalidad || 'ARGENTINA',
+      steam_id: perfil?.steam_id || ''
+    });
+    cargarAsistentesEventoEquipo(ev.id);
+  };
+
+  const handleEnviarInscripcion = async (e) => {
+    e.preventDefault();
+    if (!eventoModalActivo || !formInscripcion.nombre_piloto.trim()) return;
+    setEnviandoInscripcion(true);
+    const { error } = await api.from('inscripciones').insert([{
+      evento_id: eventoModalActivo.id,
+      nombre_piloto: formInscripcion.nombre_piloto.trim().toUpperCase(),
+      categoria_seleccionada: formInscripcion.categoria_seleccionada.trim().toUpperCase(),
+      auto_seleccionado: formInscripcion.auto_seleccionado.trim().toUpperCase(),
+      pais_origen: formInscripcion.pais_origen.trim().toUpperCase(),
+      steam_id: formInscripcion.steam_id.trim()
+    }]);
+    setEnviandoInscripcion(false);
+    if (error) {
+      alert('Error al inscribirse: ' + error.message);
+    } else {
+      alert('¡Inscripción confirmada con éxito! 🏁');
+      setEventoModalActivo(null);
+    }
   };
 
   const handleCrearCalendario = async (e) => {
     e.preventDefault();
     if (!nuevoCalendario.titulo || !nuevoCalendario.fecha) return;
 
-    const { error } = await supabase.from('calendario').insert([nuevoCalendario]);
+    const { error } = await api.from('calendario').insert([nuevoCalendario]);
 
     if (error) {
       alert('Error al crear fecha de calendario: ' + error.message);
@@ -381,7 +415,7 @@ export default function App() {
 
   const handleEliminarCalendario = async (id) => {
     if (!confirm('¿Eliminar esta fecha del calendario?')) return;
-    const { error } = await supabase.from('calendario').delete().eq('id', id);
+    const { error } = await api.from('calendario').delete({ eq_id: id });
     if (!error) cargarCalendario();
   };
 
@@ -397,10 +431,10 @@ export default function App() {
     };
 
     if (editandoId !== null) {
-      await supabase.from('salon_fama').update(datosPiloto).eq('id', editandoId);
+      await api.from('salon_fama').update(datosPiloto, { eq_id: editandoId });
       setEditandoId(null);
     } else {
-      await supabase.from('salon_fama').insert([datosPiloto]);
+      await api.from('salon_fama').insert([datosPiloto]);
     }
 
     setNuevoPilotoFama({ nombre: '', categoria: '', campeonatos: '', foto: '' });
@@ -420,7 +454,7 @@ export default function App() {
 
   const handleEliminarPilotoFama = async (id) => {
     if (!confirm('¿Eliminar del Salón de la Fama?')) return;
-    await supabase.from('salon_fama').delete().eq('id', id);
+    await api.from('salon_fama').delete({ eq_id: id });
     cargarSalónDeLaFama();
   };
 
@@ -446,7 +480,7 @@ export default function App() {
       const mesStr = String(mes + 1).padStart(2, '0');
       const diaStr = String(d).padStart(2, '0');
       const fechaFormato = `${año}-${mesStr}-${diaStr}`;
-      
+
       const eventosDelDia = calendario.filter(c => c.fecha === fechaFormato);
       dias.push({ dia: d, fecha: fechaFormato, eventos: eventosDelDia });
     }
@@ -467,7 +501,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans relative overflow-x-hidden selection:bg-sky-400 selection:text-slate-950 flex flex-col justify-between uppercase text-xs md:text-sm">
-      
+
       <div className="fixed inset-0 pointer-events-none z-0">
         {fotosRally.map((foto, index) => (
           <div
@@ -483,7 +517,7 @@ export default function App() {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700&display=swap');
-        
+
         .font-wrc {
           font-family: 'Barlow Condensed', sans-serif !important;
           letter-spacing: 0.05em;
@@ -493,15 +527,15 @@ export default function App() {
       `}</style>
 
       <header className="relative z-50 w-full max-w-[1400px] mx-auto px-4 pt-4 flex flex-wrap items-center justify-between gap-3">
-        
-        <button 
+
+        <button
           onClick={() => { setPestanaActiva('inicio'); }}
           className="cursor-pointer group flex items-center focus:outline-none"
           title="Ir al inicio"
         >
-          <img 
-            src="/logo.svg" 
-            alt="Logo Espíndola Competición" 
+          <img
+            src="/logo.svg"
+            alt="Logo Espíndola Competición"
             onError={(e) => { e.target.src = 'https://files.catbox.moe/f3xmld.png'; }}
             className="h-7 md:h-8 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] opacity-90"
           />
@@ -568,7 +602,7 @@ export default function App() {
         <div className="relative">
           {usuario ? (
             <div className="flex items-center gap-2.5 pl-2 pr-4 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/30 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-              <button 
+              <button
                 onClick={() => setMostrarPerfilModal(true)}
                 className="flex items-center gap-2 group cursor-pointer focus:outline-none"
               >
@@ -597,7 +631,7 @@ export default function App() {
                   {(perfil?.nombre_piloto || usuario.email.split('@')[0]).toUpperCase()}
                 </span>
               </button>
-              
+
               <button
                 onClick={() => {
                   setMenuUsuarioAbierto(!menuUsuarioAbierto);
@@ -612,7 +646,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <button 
+            <button
               onClick={() => setMostrarAuthModal(true)}
               className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-xs px-4 py-2 rounded-full transition shadow-md shadow-[#38bdf8]/20 tracking-wider cursor-pointer font-black"
             >
@@ -655,7 +689,7 @@ export default function App() {
       </header>
 
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
-        
+
         {pestanaActiva === 'inicio' && (
           <div className="min-h-[55vh] flex flex-col items-center justify-center">
             <div className="max-w-xl mx-auto text-center space-y-3 py-6">
@@ -811,13 +845,12 @@ export default function App() {
                       onClick={() => {
                         if (tieneCarrera) {
                           setDiaSeleccionadoModal(item.eventos[0]);
-                          setModoModalCalendario('detalle');
                           cargarAsistentesCalendario(item.eventos[0].id);
                         }
                       }}
                       className={`h-11 md:h-14 rounded-lg p-1.5 flex flex-col justify-between transition border relative overflow-hidden ${
-                        tieneCarrera 
-                          ? 'bg-[#38bdf8]/15 border-[#38bdf8]/60 shadow-[0_0_10px_rgba(56,189,248,0.22)] cursor-pointer hover:bg-[#38bdf8]/25' 
+                        tieneCarrera
+                          ? 'bg-[#38bdf8]/15 border-[#38bdf8]/60 shadow-[0_0_10px_rgba(56,189,248,0.22)] cursor-pointer hover:bg-[#38bdf8]/25'
                           : 'bg-neutral-950/40 border-white/5 hover:border-white/20'
                       }`}
                     >
@@ -946,11 +979,7 @@ export default function App() {
 
                   <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     <button
-                      onClick={() => {
-                        setEventoModalActivo(ev);
-                        setModoModalEvento('formulario');
-                        cargarAsistentesEventoEquipo(ev.id);
-                      }}
+                      onClick={() => abrirModalEvento(ev)}
                       className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc text-[10px] px-3 py-1.5 rounded-lg transition shadow tracking-wider cursor-pointer font-black uppercase"
                     >
                       INSCRIBIRSE
@@ -1282,7 +1311,7 @@ export default function App() {
                 </span>
               )}
             </div>
-            
+
             <div className="flex items-center gap-3 border-b border-white/10 pb-3">
               <div className="w-14 h-14 rounded-full bg-neutral-800 border-2 border-[#38bdf8] overflow-hidden flex items-center justify-center font-wrc text-[#38bdf8] text-lg flex-shrink-0">
                 {perfil?.avatar_url ? (
@@ -1341,9 +1370,9 @@ export default function App() {
         <div className="hidden md:block w-24" />
 
         <div className="flex items-center justify-center flex-1">
-          <img 
-            src="/sponsor.svg" 
-            alt="Sponsors Espíndola Competición" 
+          <img
+            src="/sponsor.svg"
+            alt="Sponsors Espíndola Competición"
             className="h-4 md:h-5 w-auto object-contain opacity-80 hover:opacity-100 transition drop-shadow-md mx-auto"
           />
         </div>
@@ -1394,12 +1423,144 @@ export default function App() {
         </div>
       </footer>
 
+      {eventoModalActivo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] text-[#38bdf8] font-bold">INSCRIPCIÓN A EVENTO</span>
+                <h3 className="font-wrc text-xl text-white">{eventoModalActivo.titulo}</h3>
+              </div>
+              <button
+                onClick={() => setEventoModalActivo(null)}
+                className="text-neutral-400 hover:text-white text-sm px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEnviarInscripcion} className="space-y-3">
+              <div>
+                <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE DEL PILOTO</label>
+                <input
+                  type="text"
+                  value={formInscripcion.nombre_piloto}
+                  onChange={(e) => setFormInscripcion({ ...formInscripcion, nombre_piloto: e.target.value })}
+                  required
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-neutral-300 mb-1">CATEGORÍA</label>
+                  <input
+                    type="text"
+                    value={formInscripcion.categoria_seleccionada}
+                    onChange={(e) => setFormInscripcion({ ...formInscripcion, categoria_seleccionada: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-300 mb-1">MODELO DE AUTO</label>
+                  <input
+                    type="text"
+                    value={formInscripcion.auto_seleccionado}
+                    onChange={(e) => setFormInscripcion({ ...formInscripcion, auto_seleccionado: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-neutral-300 mb-1">PAÍS</label>
+                  <input
+                    type="text"
+                    value={formInscripcion.pais_origen}
+                    onChange={(e) => setFormInscripcion({ ...formInscripcion, pais_origen: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-300 mb-1">STEAM ID 64</label>
+                  <input
+                    type="text"
+                    value={formInscripcion.steam_id}
+                    onChange={(e) => setFormInscripcion({ ...formInscripcion, steam_id: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEventoModalActivo(null)}
+                  className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs px-4 py-2 rounded-xl cursor-pointer"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  type="submit"
+                  disabled={enviandoInscripcion}
+                  className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-5 py-2 rounded-xl cursor-pointer"
+                >
+                  {enviandoInscripcion ? 'GUARDANDO...' : 'CONFIRMAR'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {diaSeleccionadoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-3">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <div>
+                <span className="text-[10px] text-[#38bdf8] font-mono">{diaSeleccionadoModal.fecha}</span>
+                <h3 className="font-wrc text-xl text-white">{diaSeleccionadoModal.titulo}</h3>
+              </div>
+              <button
+                onClick={() => setDiaSeleccionadoModal(null)}
+                className="text-neutral-400 hover:text-white text-sm px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-neutral-300">
+              {diaSeleccionadoModal.descripcion || 'FECHA OFICIAL EN EL CALENDARIO DEL EQUIPO.'}
+            </p>
+            <p className="text-[10px] text-neutral-400 font-mono">
+              ASISTENCIAS REGISTRADAS: {asistentesEvento.length}
+            </p>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setDiaSeleccionadoModal(null)}
+                className="bg-[#38bdf8] text-slate-950 font-black text-xs px-4 py-1.5 rounded-xl cursor-pointer"
+              >
+                CERRAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {mostrarPerfilModal && (
-        <PerfilModal usuario={usuario} perfil={perfil} onClose={() => setMostrarPerfilModal(false)} onActualizado={() => verificarAdminYPerfil(usuario)} />
+        <PerfilModal
+          usuario={usuario}
+          perfil={perfil}
+          onClose={() => setMostrarPerfilModal(false)}
+          onActualizado={() => verificarAdminYPerfil(usuario)}
+        />
       )}
 
       {mostrarAuthModal && (
-        <AuthModal onClose={() => setMostrarAuthModal(false)} />
+        <AuthModal
+          onClose={() => setMostrarAuthModal(false)}
+          onLoginExitoso={handleSesionConfirmada}
+        />
       )}
 
       {mostrarCambiarPasswordModal && (

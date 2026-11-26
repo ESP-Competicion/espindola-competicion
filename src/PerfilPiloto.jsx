@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient'; // Ajustá la ruta si tu cliente de Supabase está en otra carpeta
+import { api } from './api';
 
 export default function PerfilPiloto({ session }) {
   const [loading, setLoading] = useState(true);
@@ -19,15 +19,11 @@ export default function PerfilPiloto({ session }) {
   const obtenerPerfil = async () => {
     try {
       setLoading(true);
-      const { user } = session;
+      const userId = session?.user?.id || session?.id;
+      if (!userId) return;
 
-      let { data, error } = await supabase
-        .from('perfiles')
-        .select('nombre_piloto, steam_id, nacionalidad')
-        .eq('id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
+      const { data, error } = await api.from('perfiles').getById(userId);
+      if (error) {
         console.error('Error al cargar perfil:', error);
       }
 
@@ -50,17 +46,17 @@ export default function PerfilPiloto({ session }) {
     try {
       setGuardando(true);
       setMensaje(null);
-      const { user } = session;
+      const userId = session?.user?.id || session?.id;
+      if (!userId) return;
 
       const updates = {
-        id: user.id,
+        id: userId,
         nombre_piloto: perfil.nombre_piloto,
         steam_id: perfil.steam_id,
-        nacionalidad: perfil.nacionalidad,
+        nacionalidad: perfil.nacionalidad
       };
 
-      let { error } = await supabase.from('perfiles').upsert(updates);
-
+      const { error } = await api.from('perfiles').insert(updates, { upsert: true });
       if (error) throw error;
       setMensaje({ tipo: 'exito', texto: '¡Perfil actualizado correctamente!' });
     } catch (error) {
@@ -74,6 +70,8 @@ export default function PerfilPiloto({ session }) {
     return <div className="text-center text-gray-400 py-8">Cargando perfil...</div>;
   }
 
+  const emailUsuario = session?.user?.email || session?.email || '';
+
   return (
     <div className="max-w-md mx-auto bg-neutral-900 border border-neutral-800 rounded-xl p-6 shadow-xl text-white">
       <h2 className="text-xl font-bold text-amber-500 mb-4 uppercase tracking-wide">
@@ -82,8 +80,8 @@ export default function PerfilPiloto({ session }) {
 
       {mensaje && (
         <div className={`p-3 rounded-lg text-sm mb-4 ${
-          mensaje.tipo === 'exito' 
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+          mensaje.tipo === 'exito'
+            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
             : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
         }`}>
           {mensaje.texto}
@@ -97,7 +95,7 @@ export default function PerfilPiloto({ session }) {
           </label>
           <input
             type="text"
-            value={session.user.email}
+            value={emailUsuario}
             disabled
             className="w-full bg-neutral-800 text-gray-500 border border-neutral-700 rounded-lg px-3 py-2 text-sm cursor-not-allowed"
           />

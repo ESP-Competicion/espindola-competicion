@@ -1,23 +1,19 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { api } from './api';
 
-export default function PerfilModal({ usuario, onClose, onPerfilGuardado, onActualizado }) {
-  const [nombrePiloto, setNombrePiloto] = useState('');
-  const [steamId, setSteamId] = useState('');
-  const [nacionalidad, setNacionalidad] = useState('Argentina 🇦🇷');
-  const [provincia, setProvincia] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado, onActualizado }) {
+  const [nombrePiloto, setNombrePiloto] = useState(perfil?.nombre_piloto || '');
+  const [steamId, setSteamId] = useState(perfil?.steam_id || '');
+  const [nacionalidad, setNacionalidad] = useState(perfil?.nacionalidad || 'Argentina 🇦🇷');
+  const [provincia, setProvincia] = useState(perfil?.provincia || '');
+  const [telefono, setTelefono] = useState(perfil?.telefono || '');
+  const [avatarUrl, setAvatarUrl] = useState(perfil?.avatar_url || '');
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     async function cargar() {
-      if (!usuario) return;
-      const { data } = await supabase
-        .from('perfiles')
-        .select('nombre_piloto, steam_id, nacionalidad, provincia, telefono, avatar_url')
-        .eq('id', usuario.id)
-        .single();
+      if (!usuario?.id) return;
+      const { data } = await api.from('perfiles').getById(usuario.id);
 
       if (data) {
         setNombrePiloto(data.nombre_piloto || '');
@@ -33,14 +29,13 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado, onActu
 
   const handleGuardar = async (e) => {
     e.preventDefault();
-    if (!usuario) return;
+    if (!usuario?.id) return;
     setGuardando(true);
 
     const urlLimpia = avatarUrl.trim();
 
-    const { error } = await supabase
-      .from('perfiles')
-      .upsert({
+    const { error } = await api.from('perfiles').insert(
+      {
         id: usuario.id,
         nombre_piloto: nombrePiloto.trim(),
         steam_id: steamId.trim(),
@@ -48,8 +43,10 @@ export default function PerfilModal({ usuario, onClose, onPerfilGuardado, onActu
         provincia: provincia.trim(),
         telefono: telefono.trim(),
         avatar_url: urlLimpia || null,
-        updated_at: new Date()
-      });
+        updated_at: new Date().toISOString()
+      },
+      { upsert: true }
+    );
 
     setGuardando(false);
 

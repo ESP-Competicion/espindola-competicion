@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { api } from './api';
 
 const API_BASE = "https://br.assettohosting.com:10314/api/v1";
 const TOKEN = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
@@ -12,16 +12,25 @@ const formatearTiempo = (ms) => {
   return `${minutos > 0 ? minutos + ':' : ''}${String(segundos).padStart(minutos > 0 ? 2 : 1, '0')}.${String(milesimas).padStart(3, '0')}`;
 };
 
+function leerUsuarioLocal() {
+  try {
+    const raw = localStorage.getItem('esp_sesion_usuario');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Resultados() {
   const [resultadosGuardados, setResultadosGuardados] = useState([]);
   const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [usuarioActual, setUsuarioActual] = useState(() => leerUsuarioLocal());
   const [guardandoManual, setGuardandoManual] = useState(false);
 
   useEffect(() => {
-    verificarUsuario();
-    cargarResultadosSupabase();
+    setUsuarioActual(leerUsuarioLocal());
+    cargarResultadosAPI();
 
     let ultimaSesionDetectada = null;
     let datosUltimosJugadores = [];
@@ -71,14 +80,14 @@ export default function Resultados() {
               posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
             }));
 
-            const { error } = await supabase.from('resultados_sesiones').insert([{
+            const { error } = await api.from('resultados_sesiones').insert([{
               sesion_tipo: ultimaSesionDetectada,
               pista: pistaNombre,
               datos_json: datosProcesados
             }]);
 
             if (!error) {
-              cargarResultadosSupabase();
+              cargarResultadosAPI();
             }
           }
 
@@ -97,21 +106,13 @@ export default function Resultados() {
     return () => clearInterval(intervaloAutoGuardado);
   }, []);
 
-  async function verificarUsuario() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      setUsuarioActual(session.user);
-    }
-  }
-
   const esAdmin = usuarioActual?.email === 'leosimracingok@gmail.com';
 
-  async function cargarResultadosSupabase() {
+  async function cargarResultadosAPI() {
     setCargando(true);
-    const { data, error } = await supabase
-      .from('resultados_sesiones')
-      .select('*')
-      .order('fecha', { ascending: false });
+    const { data, error } = await api.from('resultados_sesiones').select({
+      order: 'fecha.desc'
+    });
 
     if (error) {
       console.error('Error al cargar resultados:', error.message);
@@ -168,7 +169,7 @@ export default function Resultados() {
         posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
       }));
 
-      const { error } = await supabase.from('resultados_sesiones').insert([{
+      const { error } = await api.from('resultados_sesiones').insert([{
         sesion_tipo: tipoSesion,
         pista: pistaNombre,
         datos_json: datosProcesados
@@ -178,7 +179,7 @@ export default function Resultados() {
         alert('Error al guardar: ' + error.message);
       } else {
         alert(`¡Resultados de ${tipoSesion} guardados exitosamente!`);
-        cargarResultadosSupabase();
+        cargarResultadosAPI();
       }
     } catch (err) {
       console.error("Error al guardar manualmente:", err);
@@ -189,12 +190,14 @@ export default function Resultados() {
 
   async function eliminarResultado(id) {
     if (!confirm('¿Estás seguro de eliminar este registro?')) return;
-    const { error } = await supabase.from('resultados_sesiones').delete().eq('id', id);
+    const { error } = await api.from('resultados_sesiones').delete({ eq_id: id });
     if (!error) {
-      cargarResultadosSupabase();
+      cargarResultadosAPI();
       setSesionSeleccionada(null);
     }
   }
+
+  const listaPilotos = Array.isArray(sesionSeleccionada?.datos_json) ? sesionSeleccionada.datos_json : [];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-wrc text-white uppercase">
@@ -298,7 +301,7 @@ export default function Resultados() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {sesionSeleccionada.datos_json.map((piloto, idx) => {
+                    {listaPilotos.map((piloto, idx) => {
                       const posActual = piloto.pos || idx + 1;
                       const posLargada = piloto.posicionLargada || posActual;
                       const diferenciaPos = posLargada - posActual;

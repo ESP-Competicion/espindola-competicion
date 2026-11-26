@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { api } from './api';
 
-// Diccionario de banderas SVG HD (Compatibilidad 100% garantizada en todos los navegadores)
 const banderasPais = {
   'Argentina': { emoji: '🇦🇷', svg: 'https://flagcdn.com/w40/ar.png' },
   'Uruguay': { emoji: '🇺🇾', svg: 'https://flagcdn.com/w40/uy.png' },
@@ -35,11 +34,10 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
   }, [evento]);
 
   async function cargarInscriptos() {
-    const { data } = await supabase
-      .from('inscripciones')
-      .select('*')
-      .eq('evento_id', evento.id)
-      .order('created_at', { ascending: true });
+    const { data } = await api.from('inscripciones').select({
+      eq_evento_id: evento.id,
+      order: 'created_at.asc'
+    });
 
     if (data) setInscriptos(data);
   }
@@ -49,16 +47,14 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
     if (!nombrePiloto) return;
     setCargando(true);
 
-    const { error } = await supabase
-      .from('inscripciones')
-      .insert([{
-        evento_id: evento.id,
-        nombre_piloto: nombrePiloto,
-        categoria_seleccionada: categoriaSeleccionada,
-        auto_seleccionado: autoSeleccionado,
-        pais_origen: paisOrigen,
-        steam_id: steamId
-      }]);
+    const { error } = await api.from('inscripciones').insert([{
+      evento_id: evento.id,
+      nombre_piloto: nombrePiloto,
+      categoria_seleccionada: categoriaSeleccionada,
+      auto_seleccionado: autoSeleccionado,
+      pais_origen: paisOrigen,
+      steam_id: steamId
+    }]);
 
     setCargando(false);
 
@@ -72,10 +68,7 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-      {/* Contenedor ampliado a max-w-4xl con bordes más amplios y limpios */}
       <div className="bg-neutral-900/95 backdrop-blur-2xl border border-amber-500/40 rounded-3xl p-8 max-w-4xl w-full shadow-2xl relative">
-        
-        {/* Encabezado */}
         <div className="flex justify-between items-center pb-5 border-b border-neutral-800">
           <div>
             <span className="text-amber-400 font-wrc text-sm uppercase tracking-widest font-bold">
@@ -83,21 +76,20 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
             </span>
             <h2 className="font-wrc text-3xl text-white font-extrabold tracking-wide mt-1">{evento.titulo}</h2>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white font-bold flex items-center justify-center transition border border-white/10"
           >
             ✕
           </button>
         </div>
 
-        {/* MODO FORMULARIO */}
         {modo === 'formulario' && (
           <form onSubmit={handleInscribirse} className="space-y-6 pt-6 font-sans">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold text-neutral-300 uppercase mb-2">Nombre del Piloto</label>
-                <input 
+                <input
                   type="text"
                   value={nombrePiloto}
                   onChange={(e) => setNombrePiloto(e.target.value)}
@@ -151,7 +143,7 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
 
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-neutral-300 uppercase mb-2">Steam ID 64</label>
-                <input 
+                <input
                   type="text"
                   placeholder="76561198..."
                   value={steamId}
@@ -162,15 +154,15 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={onClose}
                 className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-wrc text-sm uppercase px-6 py-3 rounded-xl transition"
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={cargando}
                 className="bg-amber-500 hover:bg-amber-400 text-black font-wrc font-black text-base uppercase px-8 py-3 rounded-xl transition shadow-lg shadow-amber-500/20 tracking-wider"
               >
@@ -180,7 +172,6 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
           </form>
         )}
 
-        {/* MODO LISTA DE INSCRIPTOS (Vista ampliada y banderas en imagen HD) */}
         {modo === 'lista' && (
           <div className="space-y-5 pt-5">
             <div className="flex justify-between items-center text-xs font-sans text-neutral-400 bg-neutral-950/80 px-4 py-2.5 rounded-xl border border-neutral-800">
@@ -195,20 +186,19 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
                 {inscriptos.map((piloto, idx) => {
                   const infoBandera = banderasPais[piloto.pais_origen];
                   return (
-                    <div 
-                      key={piloto.id} 
+                    <div
+                      key={piloto.id}
                       className="bg-neutral-950/70 border border-neutral-800/80 hover:border-amber-500/50 rounded-2xl p-4 flex items-center justify-between transition font-sans shadow-md"
                     >
                       <div className="flex items-center gap-4">
                         <span className="font-wrc font-black text-amber-500 text-lg w-8 text-center">
                           #{idx + 1}
                         </span>
-                        
-                        {/* Render de la bandera en imagen o fallback */}
+
                         {infoBandera?.svg ? (
-                          <img 
-                            src={infoBandera.svg} 
-                            alt={piloto.pais_origen} 
+                          <img
+                            src={infoBandera.svg}
+                            alt={piloto.pais_origen}
                             className="w-7 h-5 object-cover rounded shadow-sm border border-white/20"
                             title={piloto.pais_origen}
                           />
@@ -238,7 +228,6 @@ export default function InscripcionModal({ evento, modo, perfil, usuario, onClos
             )}
           </div>
         )}
-
       </div>
     </div>
   );

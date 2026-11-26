@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from './supabaseClient';
+import { api } from './api';
 
 const API_BASE_ST = "https://br.assettohosting.com:10314/api/v1";
 const TOKEN_ST = import.meta.env.VITE_ASSETTO_API_TOKEN || "ahsm_0a5fdc7e3c9fa77fdba10849c6f9855212f3c4c4d403577";
@@ -79,13 +79,12 @@ export default function ResultadosRallyServer({ esAdmin }) {
   }, []);
 
   async function cargarSesionesServidor() {
-    const { data, error } = await supabase
-      .from('resultados_sesiones')
-      .select('id, fecha, sesion_tipo, pista, datos_json')
-      .order('fecha', { ascending: false });
+    const { data, error } = await api.from('resultados_sesiones').select({
+      order: 'fecha.desc'
+    });
 
     if (error) {
-      console.error("Error al cargar de Supabase:", error.message);
+      console.error("Error al cargar desde API:", error.message);
       return;
     }
 
@@ -110,10 +109,7 @@ export default function ResultadosRallyServer({ esAdmin }) {
 
     try {
       setBorrando(true);
-      const { error } = await supabase
-        .from('resultados_sesiones')
-        .delete()
-        .eq('id', id);
+      const { error } = await api.from('resultados_sesiones').delete({ eq_id: id });
 
       if (error) {
         alert('Error al borrar la sesión: ' + error.message);
@@ -142,10 +138,9 @@ export default function ResultadosRallyServer({ esAdmin }) {
       setBorrando(true);
       const ids = sesionesServidor.map(s => s.id);
       if (ids.length > 0) {
-        const { error } = await supabase
-          .from('resultados_sesiones')
-          .delete()
-          .in('id', ids);
+        const { error } = await api.from('resultados_sesiones').delete({
+          in_id: ids.join(',')
+        });
 
         if (error) {
           alert('Error al resetear resultados: ' + error.message);
@@ -230,14 +225,14 @@ export default function ResultadosRallyServer({ esAdmin }) {
         };
       });
 
-      const { error } = await supabase.from('resultados_sesiones').insert([{
+      const { error } = await api.from('resultados_sesiones').insert([{
         sesion_tipo: tipoSesionActual,
         pista: pistaNombre,
         datos_json: datosProcesados
       }]);
 
       if (error) {
-        alert('Error al guardar en Supabase: ' + error.message);
+        alert('Error al guardar en la API: ' + error.message);
       } else {
         alert('¡Sesión y tiempos guardados exitosamente en la base de datos!');
         await cargarSesionesServidor();
