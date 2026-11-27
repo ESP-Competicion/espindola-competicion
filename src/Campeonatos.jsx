@@ -1,11 +1,48 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from './api';
 
+const normalizarCategoriaAuto = (j, nombreAuto = '') => {
+  const rawCat = String(
+    j?.carClass ||
+    j?.class ||
+    j?.category ||
+    j?.categoria ||
+    j?.car?.class ||
+    j?.car?.category ||
+    ''
+  ).trim().toUpperCase();
+
+  if (rawCat && rawCat !== '---' && rawCat !== 'GENERAL') {
+    return rawCat;
+  }
+
+  const autoUpper = String(nombreAuto || '').trim().toUpperCase();
+  const categoriasConocidas = [
+    'RALLY1', 'RC1',
+    'RALLY2', 'RC2',
+    'RALLY3', 'RC3',
+    'RALLY4', 'RC4',
+    'RALLY5', 'RC5',
+    'AYGO CUP', 'AYGO',
+    'GT3', 'GT4', 'GTE',
+    'TCR', 'N5', 'MAXI', 'HISTORIC', 'GROUP A', 'GROUP B'
+  ];
+
+  for (const cat of categoriasConocidas) {
+    if (autoUpper.includes(cat)) {
+      return cat;
+    }
+  }
+
+  return 'GENERAL';
+};
+
 export default function Campeonatos({ esAdmin }) {
   const [campeonatos, setCampeonatos] = useState([]);
   const [campeonatoSeleccionado, setCampeonatoSeleccionado] = useState(null);
   const [fechasCampeonato, setFechasCampeonato] = useState([]);
   const [todosResultadosCamp, setTodosResultadosCamp] = useState([]);
+  const [categoriasDeSesiones, setCategoriasDeSesiones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [calculandoAuto, setCalculandoAuto] = useState(false);
 
@@ -27,13 +64,12 @@ export default function Campeonatos({ esAdmin }) {
   // Gestión de resultados por fecha y filtros
   const [fechaSeleccionadaId, setFechaSeleccionadaId] = useState('');
   const [resultadosFecha, setResultadosFecha] = useState([]);
-  const [categoriaFiltroFecha, setCategoriaFiltroFecha] = useState('TODAS');
-  const [categoriaFiltroGeneral, setCategoriaFiltroGeneral] = useState('TODAS');
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('TODAS');
 
   // Formulario de carga manual
   const [formCargaPiloto, setFormCargaPiloto] = useState({
     piloto_nombre: '',
-    categoria: 'RC2',
+    categoria: 'RALLY2',
     posicion_final: 1,
     pos_qualy: 1,
     pos_final1: 1,
@@ -44,6 +80,31 @@ export default function Campeonatos({ esAdmin }) {
   useEffect(() => {
     cargarCampeonatos();
   }, []);
+
+  async function cargarCategoriasDesdeSesiones(campId) {
+    try {
+      const { data: sesiones } = await api.from('resultados_sesiones').select({
+        eq_campeonato_id: String(campId),
+        limit: 50
+      });
+
+      const encontradas = new Set();
+      (Array.isArray(sesiones) ? sesiones : []).forEach((s) => {
+        if (!Array.isArray(s?.datos_json)) return;
+        s.datos_json.forEach((j) => {
+          const autoNombre = typeof j?.auto === 'object' ? (j.auto?.name || '') : (j?.auto || j?.car || '');
+          const cat = normalizarCategoriaAuto(j, autoNombre);
+          if (cat && cat !== 'GENERAL') {
+            encontradas.add(cat);
+          }
+        });
+      });
+
+      setCategoriasDeSesiones(Array.from(encontradas));
+    } catch {
+      setCategoriasDeSesiones([]);
+    }
+  }
 
   async function cargarCampeonatos(forzarRefresco = false) {
     setCargando(true);
@@ -76,8 +137,7 @@ export default function Campeonatos({ esAdmin }) {
 
   async function seleccionarCampeonato(camp, forzarRefresco = false) {
     setCampeonatoSeleccionado(camp);
-    setCategoriaFiltroFecha('TODAS');
-    setCategoriaFiltroGeneral('TODAS');
+    setCategoriaSeleccionada('TODAS');
 
     if (camp.puntos_final1 && Array.isArray(camp.puntos_final1)) {
       setStrPuntosF1(camp.puntos_final1.join(', '));
@@ -89,6 +149,8 @@ export default function Campeonatos({ esAdmin }) {
     if (camp.puntos_final2 && Array.isArray(camp.puntos_final2)) {
       setStrPuntosF2(camp.puntos_final2.join(', '));
     }
+
+    await cargarCategoriasDesdeSesiones(camp.id);
 
     let fechas = cacheFechasCamp.current[camp.id];
     if (!fechas || forzarRefresco) {
@@ -164,14 +226,23 @@ export default function Campeonatos({ esAdmin }) {
     return str.split(',').map(n => parseInt(n.trim()) || 0);
   }
 
-  const categoriasEnFecha = useMemo(() => {
-    const setCats = new Set();
-    resultadosFecha.forEach((r) => {
-      const cat = String(r.categoria || 'GENERAL').trim().toUpperCase();
+  const opcionesCategorias = useMemo(() => {
+    const base = new Set(['RALLY2', 'RALLY4', 'AYGO CUP', ...categoriasDeSesiones]);
+    [...resultadosFecha, ...todosResultadosCamp].forEach((r) => {
+      const cat = String(r.categoria || '').trim().toUpperCase();
+      if (cat && cat !== 'GENERAL') base.add(cat);
+    });
+    return Array.from(base);
+  }, [categoriasDeSesiones, resultadosFecha, todosResultadosCamp]);
+
+  const categoriasFiltroDropdown = useMemo(() => {
+    const setCats = new Set(opcionesCategorias);
+    [...resultadosFecha, ...todosResultadosCamp].forEach((r) => {
+      const cat = String(r.categoria || '').trim().toUpperCase();
       if (cat) setCats.add(cat);
     });
     return ['TODAS', ...Array.from(setCats)];
-  }, [resultadosFecha]);
+  }, [opcionesCategorias, resultadosFecha, todosResultadosCamp]);
 
   const resultadosFechaFiltrados = useMemo(() => {
     const normalizados = resultadosFecha.map((r, idx) => ({
@@ -182,12 +253,12 @@ export default function Campeonatos({ esAdmin }) {
     }));
 
     const filtrados =
-      categoriaFiltroFecha === 'TODAS'
+      categoriaSeleccionada === 'TODAS'
         ? normalizados
-        : normalizados.filter((item) => item.categoria === categoriaFiltroFecha);
+        : normalizados.filter((item) => item.categoria === categoriaSeleccionada);
 
     return filtrados.sort((a, b) => {
-      if (categoriaFiltroFecha === 'TODAS' && a.categoria !== b.categoria) {
+      if (categoriaSeleccionada === 'TODAS' && a.categoria !== b.categoria) {
         return a.categoria.localeCompare(b.categoria);
       }
       if (a.posicion_final !== b.posicion_final) {
@@ -195,18 +266,9 @@ export default function Campeonatos({ esAdmin }) {
       }
       return b.puntos_total - a.puntos_total;
     });
-  }, [resultadosFecha, categoriaFiltroFecha]);
+  }, [resultadosFecha, categoriaSeleccionada]);
 
-  const categoriasEnGeneral = useMemo(() => {
-    const setCats = new Set();
-    todosResultadosCamp.forEach((r) => {
-      const cat = String(r.categoria || 'GENERAL').trim().toUpperCase();
-      if (cat) setCats.add(cat);
-    });
-    return ['TODAS', ...Array.from(setCats)];
-  }, [todosResultadosCamp]);
-
-  // Suma puntos de FECHA 1 + FECHA 2 + ... y permite filtrar por categoría
+  // Tabla general acumulada (FECHA 1 + FECHA 2 + ...) filtrable por categoría
   const tablaGeneralCalculada = useMemo(() => {
     const mapaFechas = new Map();
     fechasCampeonato.forEach((f, i) => {
@@ -222,11 +284,11 @@ export default function Campeonatos({ esAdmin }) {
       const numFecha = mapaFechas.get(String(r.fecha_id)) || 1;
       const pts = Number(r.puntos_total) || 0;
 
-      if (categoriaFiltroGeneral !== 'TODAS' && categoria !== categoriaFiltroGeneral) {
+      if (categoriaSeleccionada !== 'TODAS' && categoria !== categoriaSeleccionada) {
         return;
       }
 
-      const clave = categoriaFiltroGeneral === 'TODAS' ? `${piloto}__${categoria}` : piloto;
+      const clave = categoriaSeleccionada === 'TODAS' ? `${piloto}__${categoria}` : piloto;
       if (!agrupado.has(clave)) {
         agrupado.set(clave, {
           nombre: piloto,
@@ -242,7 +304,7 @@ export default function Campeonatos({ esAdmin }) {
     });
 
     return Array.from(agrupado.values()).sort((a, b) => b.total - a.total);
-  }, [todosResultadosCamp, fechasCampeonato, categoriaFiltroGeneral]);
+  }, [todosResultadosCamp, fechasCampeonato, categoriaSeleccionada]);
 
   async function handleFinalizarRallyPorCategoria() {
     if (!esAdmin || !campeonatoSeleccionado || !fechaSeleccionadaId || resultadosFecha.length === 0) return;
@@ -363,7 +425,7 @@ export default function Campeonatos({ esAdmin }) {
 
     const esRally = campeonatoSeleccionado?.modalidad === 'rally';
     const nombrePiloto = formCargaPiloto.piloto_nombre.toUpperCase().trim();
-    const categoriaPiloto = (formCargaPiloto.categoria || 'GENERAL').toUpperCase().trim();
+    const categoriaPiloto = (formCargaPiloto.categoria || 'RALLY2').toUpperCase().trim();
     const posFinal = Math.max(1, parseInt(formCargaPiloto.posicion_final) || 1);
 
     let ptsQ = 0, ptsF1 = 0, ptsF2 = 0, ptsT1 = 0, ptsT2 = 0, ptsT3 = 0, ptsT4 = 0;
@@ -466,12 +528,24 @@ export default function Campeonatos({ esAdmin }) {
           <h2 className="text-3xl text-[#38bdf8] tracking-wide">CAMPEONATOS OFICIALES</h2>
           <p className="text-neutral-300 text-xs">
             {esRallyActivo
-              ? 'RALLY: RESULTADOS POR FECHA Y TABLA GENERAL ACUMULADA POR CATEGORÍA.'
+              ? 'RALLY: PUNTOS POR CATEGORÍA AL TERMINAR LA FECHA Y ACUMULADO GENERAL.'
               : 'GESTIÓN DE PISTA (QUALY + FINALES).'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={categoriaSeleccionada}
+            onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+            className="bg-neutral-950 border border-[#38bdf8]/60 text-[#38bdf8] text-xs rounded-xl px-3 py-2.5 outline-none font-wrc cursor-pointer shadow-lg"
+          >
+            {categoriasFiltroDropdown.map((cat) => (
+              <option key={cat} value={cat} className="bg-neutral-900 text-white">
+                {cat === 'TODAS' ? 'CAT: TODAS' : `CAT: ${cat}`}
+              </option>
+            ))}
+          </select>
+
           <select
             value={campeonatoSeleccionado?.id || ''}
             onChange={(e) => {
@@ -606,10 +680,10 @@ export default function Campeonatos({ esAdmin }) {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-3">
               <div>
                 <h3 className="text-[#38bdf8] text-xs font-black">
-                  🏁 RESULTADOS DE LA FECHA ({fechaActualObj?.titulo_fecha || 'FECHA'}) • {campeonatoSeleccionado.modalidad?.toUpperCase()}
+                  🏁 PUNTOS DE LA FECHA ({fechaActualObj?.titulo_fecha || 'FECHA'}) • {campeonatoSeleccionado.modalidad?.toUpperCase()}
                 </h3>
                 <p className="text-[10px] text-neutral-400">
-                  CARGÁ PILOTO, CATEGORÍA Y POSICIÓN; AL TERMINAR EL RALLY SE GUARDA COMO {fechaActualObj?.titulo_fecha || 'FECHA'}.
+                  CATEGORÍA ACTIVA: <span className="text-sky-300 font-bold">{categoriaSeleccionada}</span>
                 </p>
               </div>
 
@@ -628,7 +702,6 @@ export default function Campeonatos({ esAdmin }) {
                 <select
                   value={fechaSeleccionadaId}
                   onChange={(e) => {
-                    setCategoriaFiltroFecha('TODAS');
                     setFechaSeleccionadaId(e.target.value);
                     cargarResultadosFecha(e.target.value);
                   }}
@@ -658,15 +731,16 @@ export default function Campeonatos({ esAdmin }) {
                 {esRallyActivo ? (
                   <>
                     <div>
-                      <label className="block text-[10px] text-[#38bdf8] mb-1">CATEGORÍA</label>
-                      <input
-                        type="text"
+                      <label className="block text-[10px] text-[#38bdf8] mb-1">CATEGORÍA DEL AUTO</label>
+                      <select
                         value={formCargaPiloto.categoria}
                         onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, categoria: e.target.value })}
-                        placeholder="EJ: RC2, AYGO CUP"
-                        required
-                        className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8]"
-                      />
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8] cursor-pointer"
+                      >
+                        {opcionesCategorias.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN EN CATEGORÍA</label>
@@ -709,25 +783,6 @@ export default function Campeonatos({ esAdmin }) {
               </form>
             )}
 
-            {/* Botones de filtro por categoría en la fecha */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/10">
-              <span className="text-[10px] text-neutral-400 mr-1">FILTRAR FECHA POR CATEGORÍA:</span>
-              {categoriasEnFecha.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategoriaFiltroFecha(cat)}
-                  className={`px-3 py-1 rounded-lg text-[10px] tracking-wider transition cursor-pointer ${
-                    categoriaFiltroFecha === cat
-                      ? 'bg-[#38bdf8] text-slate-950 font-black'
-                      : 'bg-neutral-900 text-neutral-300 border border-white/15 hover:border-[#38bdf8]/50'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
             {/* Tabla de la fecha: POS, NOMBRE, CATEGORÍA, PUNTOS */}
             <div className="overflow-x-auto bg-black/50 border border-white/10 rounded-xl">
               <table className="w-full text-left text-xs">
@@ -744,7 +799,7 @@ export default function Campeonatos({ esAdmin }) {
                   {resultadosFechaFiltrados.length === 0 ? (
                     <tr>
                       <td colSpan={esAdmin ? 5 : 4} className="py-6 px-3 text-center text-neutral-400">
-                        NO HAY PILOTOS CARGADOS EN ESTA FECHA PARA EL FILTRO SELECCIONADO.
+                        NO HAY PILOTOS CARGADOS EN ESTA FECHA PARA LA CATEGORÍA SELECCIONADA.
                       </td>
                     </tr>
                   ) : (
@@ -795,7 +850,6 @@ export default function Campeonatos({ esAdmin }) {
                       key={f.id}
                       type="button"
                       onClick={() => {
-                        setCategoriaFiltroFecha('TODAS');
                         setFechaSeleccionadaId(f.id);
                         cargarResultadosFecha(f.id);
                       }}
@@ -824,25 +878,8 @@ export default function Campeonatos({ esAdmin }) {
             <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
               <div className="bg-gradient-to-r from-[#38bdf8]/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-[#38bdf8]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h3 className="text-white text-xs tracking-wider font-black">
-                  🏆 TABLA GENERAL - {campeonatoSeleccionado.nombre} ({campeonatoSeleccionado.modalidad?.toUpperCase()})
+                  🏆 TABLA GENERAL - {campeonatoSeleccionado.nombre} ({categoriaSeleccionada})
                 </h3>
-
-                <div className="flex flex-wrap items-center gap-1">
-                  {categoriasEnGeneral.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setCategoriaFiltroGeneral(cat)}
-                      className={`px-2.5 py-0.5 rounded text-[10px] transition cursor-pointer ${
-                        categoriaFiltroGeneral === cat
-                          ? 'bg-[#38bdf8] text-slate-950 font-black'
-                          : 'bg-neutral-900 text-neutral-300 border border-white/15 hover:border-[#38bdf8]/50'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -870,7 +907,7 @@ export default function Campeonatos({ esAdmin }) {
                           colSpan={3 + fechasCampeonato.length + 1}
                           className="text-center py-10 text-neutral-400 text-xs"
                         >
-                          TODAVÍA NO HAY PUNTOS REGISTRADOS EN ESTE CAMPEONATO.
+                          TODAVÍA NO HAY PUNTOS REGISTRADOS PARA ESTE FILTRO.
                         </td>
                       </tr>
                     ) : (
