@@ -155,7 +155,8 @@ export default function App() {
     horario: '',
     categorias: '',
     modelos_autos: '',
-    campeonato_id: ''
+    campeonato_id: '',
+    numero_fecha: 1
   });
   const [nuevoCalendario, setNuevoCalendario] = useState({
     titulo: '',
@@ -395,6 +396,7 @@ export default function App() {
       categorias: nuevoEvento.categorias,
       modelos_autos: nuevoEvento.modelos_autos,
       campeonato_id: nuevoEvento.campeonato_id ? nuevoEvento.campeonato_id : null,
+      numero_fecha: nuevoEvento.campeonato_id ? (parseInt(nuevoEvento.numero_fecha, 10) || 1) : null,
       archivado: 0
     };
 
@@ -409,7 +411,8 @@ export default function App() {
         horario: '',
         categorias: '',
         modelos_autos: '',
-        campeonato_id: ''
+        campeonato_id: '',
+        numero_fecha: 1
       });
       setSubVistaEventos('activos');
       await cargarEventos();
@@ -1233,7 +1236,7 @@ export default function App() {
                   />
                   <select
                     value={nuevoEvento.campeonato_id}
-                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value })}
+                    onChange={(e) => setNuevoEvento({ ...nuevoEvento, campeonato_id: e.target.value, numero_fecha: 1 })}
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                   >
                     <option value="">SIN CAMPEONATO VINCULADO</option>
@@ -1241,6 +1244,18 @@ export default function App() {
                       <option key={camp.id} value={camp.id}>{camp.nombre}</option>
                     ))}
                   </select>
+
+                  {nuevoEvento.campeonato_id && (
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      placeholder="N° FECHA (EJ: 1)"
+                      value={nuevoEvento.numero_fecha}
+                      onChange={(e) => setNuevoEvento({ ...nuevoEvento, numero_fecha: e.target.value })}
+                      className="bg-neutral-950 border border-[#38bdf8]/40 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
+                    />
+                  )}
                 </div>
                 <div className="flex justify-end">
                   <button
@@ -1292,7 +1307,7 @@ export default function App() {
                           <span className="text-[#38bdf8] font-wrc text-[9px] tracking-widest uppercase">{ev.fecha} • {ev.horario || 'POR CONFIRMAR'}</span>
                           {nombreCamp && (
                             <span className="text-[9px] font-wrc bg-[#38bdf8]/15 text-sky-200 border border-[#38bdf8]/35 px-2 py-0.5 rounded-full">
-                              🏆 {nombreCamp}
+                              🏆 {nombreCamp}{ev.numero_fecha ? ` • FECHA ${ev.numero_fecha}` : ''}
                             </span>
                           )}
                         </div>
