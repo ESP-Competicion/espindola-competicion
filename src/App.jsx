@@ -70,7 +70,7 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
   else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
   else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
-  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
+  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p === 'EEUU' || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
 
@@ -198,7 +198,7 @@ export default function App() {
     } else if (pestanaActiva === 'calendario') {
       cargarCalendario();
     } else if (pestanaActiva === 'fama') {
-      cargarSalónDeLaFama();
+      cargarSalonDeLaFama();
     } else if (pestanaActiva === 'miembros') {
       cargarMiembros();
     } else if (pestanaActiva === 'historia') {
@@ -249,7 +249,7 @@ export default function App() {
       order: 'created_at.desc',
       limit: 60
     });
-    if (data) setEventos(data);
+    if (Array.isArray(data)) setEventos(data);
   }
 
   async function cargarInscripciones() {
@@ -263,22 +263,23 @@ export default function App() {
     const { data } = await api.from('campeonatos').select({
       order: 'nombre.asc'
     });
-    if (data) setCampeonatosDisponibles(data);
+    if (Array.isArray(data)) setCampeonatosDisponibles(data);
   }
 
   async function cargarCalendario() {
     const { data } = await api.from('calendario').select({
       order: 'fecha.asc'
     });
-    if (data) setCalendario(data);
+    if (Array.isArray(data)) setCalendario(data);
   }
 
-  async function cargarSalónDeLaFama() {
+  async function cargarSalonDeLaFama() {
     const { data, error } = await api.from('salon_fama').select({
       order: 'campeonatos.desc'
     });
     if (error) {
-      alert('Error al cargar Salón de la Fama: ' + error.message);
+      console.error('Error al cargar Salón de la Fama:', error);
+      setHallFama([]);
       return;
     }
     if (Array.isArray(data)) {
@@ -289,7 +290,7 @@ export default function App() {
 
   async function cargarMiembros() {
     const { data } = await api.from('perfiles').select();
-    if (data) setMiembros(data);
+    if (Array.isArray(data)) setMiembros(data);
   }
 
   async function cargarAsistentesCalendario(calendarioId) {
@@ -349,7 +350,7 @@ export default function App() {
 
   const handleGuardarConfig = async (e) => {
     e.preventDefault();
-    const normalizarUrl = (url, fallback) => {
+    const normalizarUrl = (url) => {
       const limpio = (url || '').trim();
       if (!limpio) return '';
       if (limpio.startsWith('http://') || limpio.startsWith('https://')) return limpio;
@@ -357,9 +358,9 @@ export default function App() {
     };
 
     const configLimpia = {
-      instagram: normalizarUrl(config.instagram, 'https://instagram.com'),
-      discord: normalizarUrl(config.discord, 'https://discord.gg'),
-      tiktok: normalizarUrl(config.tiktok, 'https://tiktok.com'),
+      instagram: normalizarUrl(config.instagram),
+      discord: normalizarUrl(config.discord),
+      tiktok: normalizarUrl(config.tiktok),
       historia_texto: config.historia_texto,
       inicio_badge: (config.inicio_badge || '').trim().toUpperCase() || DEFAULT_INICIO_BADGE,
       inicio_titulo: (config.inicio_titulo || '').trim().toUpperCase() || DEFAULT_INICIO_TITULO
@@ -411,7 +412,7 @@ export default function App() {
         campeonato_id: ''
       });
       setSubVistaEventos('activos');
-      cargarEventos();
+      await cargarEventos();
     }
   };
 
@@ -426,6 +427,7 @@ export default function App() {
       alert('Error al actualizar estado del evento: ' + error.message);
       return;
     }
+    setEventos((prev) => prev.map((item) => (item.id === ev.id ? { ...item, archivado: nuevoEstado } : item)));
     await cargarEventos();
   };
 
@@ -439,6 +441,7 @@ export default function App() {
       alert('Error al eliminar evento: ' + error.message);
       return;
     }
+    setEventos((prev) => prev.filter((item) => item.id !== id));
     await cargarEventos();
   };
 
@@ -479,7 +482,7 @@ export default function App() {
     } else {
       alert('¡Inscripción confirmada con éxito! 🏁');
       setEventoModalActivo(null);
-      cargarInscripciones();
+      await cargarInscripciones();
     }
   };
 
@@ -537,7 +540,7 @@ export default function App() {
       alert('Error al crear fecha de calendario: ' + error.message);
     } else {
       setNuevoCalendario({ titulo: '', fecha: '', descripcion: '' });
-      cargarCalendario();
+      await cargarCalendario();
     }
   };
 
@@ -551,6 +554,7 @@ export default function App() {
       alert('Error al eliminar fecha del calendario: ' + error.message);
       return;
     }
+    setCalendario((prev) => prev.filter((item) => item.id !== id));
     await cargarCalendario();
   };
 
@@ -576,7 +580,7 @@ export default function App() {
 
     setEditandoId(null);
     setNuevoPilotoFama({ nombre: '', nacionalidad: 'ARGENTINA', campeonatos: '', foto: '' });
-    await cargarSalónDeLaFama();
+    await cargarSalonDeLaFama();
   };
 
   const handleEditarPilotoFama = (piloto) => {
@@ -600,7 +604,7 @@ export default function App() {
       alert('Error al eliminar del Salón de la Fama: ' + error.message);
       return;
     }
-    await cargarSalónDeLaFama();
+    await cargarSalonDeLaFama();
   };
 
   const cambiarMes = (direccion) => {
