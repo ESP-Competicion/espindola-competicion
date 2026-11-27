@@ -224,8 +224,8 @@ export const api = {
 
   async getTablaCampeonato(campeonatoId) {
     try {
-      const qs = buildQueryString({ campeonato_id: campeonatoId });
-      const data = await request(`/api/campeonatos/tabla${qs}`, {
+      const encodedId = encodeURIComponent(String(campeonatoId || ''));
+      const data = await request(`/api/campeonatos/${encodedId}/tabla`, {
         method: 'GET'
       });
       return { data: Array.isArray(data) ? data : [], error: null };

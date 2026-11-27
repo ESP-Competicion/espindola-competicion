@@ -452,12 +452,16 @@ export default function App() {
     if (!exigirSesion('Tenés que iniciar sesión con tu cuenta de piloto para inscribirte a un evento.')) {
       return;
     }
-    const categoriasLista = ev.categorias ? ev.categorias.split(',').map(c => c.trim()).filter(Boolean) : [];
-    const autosLista = ev.modelos_autos ? ev.modelos_autos.split(',').map(m => m.trim()).filter(Boolean) : [];
+    const categoriasLista = ev.categorias
+      ? ev.categorias.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean)
+      : [];
+    const autosLista = ev.modelos_autos
+      ? ev.modelos_autos.split(',').map((m) => m.trim().toUpperCase()).filter(Boolean)
+      : [];
     setEventoModalActivo(ev);
     setFormInscripcion({
       nombre_piloto: perfil?.nombre_piloto || usuario?.email?.split('@')[0] || '',
-      categoria_seleccionada: categoriasLista[0] || 'GENERAL',
+      categoria_seleccionada: categoriasLista[0] || '',
       auto_seleccionado: autosLista[0] || 'LIBRE',
       pais_origen: perfil?.nacionalidad || 'ARGENTINA',
       steam_id: perfil?.steam_id || ''
@@ -474,8 +478,8 @@ export default function App() {
     const { error } = await api.from('inscripciones').insert([{
       evento_id: eventoModalActivo.id,
       nombre_piloto: formInscripcion.nombre_piloto.trim().toUpperCase(),
-      categoria_seleccionada: formInscripcion.categoria_seleccionada.trim().toUpperCase(),
-      auto_seleccionado: formInscripcion.auto_seleccionado.trim().toUpperCase(),
+      categoria_seleccionada: (formInscripcion.categoria_seleccionada || 'GENERAL').trim().toUpperCase(),
+      auto_seleccionado: (formInscripcion.auto_seleccionado || 'LIBRE').trim().toUpperCase(),
       pais_origen: formInscripcion.pais_origen.trim().toUpperCase(),
       steam_id: formInscripcion.steam_id.trim()
     }]);
@@ -1222,7 +1226,7 @@ export default function App() {
                   />
                   <input
                     type="text"
-                    placeholder="CATEGORÍAS (EJ: RC2 / AYGO)"
+                    placeholder="CATEGORÍAS (EJ: RC2, AYGO CUP)"
                     value={nuevoEvento.categorias}
                     onChange={(e) => setNuevoEvento({ ...nuevoEvento, categorias: e.target.value.toUpperCase() })}
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
@@ -1851,7 +1855,6 @@ export default function App() {
                     </div>
                     <div className="text-[10px] text-sky-300 font-mono flex flex-wrap gap-2">
                       {ins.categoria_seleccionada && <span>{ins.categoria_seleccionada}</span>}
-                      {ins.auto_seleccionado && <span>• {ins.auto_seleccionado}</span>}
                       {ins.pais_origen && <span className="text-neutral-400">• {ins.pais_origen}</span>}
                     </div>
                   </div>
@@ -1900,26 +1903,44 @@ export default function App() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] text-neutral-300 mb-1">CATEGORÍA</label>
-                  <input
-                    type="text"
-                    value={formInscripcion.categoria_seleccionada}
-                    onChange={(e) => setFormInscripcion({ ...formInscripcion, categoria_seleccionada: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-neutral-300 mb-1">MODELO DE AUTO</label>
-                  <input
-                    type="text"
-                    value={formInscripcion.auto_seleccionado}
-                    onChange={(e) => setFormInscripcion({ ...formInscripcion, auto_seleccionado: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
-                  />
-                </div>
-              </div>
+              {(() => {
+                const opcionesCategoria = (eventoModalActivo.categorias || '')
+                  .split(',')
+                  .map((c) => c.trim().toUpperCase())
+                  .filter(Boolean);
+
+                return (
+                  <div>
+                    <label className="block text-[10px] text-neutral-300 mb-1">CATEGORÍA</label>
+                    {opcionesCategoria.length > 0 ? (
+                      <select
+                        value={formInscripcion.categoria_seleccionada}
+                        onChange={(e) =>
+                          setFormInscripcion({ ...formInscripcion, categoria_seleccionada: e.target.value })
+                        }
+                        required
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8] cursor-pointer"
+                      >
+                        {opcionesCategoria.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={formInscripcion.categoria_seleccionada}
+                        onChange={(e) =>
+                          setFormInscripcion({ ...formInscripcion, categoria_seleccionada: e.target.value })
+                        }
+                        required
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                      />
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
