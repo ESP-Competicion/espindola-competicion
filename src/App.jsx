@@ -418,10 +418,10 @@ export default function App() {
   const handleToggleArchivarEvento = async (ev) => {
     if (!esAdminEfectivo) return;
     const nuevoEstado = Number(ev.archivado) === 1 ? 0 : 1;
-    const { error } = await api.from('eventos').update(
-      { archivado: nuevoEstado },
-      { eq_id: ev.id }
-    );
+    const { error } = await api
+      .from('eventos')
+      .eq('id', ev.id)
+      .update({ archivado: nuevoEstado });
     if (error) {
       alert('Error al actualizar estado del evento: ' + error.message);
       return;
@@ -431,8 +431,15 @@ export default function App() {
 
   const handleEliminarEvento = async (id) => {
     if (!confirm('¿Seguro de eliminar este evento?')) return;
-    const { error } = await api.from('eventos').delete({ eq_id: id });
-    if (!error) cargarEventos();
+    const { error } = await api
+      .from('eventos')
+      .eq('id', id)
+      .delete();
+    if (error) {
+      alert('Error al eliminar evento: ' + error.message);
+      return;
+    }
+    await cargarEventos();
   };
 
   const abrirModalEvento = (ev) => {
@@ -495,7 +502,10 @@ export default function App() {
     setEnviandoParticipacionCalendario(true);
     try {
       if (yaParticipa) {
-        const { error } = await api.from('asistencias_calendario').delete({ eq_id: yaParticipa.id });
+        const { error } = await api
+          .from('asistencias_calendario')
+          .eq('id', yaParticipa.id)
+          .delete();
         if (error) {
           alert('No se pudo quitar la participación: ' + error.message);
           return;
@@ -533,8 +543,15 @@ export default function App() {
 
   const handleEliminarCalendario = async (id) => {
     if (!confirm('¿Eliminar esta fecha del calendario?')) return;
-    const { error } = await api.from('calendario').delete({ eq_id: id });
-    if (!error) cargarCalendario();
+    const { error } = await api
+      .from('calendario')
+      .eq('id', id)
+      .delete();
+    if (error) {
+      alert('Error al eliminar fecha del calendario: ' + error.message);
+      return;
+    }
+    await cargarCalendario();
   };
 
   const handleGuardarPilotoFama = async (e) => {
@@ -549,7 +566,7 @@ export default function App() {
     };
 
     const { error } = editandoId !== null
-      ? await api.from('salon_fama').update(datosPiloto, { eq_id: editandoId })
+      ? await api.from('salon_fama').eq('id', editandoId).update(datosPiloto)
       : await api.from('salon_fama').insert([datosPiloto]);
 
     if (error) {
@@ -575,7 +592,10 @@ export default function App() {
 
   const handleEliminarPilotoFama = async (id) => {
     if (!confirm('¿Eliminar del Salón de la Fama?')) return;
-    const { error } = await api.from('salon_fama').delete({ eq_id: id });
+    const { error } = await api
+      .from('salon_fama')
+      .eq('id', id)
+      .delete();
     if (error) {
       alert('Error al eliminar del Salón de la Fama: ' + error.message);
       return;
