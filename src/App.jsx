@@ -224,7 +224,11 @@ export default function App() {
       }
     }
 
-    const { data } = await api.from('configuracion_equipo').getById(1);
+    const { data } = await api
+      .from('configuracion_equipo')
+      .eq('id', 1)
+      .single()
+      .select();
 
     if (data) {
       const nuevaConfig = {
@@ -309,7 +313,11 @@ export default function App() {
     }
 
     if (user.id) {
-      const { data } = await api.from('perfiles').getById(user.id);
+      const { data } = await api
+        .from('perfiles')
+        .eq('id', user.id)
+        .single()
+        .select();
       if (data) setPerfil(data);
     }
   }

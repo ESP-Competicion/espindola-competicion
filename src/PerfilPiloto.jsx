@@ -1,160 +1,95 @@
 import { useState, useEffect } from 'react';
 import { api } from './api';
 
-export default function PerfilPiloto({ session }) {
-  const [loading, setLoading] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState(null);
-
-  const [perfil, setPerfil] = useState({
-    nombre_piloto: '',
-    steam_id: '',
-    nacionalidad: 'Argentina'
-  });
+export default function PerfilPiloto({ userId }) {
+  const [perfil, setPerfil] = useState(null);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    obtenerPerfil();
-  }, [session]);
-
-  const obtenerPerfil = async () => {
-    try {
-      setLoading(true);
-      const userId = session?.user?.id || session?.id;
-      if (!userId) return;
-
-      const { data, error } = await api.from('perfiles').getById(userId);
-      if (error) {
-        console.error('Error al cargar perfil:', error);
+    async function cargarPerfil() {
+      if (!userId) {
+        setCargando(false);
+        return;
       }
 
-      if (data) {
-        setPerfil({
-          nombre_piloto: data.nombre_piloto || '',
-          steam_id: data.steam_id || '',
-          nacionalidad: data.nacionalidad || 'Argentina'
-        });
+      setCargando(true);
+      try {
+        const { data } = await api
+          .from('perfiles')
+          .eq('id', userId)
+          .single()
+          .select();
+        setPerfil(data || null);
+      } finally {
+        setCargando(false);
       }
-    } catch (error) {
-      console.error('Error general:', error);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const actualizarPerfil = async (e) => {
-    e.preventDefault();
-    try {
-      setGuardando(true);
-      setMensaje(null);
-      const userId = session?.user?.id || session?.id;
-      if (!userId) return;
+    cargarPerfil();
+  }, [userId]);
 
-      const updates = {
-        id: userId,
-        nombre_piloto: perfil.nombre_piloto,
-        steam_id: perfil.steam_id,
-        nacionalidad: perfil.nacionalidad
-      };
-
-      const { error } = await api.from('perfiles').insert(updates, { upsert: true });
-      if (error) throw error;
-      setMensaje({ tipo: 'exito', texto: '¡Perfil actualizado correctamente!' });
-    } catch (error) {
-      setMensaje({ tipo: 'error', texto: 'Error al actualizar el perfil: ' + error.message });
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="text-center text-gray-400 py-8">Cargando perfil...</div>;
+  if (cargando) {
+    return (
+      <div className="bg-neutral-900/60 border border-white/10 rounded-xl p-4 text-xs font-wrc text-neutral-300">
+        CARGANDO PERFIL...
+      </div>
+    );
   }
 
-  const emailUsuario = session?.user?.email || session?.email || '';
+  if (!perfil) {
+    return (
+      <div className="bg-neutral-900/60 border border-white/10 rounded-xl p-4 text-xs font-wrc text-neutral-400">
+        PERFIL NO ENCONTRADO.
+      </div>
+    );
+  }
+
+  const inicial = (perfil.nombre_piloto || 'E').charAt(0).toUpperCase();
 
   return (
-    <div className="max-w-md mx-auto bg-neutral-900 border border-neutral-800 rounded-xl p-6 shadow-xl text-white">
-      <h2 className="text-xl font-bold text-amber-500 mb-4 uppercase tracking-wide">
-        Perfil de Piloto
-      </h2>
-
-      {mensaje && (
-        <div className={`p-3 rounded-lg text-sm mb-4 ${
-          mensaje.tipo === 'exito'
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-        }`}>
-          {mensaje.texto}
-        </div>
-      )}
-
-      <form onSubmit={actualizarPerfil} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
-            Correo Electrónico
-          </label>
-          <input
-            type="text"
-            value={emailUsuario}
-            disabled
-            className="w-full bg-neutral-800 text-gray-500 border border-neutral-700 rounded-lg px-3 py-2 text-sm cursor-not-allowed"
+    <div className="bg-neutral-900/65 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl flex items-center gap-3">
+      <div className="w-12 h-12 rounded-full bg-neutral-800 border border-[#38bdf8]/50 flex items-center justify-center overflow-hidden font-wrc text-[#38bdf8] text-base flex-shrink-0">
+        {perfil.avatar_url ? (
+          <img
+            src={perfil.avatar_url}
+            alt={perfil.nombre_piloto || 'Piloto'}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              if (e.currentTarget.nextSibling) {
+                e.currentTarget.nextSibling.style.display = 'flex';
+              }
+            }}
+            className="w-full h-full object-cover"
           />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
-            Nombre y Apellido (Piloto)
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="Ej: Lucas Negri"
-            value={perfil.nombre_piloto}
-            onChange={(e) => setPerfil({ ...perfil, nombre_piloto: e.target.value })}
-            className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
-            Steam ID 64
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="76561198xxxxxxxxx"
-            value={perfil.steam_id}
-            onChange={(e) => setPerfil({ ...perfil, steam_id: e.target.value })}
-            className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
-            Nacionalidad
-          </label>
-          <select
-            value={perfil.nacionalidad}
-            onChange={(e) => setPerfil({ ...perfil, nacionalidad: e.target.value })}
-            className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-          >
-            <option value="Argentina">Argentina</option>
-            <option value="Brasil">Brasil</option>
-            <option value="Chile">Chile</option>
-            <option value="Uruguay">Uruguay</option>
-            <option value="Paraguay">Paraguay</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          disabled={guardando}
-          className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 px-4 rounded-lg transition duration-200 uppercase text-sm disabled:opacity-50 mt-2"
+        ) : null}
+        <span
+          style={{ display: perfil.avatar_url ? 'none' : 'flex' }}
+          className="w-full h-full items-center justify-center"
         >
-          {guardando ? 'Guardando...' : 'Guardar Cambios'}
-        </button>
-      </form>
+          {inicial}
+        </span>
+      </div>
+
+      <div className="space-y-0.5 overflow-hidden">
+        <h3 className="font-wrc text-base text-white truncate">
+          {(perfil.nombre_piloto || 'PILOTO').toUpperCase()}
+        </h3>
+        {perfil.nacionalidad && (
+          <p className="text-[11px] font-wrc text-neutral-300 truncate">
+            PAÍS: <span className="text-white">{perfil.nacionalidad}</span>
+          </p>
+        )}
+        {perfil.provincia && (
+          <p className="text-[11px] font-wrc text-neutral-300 truncate">
+            PROVINCIA: <span className="text-white">{perfil.provincia}</span>
+          </p>
+        )}
+        {perfil.steam_id && (
+          <p className="text-[10px] font-mono text-sky-300 truncate">
+            STEAM ID: {perfil.steam_id}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

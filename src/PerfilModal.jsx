@@ -14,7 +14,11 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
   useEffect(() => {
     async function cargar() {
       if (!usuario?.id) return;
-      const { data } = await api.from('perfiles').getById(usuario.id);
+      const { data } = await api
+        .from('perfiles')
+        .eq('id', usuario.id)
+        .single()
+        .select();
 
       if (data) {
         setNombrePiloto(data.nombre_piloto || '');
@@ -34,34 +38,44 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
     if (!usuario?.id) return;
     setGuardando(true);
 
-    const urlLimpia = avatarUrl.trim();
-    const { data: actual } = await api.from('perfiles').getById(usuario.id);
-    const hashFinal = actual?.password_hash || passwordHash || null;
+    try {
+      const urlLimpia = avatarUrl.trim();
+      const { data: actual } = await api
+        .from('perfiles')
+        .eq('id', usuario.id)
+        .single()
+        .select();
 
-    const { error } = await api.from('perfiles').insert(
-      {
-        id: usuario.id,
-        nombre_piloto: nombrePiloto.trim(),
-        steam_id: steamId.trim(),
-        nacionalidad: nacionalidad.trim(),
-        provincia: provincia.trim(),
-        telefono: telefono.trim(),
-        avatar_url: urlLimpia || null,
-        password_hash: hashFinal,
-        updated_at: new Date().toISOString()
-      },
-      { upsert: true }
-    );
+      const hashFinal = actual?.password_hash || passwordHash || null;
 
-    setGuardando(false);
+      const { error } = await api.from('perfiles').insert(
+        {
+          id: usuario.id,
+          nombre_piloto: nombrePiloto.trim(),
+          steam_id: steamId.trim(),
+          nacionalidad: nacionalidad.trim(),
+          provincia: provincia.trim(),
+          telefono: telefono.trim(),
+          avatar_url: urlLimpia || null,
+          password_hash: hashFinal,
+          updated_at: new Date().toISOString()
+        },
+        { upsert: true }
+      );
 
-    if (error) {
-      alert('Error al guardar perfil: ' + error.message);
-    } else {
-      alert('¡Perfil actualizado con éxito!');
-      if (onPerfilGuardado) onPerfilGuardado();
-      if (onActualizado) onActualizado();
-      onClose();
+      if (error) {
+        alert('Error al guardar perfil: ' + error.message);
+      } else {
+        alert('¡Perfil actualizado con éxito!');
+        if (onPerfilGuardado) onPerfilGuardado();
+        if (onActualizado) onActualizado();
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error inesperado al guardar perfil:', err);
+      alert('Ocurrió un error inesperado al guardar el perfil.');
+    } finally {
+      setGuardando(false);
     }
   };
 
