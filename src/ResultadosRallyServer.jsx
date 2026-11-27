@@ -309,14 +309,23 @@ export default function ResultadosRallyServer({
       }
       const datosServ = await resServidor.json();
 
-      const tipoSesionActual = extraerTexto(
+      const rawSesion = extraerTexto(
         datosServ?.session?.type ||
         datosServ?.session?.name ||
         datosServ?.session,
-        'PRACTICE'
-      ).toUpperCase();
+        ''
+      ).trim().toUpperCase();
 
-      const pistaNombre = extraerTexto(datosServ?.track?.name || datosServ?.track, 'TRAMO DE RALLY');
+      const tipoSesionActual =
+        rawSesion && rawSesion !== '---' && rawSesion !== 'UNDEFINED' && rawSesion !== 'NULL'
+          ? rawSesion
+          : 'PRACTICE';
+
+      const rawPista = extraerTexto(datosServ?.track?.name || datosServ?.track, '').trim();
+      const pistaNombre =
+        rawPista && rawPista !== '---'
+          ? rawPista
+          : (tituloEvento || 'TRAMO DE RALLY');
 
       const resJugadores = await fetch(`${API_BASE_ST}/players`, { headers }).catch(() => null);
       if (!resJugadores || !resJugadores.ok) {
