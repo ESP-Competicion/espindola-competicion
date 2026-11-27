@@ -179,32 +179,47 @@ export const api = {
   },
 
   async login(email, password) {
-    const data = await request('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-    if (data?.token) {
-      setToken(data.token);
+    try {
+      const data = await request('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      const token = data?.sessionToken || data?.adminToken || data?.token;
+      if (token) {
+        setToken(token);
+      }
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
     }
-    return data;
   },
 
   async register(payload) {
-    const data = await request('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    if (data?.token) {
-      setToken(data.token);
+    try {
+      const data = await request('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const token = data?.sessionToken || data?.adminToken || data?.token;
+      if (token) {
+        setToken(token);
+      }
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
     }
-    return data;
   },
 
   async changePassword(currentPassword, newPassword) {
-    return request('/api/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify({ currentPassword, newPassword })
-    });
+    try {
+      const data = await request('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
   },
 
   async getTablaCampeonato(campeonatoId) {
