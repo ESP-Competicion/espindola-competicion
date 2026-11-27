@@ -3,6 +3,10 @@
     {
       "source": "/api/assetto/:path*",
       "destination": "http://br.assettohosting.com:10314/api/v1/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://espindola-api.argproseries.workers.dev/api/:path*"
     }
   ]
 }
