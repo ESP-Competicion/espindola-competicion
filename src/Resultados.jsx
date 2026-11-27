@@ -21,12 +21,139 @@ function leerUsuarioLocal() {
   }
 }
 
+function clasificarTipoSesionPista(tipoRaw, carrerasYaGuardadasEnFecha = 0) {
+  const upper = String(tipoRaw || 'PRACTICE').toUpperCase();
+  if (upper.includes('QUALY') || upper.includes('QUALIF')) return 'QUALY';
+  if (upper.includes('FINAL 2') || upper.includes('RACE 2') || upper.includes('R2')) return 'FINAL 2';
+  if (upper.includes('FINAL 1') || upper.includes('RACE 1') || upper.includes('R1')) return 'FINAL 1';
+  if (upper.includes('RACE') || upper.includes('FINAL')) {
+    return carrerasYaGuardadasEnFecha >= 1 ? 'FINAL 2' : 'FINAL 1';
+  }
+  return upper;
+}
+
 export default function Resultados() {
   const [resultadosGuardados, setResultadosGuardados] = useState([]);
   const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [usuarioActual, setUsuarioActual] = useState(() => leerUsuarioLocal());
   const [guardandoManual, setGuardandoManual] = useState(false);
+
+  async function resolverContextoPistaYSumarPuntos(tipoSesionRaw, datosProcesados) {
+    try {
+      const { data: campeonatos } = await api.from('campeonatos').select({
+        order: 'created_at.desc'
+      });
+
+      const campPista = Array.isArray(campeonatos)
+        ? campeonatos.find(c => String(c.modalidad || '').toLowerCase() === 'pista')
+        : null;
+
+      if (!campPista) {
+        return { campeonato_id: null, evento_id: null, sesion_tipo: tipoSesionRaw };
+      }
+
+      const { data: fechas } = await api.from('campeonato_fechas').select({
+        eq_campeonato_id: campPista.id,
+        order: 'numero_fecha.asc'
+      });
+
+      const fechaActiva = Array.isArray(fechas) && fechas.length > 0
+        ? (fechas.find(f => String(f.estado || '').toLowerCase() !== 'finalizada') || fechas[fechas.length - 1])
+        : null;
+
+      const { data: eventos } = await api.from('eventos').select({
+        eq_campeonato_id: campPista.id,
+        order: 'created_at.desc'
+      });
+
+      const eventoActivo = Array.isArray(eventos) && eventos.length > 0
+        ? (eventos.find(ev => !ev.archivado) || eventos[0])
+        : null;
+
+      const { data: sesionesPrevias } = await api.from('resultados_sesiones').select({
+        eq_campeonato_id: campPista.id
+      });
+
+      const carrerasPrevias = Array.isArray(sesionesPrevias)
+        ? sesionesPrevias.filter(s => ['FINAL 1', 'FINAL 2', 'RACE'].includes(String(s.sesion_tipo || '').toUpperCase())).length
+        : 0;
+
+      const sesionNormalizada = clasificarTipoSesionPista(tipoSesionRaw, carrerasPrevias);
+
+      if (fechaActiva && ['QUALY', 'FINAL 1', 'FINAL 2'].includes(sesionNormalizada)) {
+        const escala =
+          sesionNormalizada === 'QUALY'
+            ? (Array.isArray(campPista.puntos_qualy) ? campPista.puntos_qualy : [10, 8, 6, 4, 2])
+            : sesionNormalizada === 'FINAL 2'
+              ? (Array.isArray(campPista.puntos_final2) ? campPista.puntos_final2 : [25, 18, 15, 12, 10, 8, 6, 4, 2, 1])
+              : (Array.isArray(campPista.puntos_final1) ? campPista.puntos_final1 : [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]);
+
+        const ordenados = [...datosProcesados].sort((a, b) => {
+          if (sesionNormalizada === 'QUALY') {
+            const msA = Number(a.bestLapMs) || Infinity;
+            const msB = Number(b.bestLapMs) || Infinity;
+            return msA - msB;
+          }
+          return (Number(a.pos) || 999) - (Number(b.pos) || 999);
+        });
+
+        const { data: existentes } = await api.from('campeonato_resultados_fecha').select({
+          eq_fecha_id: fechaActiva.id
+        });
+        const mapaExistentes = new Map(
+          (Array.isArray(existentes) ? existentes : []).map(r => [String(r.piloto_nombre || '').trim().toUpperCase(), r])
+        );
+
+        for (let idx = 0; idx < ordenados.length; idx++) {
+          const pilotoNombre = String(ordenados[idx]?.nombre || '').trim().toUpperCase();
+          if (!pilotoNombre) continue;
+
+          const ptsGanados = idx < escala.length ? (Number(escala[idx]) || 0) : 0;
+          const previo = mapaExistentes.get(pilotoNombre);
+
+          const ptsQ = sesionNormalizada === 'QUALY' ? ptsGanados : (Number(previo?.puntos_qualy) || 0);
+          const ptsF1 = sesionNormalizada === 'FINAL 1' ? ptsGanados : (Number(previo?.puntos_final1) || 0);
+          const ptsF2 = sesionNormalizada === 'FINAL 2' ? ptsGanados : (Number(previo?.puntos_final2) || 0);
+          const ptsT1 = Number(previo?.puntos_tramo1) || 0;
+          const ptsT2 = Number(previo?.puntos_tramo2) || 0;
+          const ptsT3 = Number(previo?.puntos_tramo3) || 0;
+          const ptsT4 = Number(previo?.puntos_tramo4) || 0;
+          const total = ptsQ + ptsF1 + ptsF2 + ptsT1 + ptsT2 + ptsT3 + ptsT4;
+
+          const payload = {
+            puntos_qualy: ptsQ,
+            puntos_final1: ptsF1,
+            puntos_final2: ptsF2,
+            puntos_tramo1: ptsT1,
+            puntos_tramo2: ptsT2,
+            puntos_tramo3: ptsT3,
+            puntos_tramo4: ptsT4,
+            puntos_total: total
+          };
+
+          if (previo) {
+            await api.from('campeonato_resultados_fecha').update(payload, { eq_id: previo.id });
+          } else {
+            await api.from('campeonato_resultados_fecha').insert([{
+              fecha_id: fechaActiva.id,
+              piloto_nombre: pilotoNombre,
+              ...payload
+            }]);
+          }
+        }
+      }
+
+      return {
+        campeonato_id: campPista.id,
+        evento_id: eventoActivo?.id || null,
+        sesion_tipo: sesionNormalizada
+      };
+    } catch (err) {
+      console.error('Error al procesar puntos de pista:', err);
+      return { campeonato_id: null, evento_id: null, sesion_tipo: tipoSesionRaw };
+    }
+  }
 
   useEffect(() => {
     setUsuarioActual(leerUsuarioLocal());
@@ -80,9 +207,13 @@ export default function Resultados() {
               posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
             }));
 
+            const ctxPista = await resolverContextoPistaYSumarPuntos(ultimaSesionDetectada, datosProcesados);
+
             const { error } = await api.from('resultados_sesiones').insert([{
-              sesion_tipo: ultimaSesionDetectada,
+              sesion_tipo: ctxPista.sesion_tipo,
               pista: pistaNombre,
+              campeonato_id: ctxPista.campeonato_id,
+              evento_id: ctxPista.evento_id,
               datos_json: datosProcesados
             }]);
 
@@ -169,16 +300,20 @@ export default function Resultados() {
         posicionLargada: j?.startingPosition !== undefined ? Number(j.startingPosition) : (idx + 1)
       }));
 
+      const ctxPista = await resolverContextoPistaYSumarPuntos(tipoSesion, datosProcesados);
+
       const { error } = await api.from('resultados_sesiones').insert([{
-        sesion_tipo: tipoSesion,
+        sesion_tipo: ctxPista.sesion_tipo,
         pista: pistaNombre,
+        campeonato_id: ctxPista.campeonato_id,
+        evento_id: ctxPista.evento_id,
         datos_json: datosProcesados
       }]);
 
       if (error) {
         alert('Error al guardar: ' + error.message);
       } else {
-        alert(`¡Resultados de ${tipoSesion} guardados exitosamente!`);
+        alert(`¡Resultados de ${ctxPista.sesion_tipo} guardados exitosamente!`);
         cargarResultadosAPI();
       }
     } catch (err) {
