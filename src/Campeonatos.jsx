@@ -1,52 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from './api';
 
-const normalizarCategoriaRally = (j, nombreAuto = '') => {
-  const rawCat = String(
-    j?.carClass ||
-    j?.class ||
-    j?.category ||
-    j?.categoria ||
-    j?.car?.class ||
-    j?.car?.category ||
-    ''
-  ).trim().toUpperCase();
-
-  if (rawCat && rawCat !== '---' && rawCat !== 'GENERAL') {
-    return rawCat;
-  }
-
-  const autoUpper = String(nombreAuto || '').trim().toUpperCase();
-  const clasesIndependientes = [
-    'RALLY1', 'RC1',
-    'RALLY2', 'RC2',
-    'RALLY3', 'RC3',
-    'RALLY4', 'RC4',
-    'RALLY5', 'RC5',
-    'AYGO CUP', 'AYGO',
-    'GT3', 'GT4', 'GTE',
-    'TCR', 'N5', 'MAXI', 'HISTORIC', 'GROUP A', 'GROUP B'
-  ];
-
-  for (const clase of clasesIndependientes) {
-    if (autoUpper.includes(clase)) {
-      return clase;
-    }
-  }
-
-  return 'GENERAL';
-};
-
 export default function Campeonatos({ esAdmin }) {
   const [campeonatos, setCampeonatos] = useState([]);
   const [campeonatoSeleccionado, setCampeonatoSeleccionado] = useState(null);
   const [fechasCampeonato, setFechasCampeonato] = useState([]);
-  const [tablaPosiciones, setTablaPosiciones] = useState([]);
+  const [todosResultadosCamp, setTodosResultadosCamp] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [calculandoAuto, setCalculandoAuto] = useState(false);
 
   const cacheResultadosFecha = useRef({});
-  const cacheTablasGenerales = useRef({});
+  const cacheTodosResultadosCamp = useRef({});
   const cacheFechasCamp = useRef({});
 
   // Formulario de creación
@@ -60,12 +24,13 @@ export default function Campeonatos({ esAdmin }) {
   const [strPuntosF2, setStrPuntosF2] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
   const [strPuntosTramo, setStrPuntosTramo] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
 
-  // Gestión de resultados por fecha
+  // Gestión de resultados por fecha y filtros
   const [fechaSeleccionadaId, setFechaSeleccionadaId] = useState('');
   const [resultadosFecha, setResultadosFecha] = useState([]);
-  const [categoriaFiltro, setCategoriaFiltro] = useState('TODAS');
+  const [categoriaFiltroFecha, setCategoriaFiltroFecha] = useState('TODAS');
+  const [categoriaFiltroGeneral, setCategoriaFiltroGeneral] = useState('TODAS');
 
-  // Formulario de carga manual para Rally (por posición final y categoría) o Pista
+  // Formulario de carga manual
   const [formCargaPiloto, setFormCargaPiloto] = useState({
     piloto_nombre: '',
     categoria: 'RC2',
@@ -98,20 +63,21 @@ export default function Campeonatos({ esAdmin }) {
         ? (data.find(c => c.id === campeonatoSeleccionado?.id) || data[0])
         : (campeonatoSeleccionado || data[0]);
       if (actual) {
-        seleccionarCampeonato(actual, forzarRefresco);
+        await seleccionarCampeonato(actual, forzarRefresco);
       }
     } else {
       setCampeonatos([]);
       setCampeonatoSeleccionado(null);
       setFechasCampeonato([]);
-      setTablaPosiciones([]);
+      setTodosResultadosCamp([]);
     }
     setCargando(false);
   }
 
   async function seleccionarCampeonato(camp, forzarRefresco = false) {
     setCampeonatoSeleccionado(camp);
-    setCategoriaFiltro('TODAS');
+    setCategoriaFiltroFecha('TODAS');
+    setCategoriaFiltroGeneral('TODAS');
 
     if (camp.puntos_final1 && Array.isArray(camp.puntos_final1)) {
       setStrPuntosF1(camp.puntos_final1.join(', '));
@@ -136,15 +102,16 @@ export default function Campeonatos({ esAdmin }) {
 
     setFechasCampeonato(fechas);
     if (fechas.length > 0) {
-      const primeraFechaId = fechas[0].id;
-      setFechaSeleccionadaId(primeraFechaId);
-      cargarResultadosFecha(primeraFechaId, forzarRefresco);
+      const existePrevia = fechas.some(f => String(f.id) === String(fechaSeleccionadaId));
+      const fechaIdActiva = existePrevia ? fechaSeleccionadaId : fechas[0].id;
+      setFechaSeleccionadaId(fechaIdActiva);
+      await cargarResultadosFecha(fechaIdActiva, forzarRefresco);
     } else {
       setFechaSeleccionadaId('');
       setResultadosFecha([]);
     }
 
-    calcularTablaGeneral(camp.id, forzarRefresco);
+    await cargarTodosResultadosCampeonato(camp.id, fechas, forzarRefresco);
   }
 
   async function cargarResultadosFecha(fechaId, forzarRefresco = false) {
@@ -167,16 +134,30 @@ export default function Campeonatos({ esAdmin }) {
     setResultadosFecha(lista);
   }
 
-  async function calcularTablaGeneral(campId, forzarRefresco = false) {
-    if (!forzarRefresco && cacheTablasGenerales.current[campId]) {
-      setTablaPosiciones(cacheTablasGenerales.current[campId]);
+  async function cargarTodosResultadosCampeonato(campId, fechasLista = fechasCampeonato, forzarRefresco = false) {
+    if (!campId) {
+      setTodosResultadosCamp([]);
       return;
     }
 
-    const { data: listaOrdenada } = await api.getTablaCampeonato(campId);
-    const tabla = listaOrdenada || [];
-    cacheTablasGenerales.current[campId] = tabla;
-    setTablaPosiciones(tabla);
+    if (!forzarRefresco && cacheTodosResultadosCamp.current[campId]) {
+      setTodosResultadosCamp(cacheTodosResultadosCamp.current[campId]);
+      return;
+    }
+
+    if (!Array.isArray(fechasLista) || fechasLista.length === 0) {
+      setTodosResultadosCamp([]);
+      return;
+    }
+
+    const idsFechas = fechasLista.map(f => f.id);
+    const { data } = await api.from('campeonato_resultados_fecha').select({
+      in_fecha_id: idsFechas.join(',')
+    });
+
+    const acumulado = Array.isArray(data) ? data : [];
+    cacheTodosResultadosCamp.current[campId] = acumulado;
+    setTodosResultadosCamp(acumulado);
   }
 
   function parsearEscalaPuntos(str) {
@@ -201,12 +182,12 @@ export default function Campeonatos({ esAdmin }) {
     }));
 
     const filtrados =
-      categoriaFiltro === 'TODAS'
+      categoriaFiltroFecha === 'TODAS'
         ? normalizados
-        : normalizados.filter((item) => item.categoria === categoriaFiltro);
+        : normalizados.filter((item) => item.categoria === categoriaFiltroFecha);
 
     return filtrados.sort((a, b) => {
-      if (categoriaFiltro === 'TODAS' && a.categoria !== b.categoria) {
+      if (categoriaFiltroFecha === 'TODAS' && a.categoria !== b.categoria) {
         return a.categoria.localeCompare(b.categoria);
       }
       if (a.posicion_final !== b.posicion_final) {
@@ -214,9 +195,55 @@ export default function Campeonatos({ esAdmin }) {
       }
       return b.puntos_total - a.puntos_total;
     });
-  }, [resultadosFecha, categoriaFiltro]);
+  }, [resultadosFecha, categoriaFiltroFecha]);
 
-  // Asigna puntos recién al terminar el rally, por posición general dentro de cada categoría
+  const categoriasEnGeneral = useMemo(() => {
+    const setCats = new Set();
+    todosResultadosCamp.forEach((r) => {
+      const cat = String(r.categoria || 'GENERAL').trim().toUpperCase();
+      if (cat) setCats.add(cat);
+    });
+    return ['TODAS', ...Array.from(setCats)];
+  }, [todosResultadosCamp]);
+
+  // Suma puntos de FECHA 1 + FECHA 2 + ... y permite filtrar por categoría
+  const tablaGeneralCalculada = useMemo(() => {
+    const mapaFechas = new Map();
+    fechasCampeonato.forEach((f, i) => {
+      mapaFechas.set(String(f.id), Number(f.numero_fecha) || i + 1);
+    });
+
+    const agrupado = new Map();
+
+    todosResultadosCamp.forEach((r) => {
+      const piloto = String(r.piloto_nombre || '').trim().toUpperCase();
+      if (!piloto) return;
+      const categoria = String(r.categoria || 'GENERAL').trim().toUpperCase();
+      const numFecha = mapaFechas.get(String(r.fecha_id)) || 1;
+      const pts = Number(r.puntos_total) || 0;
+
+      if (categoriaFiltroGeneral !== 'TODAS' && categoria !== categoriaFiltroGeneral) {
+        return;
+      }
+
+      const clave = categoriaFiltroGeneral === 'TODAS' ? `${piloto}__${categoria}` : piloto;
+      if (!agrupado.has(clave)) {
+        agrupado.set(clave, {
+          nombre: piloto,
+          categoria,
+          total: 0,
+          puntosPorFecha: {}
+        });
+      }
+
+      const entry = agrupado.get(clave);
+      entry.puntosPorFecha[numFecha] = (entry.puntosPorFecha[numFecha] || 0) + pts;
+      entry.total += pts;
+    });
+
+    return Array.from(agrupado.values()).sort((a, b) => b.total - a.total);
+  }, [todosResultadosCamp, fechasCampeonato, categoriaFiltroGeneral]);
+
   async function handleFinalizarRallyPorCategoria() {
     if (!esAdmin || !campeonatoSeleccionado || !fechaSeleccionadaId || resultadosFecha.length === 0) return;
 
@@ -265,29 +292,27 @@ export default function Campeonatos({ esAdmin }) {
 
       delete cacheFechasCamp.current[campeonatoSeleccionado.id];
       delete cacheResultadosFecha.current[fechaSeleccionadaId];
-      delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
+      delete cacheTodosResultadosCamp.current[campeonatoSeleccionado.id];
 
-      await cargarFechasYRefrescar(campeonatoSeleccionado.id, fechaSeleccionadaId);
-      alert('¡Rally finalizado! Puntos asignados por posición final dentro de cada categoría.');
+      const { data: fechasActualizadas } = await api.from('campeonato_fechas').select({
+        eq_campeonato_id: campeonatoSeleccionado.id,
+        order: 'numero_fecha.asc'
+      });
+      const listaFechas = fechasActualizadas || [];
+      cacheFechasCamp.current[campeonatoSeleccionado.id] = listaFechas;
+      setFechasCampeonato(listaFechas);
+
+      await cargarResultadosFecha(fechaSeleccionadaId, true);
+      await cargarTodosResultadosCampeonato(campeonatoSeleccionado.id, listaFechas, true);
+
+      const fechaObj = listaFechas.find(f => String(f.id) === String(fechaSeleccionadaId));
+      alert(`¡${fechaObj?.titulo_fecha || 'Fecha'} guardada en el historial y puntos sumados a la tabla general!`);
     } catch (err) {
       console.error('Error al asignar puntos al finalizar el rally:', err);
       alert('Ocurrió un error al asignar los puntos de la fecha.');
     } finally {
       setCalculandoAuto(false);
     }
-  }
-
-  async function cargarFechasYRefrescar(campId, fechaId) {
-    const { data: fechasActualizadas } = await api.from('campeonato_fechas').select({
-      eq_campeonato_id: campId,
-      order: 'numero_fecha.asc'
-    });
-    const listaFechas = fechasActualizadas || [];
-    cacheFechasCamp.current[campId] = listaFechas;
-    setFechasCampeonato(listaFechas);
-
-    await cargarResultadosFecha(fechaId, true);
-    await calcularTablaGeneral(campId, true);
   }
 
   async function handleCrearCampeonato(e) {
@@ -343,10 +368,7 @@ export default function Campeonatos({ esAdmin }) {
 
     let ptsQ = 0, ptsF1 = 0, ptsF2 = 0, ptsT1 = 0, ptsT2 = 0, ptsT3 = 0, ptsT4 = 0;
 
-    if (esRally) {
-      // En rally no se suman puntos por tramo: los puntos se calculan al terminar el rally por categoría
-      ptsF1 = 0;
-    } else {
+    if (!esRally) {
       const arrQ = campeonatoSeleccionado?.puntos_qualy || parsearEscalaPuntos(strPuntosQ);
       const arrF1 = campeonatoSeleccionado?.puntos_final1 || parsearEscalaPuntos(strPuntosF1);
       const arrF2 = campeonatoSeleccionado?.puntos_final2 || parsearEscalaPuntos(strPuntosF2);
@@ -401,10 +423,11 @@ export default function Campeonatos({ esAdmin }) {
       pos_final2: 1,
       sancion: ''
     });
+
     delete cacheResultadosFecha.current[fechaSeleccionadaId];
-    delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
+    delete cacheTodosResultadosCamp.current[campeonatoSeleccionado.id];
     await cargarResultadosFecha(fechaSeleccionadaId, true);
-    await calcularTablaGeneral(campeonatoSeleccionado.id, true);
+    await cargarTodosResultadosCampeonato(campeonatoSeleccionado.id, fechasCampeonato, true);
   }
 
   async function eliminarResultadoPiloto(id) {
@@ -414,9 +437,9 @@ export default function Campeonatos({ esAdmin }) {
       return;
     }
     delete cacheResultadosFecha.current[fechaSeleccionadaId];
-    delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
+    delete cacheTodosResultadosCamp.current[campeonatoSeleccionado.id];
     await cargarResultadosFecha(fechaSeleccionadaId, true);
-    await calcularTablaGeneral(campeonatoSeleccionado.id, true);
+    await cargarTodosResultadosCampeonato(campeonatoSeleccionado.id, fechasCampeonato, true);
   }
 
   async function eliminarCampeonato(id) {
@@ -427,7 +450,7 @@ export default function Campeonatos({ esAdmin }) {
       return;
     }
     delete cacheFechasCamp.current[id];
-    delete cacheTablasGenerales.current[id];
+    delete cacheTodosResultadosCamp.current[id];
     setCampeonatoSeleccionado(null);
     await cargarCampeonatos(true);
   }
@@ -443,7 +466,7 @@ export default function Campeonatos({ esAdmin }) {
           <h2 className="text-3xl text-[#38bdf8] tracking-wide">CAMPEONATOS OFICIALES</h2>
           <p className="text-neutral-300 text-xs">
             {esRallyActivo
-              ? 'RALLY: PUNTOS POR POSICIÓN GENERAL DE CATEGORÍA AL TERMINAR LA FECHA.'
+              ? 'RALLY: RESULTADOS POR FECHA Y TABLA GENERAL ACUMULADA POR CATEGORÍA.'
               : 'GESTIÓN DE PISTA (QUALY + FINALES).'}
           </p>
         </div>
@@ -578,7 +601,7 @@ export default function Campeonatos({ esAdmin }) {
       ) : (
         <div className="space-y-6">
 
-          {/* CARGA Y CIERRE DE FECHA */}
+          {/* RESULTADOS POR FECHA (FECHA 1, FECHA 2...) */}
           <div className="bg-neutral-950/90 border border-[#38bdf8]/40 rounded-2xl p-5 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-3">
               <div>
@@ -586,9 +609,7 @@ export default function Campeonatos({ esAdmin }) {
                   🏁 RESULTADOS DE LA FECHA ({fechaActualObj?.titulo_fecha || 'FECHA'}) • {campeonatoSeleccionado.modalidad?.toUpperCase()}
                 </h3>
                 <p className="text-[10px] text-neutral-400">
-                  {esRallyActivo
-                    ? 'CARGÁ PILOTO, CATEGORÍA Y POSICIÓN; AL TERMINAR EL RALLY SE ASIGNAN LOS PUNTOS POR CATEGORÍA.'
-                    : 'RESULTADOS CARGADOS EN ESTA FECHA.'}
+                  CARGÁ PILOTO, CATEGORÍA Y POSICIÓN; AL TERMINAR EL RALLY SE GUARDA COMO {fechaActualObj?.titulo_fecha || 'FECHA'}.
                 </p>
               </div>
 
@@ -600,14 +621,14 @@ export default function Campeonatos({ esAdmin }) {
                     disabled={calculandoAuto || !fechaSeleccionadaId || resultadosFecha.length === 0}
                     className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 font-black text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer disabled:opacity-50"
                   >
-                    {calculandoAuto ? 'ASIGNANDO PUNTOS...' : '🏁 TERMINAR RALLY Y DAR PUNTOS'}
+                    {calculandoAuto ? 'GUARDANDO...' : '🏁 TERMINAR RALLY Y DAR PUNTOS'}
                   </button>
                 )}
 
                 <select
                   value={fechaSeleccionadaId}
                   onChange={(e) => {
-                    setCategoriaFiltro('TODAS');
+                    setCategoriaFiltroFecha('TODAS');
                     setFechaSeleccionadaId(e.target.value);
                     cargarResultadosFecha(e.target.value);
                   }}
@@ -688,16 +709,16 @@ export default function Campeonatos({ esAdmin }) {
               </form>
             )}
 
-            {/* Botones de filtro por categoría */}
+            {/* Botones de filtro por categoría en la fecha */}
             <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/10">
-              <span className="text-[10px] text-neutral-400 mr-1">FILTRAR POR CATEGORÍA:</span>
+              <span className="text-[10px] text-neutral-400 mr-1">FILTRAR FECHA POR CATEGORÍA:</span>
               {categoriasEnFecha.map((cat) => (
                 <button
                   key={cat}
                   type="button"
-                  onClick={() => setCategoriaFiltro(cat)}
+                  onClick={() => setCategoriaFiltroFecha(cat)}
                   className={`px-3 py-1 rounded-lg text-[10px] tracking-wider transition cursor-pointer ${
-                    categoriaFiltro === cat
+                    categoriaFiltroFecha === cat
                       ? 'bg-[#38bdf8] text-slate-950 font-black'
                       : 'bg-neutral-900 text-neutral-300 border border-white/15 hover:border-[#38bdf8]/50'
                   }`}
@@ -754,7 +775,7 @@ export default function Campeonatos({ esAdmin }) {
             </div>
           </div>
 
-          {/* HISTORIAL DE FECHAS Y TABLA GENERAL */}
+          {/* HISTORIAL DE FECHAS Y TABLA GENERAL ACUMULADA (FECHA 1 + FECHA 2...) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl space-y-3">
               <h3 className="text-[#38bdf8] text-xs font-black border-b border-white/10 pb-2">
@@ -762,14 +783,19 @@ export default function Campeonatos({ esAdmin }) {
               </h3>
 
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                {fechasCampeonato.map((f) => {
+                {fechasCampeonato.map((f, index) => {
                   const activa = String(f.id) === String(fechaSeleccionadaId);
+                  const numF = Number(f.numero_fecha) || index + 1;
+                  const ptsEnFecha = todosResultadosCamp
+                    .filter(r => String(r.fecha_id) === String(f.id))
+                    .reduce((acc, r) => acc + (Number(r.puntos_total) || 0), 0);
+
                   return (
                     <button
                       key={f.id}
                       type="button"
                       onClick={() => {
-                        setCategoriaFiltro('TODAS');
+                        setCategoriaFiltroFecha('TODAS');
                         setFechaSeleccionadaId(f.id);
                         cargarResultadosFecha(f.id);
                       }}
@@ -780,8 +806,11 @@ export default function Campeonatos({ esAdmin }) {
                       }`}
                     >
                       <div>
-                        <span className="text-[10px] text-[#38bdf8] font-bold">{f.titulo_fecha}</span>
+                        <span className="text-[10px] text-[#38bdf8] font-bold">
+                          {f.titulo_fecha || `FECHA ${numF}`}
+                        </span>
                         <p className="text-xs text-white">{f.fecha_programada}</p>
+                        <p className="text-[10px] text-neutral-400 font-mono">{ptsEnFecha} PTS REPARTIDOS</p>
                       </div>
                       <span className="text-[9px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-300">
                         {(f.estado || 'PENDIENTE').toUpperCase()}
@@ -793,10 +822,27 @@ export default function Campeonatos({ esAdmin }) {
             </div>
 
             <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-gradient-to-r from-[#38bdf8]/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-[#38bdf8]/30">
+              <div className="bg-gradient-to-r from-[#38bdf8]/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-[#38bdf8]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h3 className="text-white text-xs tracking-wider font-black">
                   🏆 TABLA GENERAL - {campeonatoSeleccionado.nombre} ({campeonatoSeleccionado.modalidad?.toUpperCase()})
                 </h3>
+
+                <div className="flex flex-wrap items-center gap-1">
+                  {categoriasEnGeneral.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategoriaFiltroGeneral(cat)}
+                      className={`px-2.5 py-0.5 rounded text-[10px] transition cursor-pointer ${
+                        categoriaFiltroGeneral === cat
+                          ? 'bg-[#38bdf8] text-slate-950 font-black'
+                          : 'bg-neutral-900 text-neutral-300 border border-white/15 hover:border-[#38bdf8]/50'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -805,41 +851,54 @@ export default function Campeonatos({ esAdmin }) {
                     <tr className="border-b border-white/15 text-[#38bdf8] tracking-wider bg-black/70">
                       <th className="py-2.5 px-3 text-center w-10">POS</th>
                       <th className="py-2.5 px-3">PILOTO</th>
-                      {!esRallyActivo && (
-                        <>
-                          <th className="py-2.5 px-3 text-center">QUALY</th>
-                          <th className="py-2.5 px-3 text-center">FINAL 1</th>
-                          <th className="py-2.5 px-3 text-center">FINAL 2</th>
-                        </>
-                      )}
+                      <th className="py-2.5 px-3">CATEGORÍA</th>
+                      {fechasCampeonato.map((f, idx) => {
+                        const numF = Number(f.numero_fecha) || idx + 1;
+                        return (
+                          <th key={f.id} className="py-2.5 px-2.5 text-center">
+                            F{numF}
+                          </th>
+                        );
+                      })}
                       <th className="py-2.5 px-3 text-right text-[#38bdf8] border-l border-white/10">TOTAL</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {tablaPosiciones.length === 0 ? (
+                    {tablaGeneralCalculada.length === 0 ? (
                       <tr>
-                        <td colSpan={esRallyActivo ? 3 : 6} className="text-center py-10 text-neutral-400 text-xs">
+                        <td
+                          colSpan={3 + fechasCampeonato.length + 1}
+                          className="text-center py-10 text-neutral-400 text-xs"
+                        >
                           TODAVÍA NO HAY PUNTOS REGISTRADOS EN ESTE CAMPEONATO.
                         </td>
                       </tr>
                     ) : (
-                      tablaPosiciones.map((p, idx) => {
+                      tablaGeneralCalculada.map((p, idx) => {
                         const esPrimero = idx === 0;
-                        const colorPos = esPrimero ? "bg-[#38bdf8] text-slate-950 font-black" : idx === 1 ? "bg-neutral-300 text-black font-black" : idx === 2 ? "bg-sky-700 text-white font-black" : "text-neutral-300 font-bold";
+                        const colorPos = esPrimero
+                          ? 'bg-[#38bdf8] text-slate-950 font-black'
+                          : idx === 1
+                            ? 'bg-neutral-300 text-black font-black'
+                            : idx === 2
+                              ? 'bg-sky-700 text-white font-black'
+                              : 'text-neutral-300 font-bold';
 
                         return (
-                          <tr key={idx} className={`hover:bg-white/5 transition ${esPrimero ? 'bg-[#38bdf8]/10' : ''}`}>
+                          <tr key={`${p.nombre}-${p.categoria}-${idx}`} className={`hover:bg-white/5 transition ${esPrimero ? 'bg-[#38bdf8]/10' : ''}`}>
                             <td className="py-2.5 px-3 text-center">
                               <span className={`inline-block w-5 h-5 leading-5 rounded text-[11px] ${colorPos}`}>{idx + 1}</span>
                             </td>
                             <td className="py-2.5 px-3 font-bold text-white">{p.nombre}</td>
-                            {!esRallyActivo && (
-                              <>
-                                <td className="py-2.5 px-3 text-center font-mono text-neutral-300">{p.q}</td>
-                                <td className="py-2.5 px-3 text-center font-mono text-neutral-300">{p.f1}</td>
-                                <td className="py-2.5 px-3 text-center font-mono text-neutral-300">{p.f2}</td>
-                              </>
-                            )}
+                            <td className="py-2.5 px-3 font-mono text-sky-200">{p.categoria}</td>
+                            {fechasCampeonato.map((f, fIdx) => {
+                              const numF = Number(f.numero_fecha) || fIdx + 1;
+                              return (
+                                <td key={f.id} className="py-2.5 px-2.5 text-center font-mono text-neutral-300">
+                                  {p.puntosPorFecha[numF] || 0}
+                                </td>
+                              );
+                            })}
                             <td className="py-2.5 px-3 text-right font-mono font-black text-[#38bdf8] border-l border-white/10 bg-sky-950/20 text-sm">
                               {p.total} PTS
                             </td>
