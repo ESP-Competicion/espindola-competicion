@@ -1,12 +1,49 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from './api';
 
+const normalizarCategoriaRally = (j, nombreAuto = '') => {
+  const rawCat = String(
+    j?.carClass ||
+    j?.class ||
+    j?.category ||
+    j?.categoria ||
+    j?.car?.class ||
+    j?.car?.category ||
+    ''
+  ).trim().toUpperCase();
+
+  if (rawCat && rawCat !== '---' && rawCat !== 'GENERAL') {
+    return rawCat;
+  }
+
+  const autoUpper = String(nombreAuto || '').trim().toUpperCase();
+  const clasesIndependientes = [
+    'RALLY1', 'RC1',
+    'RALLY2', 'RC2',
+    'RALLY3', 'RC3',
+    'RALLY4', 'RC4',
+    'RALLY5', 'RC5',
+    'AYGO CUP', 'AYGO',
+    'GT3', 'GT4', 'GTE',
+    'TCR', 'N5', 'MAXI', 'HISTORIC', 'GROUP A', 'GROUP B'
+  ];
+
+  for (const clase of clasesIndependientes) {
+    if (autoUpper.includes(clase)) {
+      return clase;
+    }
+  }
+
+  return 'GENERAL';
+};
+
 export default function Campeonatos({ esAdmin }) {
   const [campeonatos, setCampeonatos] = useState([]);
   const [campeonatoSeleccionado, setCampeonatoSeleccionado] = useState(null);
   const [fechasCampeonato, setFechasCampeonato] = useState([]);
   const [tablaPosiciones, setTablaPosiciones] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [calculandoAuto, setCalculandoAuto] = useState(false);
 
   const cacheResultadosFecha = useRef({});
   const cacheTablasGenerales = useRef({});
@@ -144,6 +181,151 @@ export default function Campeonatos({ esAdmin }) {
 
   function parsearEscalaPuntos(str) {
     return str.split(',').map(n => parseInt(n.trim()) || 0);
+  }
+
+  async function handleAutoCalcularPuntosRally() {
+    if (!esAdmin || !campeonatoSeleccionado || !fechaSeleccionadaId) return;
+
+    try {
+      setCalculandoAuto(true);
+
+      const fechaObj = fechasCampeonato.find(f => String(f.id) === String(fechaSeleccionadaId));
+      const numFecha = Number(fechaObj?.numero_fecha) || 1;
+
+      const { data: eventosCamp } = await api.from('eventos').select({
+        eq_campeonato_id: String(campeonatoSeleccionado.id)
+      });
+
+      const eventosDeLaFecha = Array.isArray(eventosCamp)
+        ? eventosCamp.filter(ev => Number(ev.numero_fecha || 1) === numFecha)
+        : [];
+      const idsEventosFecha = new Set(eventosDeLaFecha.map(ev => String(ev.id)));
+
+      const { data: sesionesRaw, error: errSesiones } = await api.from('resultados_sesiones').select({
+        eq_campeonato_id: String(campeonatoSeleccionado.id),
+        order: 'fecha.asc'
+      });
+
+      if (errSesiones) {
+        alert('Error al leer sesiones del rally: ' + errSesiones.message);
+        return;
+      }
+
+      let sesiones = Array.isArray(sesionesRaw) ? sesionesRaw : [];
+      if (idsEventosFecha.size > 0) {
+        const filtradasPorEvento = sesiones.filter(s => s.evento_id && idsEventosFecha.has(String(s.evento_id)));
+        if (filtradasPorEvento.length > 0) {
+          sesiones = filtradasPorEvento;
+        }
+      }
+
+      const tramosAProcesar = sesiones.slice(0, 4);
+      if (tramosAProcesar.length === 0) {
+        alert('No se encontraron sesiones guardadas en resultados_sesiones para este campeonato/fecha.');
+        return;
+      }
+
+      const escala = Array.isArray(campeonatoSeleccionado?.puntos_final1) && campeonatoSeleccionado.puntos_final1.length > 0
+        ? campeonatoSeleccionado.puntos_final1.map(n => Number(n) || 0)
+        : parsearEscalaPuntos(strPuntosTramo);
+
+      const puntosPorPiloto = {};
+
+      const asegurarPiloto = (nombre) => {
+        if (!puntosPorPiloto[nombre]) {
+          puntosPorPiloto[nombre] = {
+            piloto_nombre: nombre,
+            puntos_qualy: 0,
+            puntos_final1: 0,
+            puntos_final2: 0,
+            puntos_tramo1: 0,
+            puntos_tramo2: 0,
+            puntos_tramo3: 0,
+            puntos_tramo4: 0,
+            puntos_total: 0,
+            sancion_aplicada: ''
+          };
+        }
+        return puntosPorPiloto[nombre];
+      };
+
+      tramosAProcesar.forEach((sesion, tramoIdx) => {
+        if (!Array.isArray(sesion?.datos_json)) return;
+
+        const porCategoria = {};
+
+        sesion.datos_json.forEach((j) => {
+          const nombrePiloto = String(j?.nombre || j?.driver || j?.name || '').trim().toUpperCase();
+          const ms = Number(j?.bestLapMs || j?.bestLap || j?.tiempoMs || j?.lastLapMs || 0);
+          if (!nombrePiloto || !ms || ms <= 0) return;
+
+          const nombreAuto = typeof j?.auto === 'object' ? (j.auto.name || 'AUTO') : (j?.auto || j?.car || 'AUTO');
+          const cat = normalizarCategoriaRally(j, nombreAuto);
+
+          if (!porCategoria[cat]) porCategoria[cat] = [];
+          porCategoria[cat].push({ piloto: nombrePiloto, ms });
+        });
+
+        const campoTramo = `puntos_tramo${tramoIdx + 1}`;
+
+        Object.values(porCategoria).forEach((pilotosCat) => {
+          const ordenadosCat = [...pilotosCat].sort((a, b) => a.ms - b.ms);
+          ordenadosCat.forEach((item, posIdx) => {
+            const pts = posIdx < escala.length ? escala[posIdx] : 0;
+            const reg = asegurarPiloto(item.piloto);
+            reg[campoTramo] += pts;
+          });
+        });
+      });
+
+      const pilotosLista = Object.values(puntosPorPiloto);
+      if (pilotosLista.length === 0) {
+        alert('Las sesiones encontradas no tienen tiempos válidos para asignar puntos.');
+        return;
+      }
+
+      const { data: existentes } = await api.from('campeonato_resultados_fecha').select({
+        eq_fecha_id: fechaSeleccionadaId
+      });
+      const mapaExistentes = new Map(
+        (Array.isArray(existentes) ? existentes : []).map(r => [String(r.piloto_nombre || '').trim().toUpperCase(), r])
+      );
+
+      for (const reg of pilotosLista) {
+        const total =
+          (reg.puntos_tramo1 || 0) +
+          (reg.puntos_tramo2 || 0) +
+          (reg.puntos_tramo3 || 0) +
+          (reg.puntos_tramo4 || 0);
+
+        const payload = {
+          ...reg,
+          puntos_total: total
+        };
+
+        const previo = mapaExistentes.get(reg.piloto_nombre);
+        if (previo) {
+          await api.from('campeonato_resultados_fecha').update(payload, { eq_id: previo.id });
+        } else {
+          await api.from('campeonato_resultados_fecha').insert([{
+            fecha_id: fechaSeleccionadaId,
+            ...payload
+          }]);
+        }
+      }
+
+      delete cacheResultadosFecha.current[fechaSeleccionadaId];
+      delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
+      await cargarResultadosFecha(fechaSeleccionadaId, true);
+      await calcularTablaGeneral(campeonatoSeleccionado.id, true);
+
+      alert(`¡Puntos calculados por categoría para ${pilotosLista.length} pilotos en ${fechaObj?.titulo_fecha || 'la fecha'}!`);
+    } catch (err) {
+      console.error('Error al autocalcular puntos:', err);
+      alert('Ocurrió un error al calcular los puntos automáticamente.');
+    } finally {
+      setCalculandoAuto(false);
+    }
   }
 
   async function handleCrearCampeonato(e) {
@@ -433,18 +615,31 @@ export default function Campeonatos({ esAdmin }) {
                   🏁 CARGA MANUAL DE RESULTADOS ({campeonatoSeleccionado.modalidad?.toUpperCase()})
                 </h3>
 
-                <select
-                  value={fechaSeleccionadaId}
-                  onChange={(e) => {
-                    setFechaSeleccionadaId(e.target.value);
-                    cargarResultadosFecha(e.target.value);
-                  }}
-                  className="bg-neutral-900 border border-neutral-700 text-white text-xs rounded-lg px-3 py-1.5 outline-none font-wrc cursor-pointer"
-                >
-                  {fechasCampeonato.map(f => (
-                    <option key={f.id} value={f.id} className="bg-neutral-900 text-white">{f.titulo_fecha}</option>
-                  ))}
-                </select>
+                <div className="flex flex-wrap items-center gap-2">
+                  {esRallyActivo && (
+                    <button
+                      type="button"
+                      onClick={handleAutoCalcularPuntosRally}
+                      disabled={calculandoAuto || !fechaSeleccionadaId}
+                      className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 font-black text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer disabled:opacity-50"
+                    >
+                      {calculandoAuto ? 'CALCULANDO...' : '⚡ AUTO-CALCULAR POR CATEGORÍA'}
+                    </button>
+                  )}
+
+                  <select
+                    value={fechaSeleccionadaId}
+                    onChange={(e) => {
+                      setFechaSeleccionadaId(e.target.value);
+                      cargarResultadosFecha(e.target.value);
+                    }}
+                    className="bg-neutral-900 border border-neutral-700 text-white text-xs rounded-lg px-3 py-1.5 outline-none font-wrc cursor-pointer"
+                  >
+                    {fechasCampeonato.map(f => (
+                      <option key={f.id} value={f.id} className="bg-neutral-900 text-white">{f.titulo_fecha}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <form onSubmit={handleGuardarPuntosPiloto} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
