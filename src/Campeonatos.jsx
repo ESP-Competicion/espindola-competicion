@@ -261,7 +261,11 @@ export default function Campeonatos({ esAdmin }) {
   }
 
   async function eliminarResultadoPiloto(id) {
-    await api.from('campeonato_resultados_fecha').delete({ eq_id: id });
+    const { error } = await api.from('campeonato_resultados_fecha').eq('id', id).delete();
+    if (error) {
+      alert('Error al eliminar resultado del piloto: ' + error.message);
+      return;
+    }
     delete cacheResultadosFecha.current[fechaSeleccionadaId];
     delete cacheTablasGenerales.current[campeonatoSeleccionado.id];
     await cargarResultadosFecha(fechaSeleccionadaId, true);
@@ -270,7 +274,11 @@ export default function Campeonatos({ esAdmin }) {
 
   async function eliminarCampeonato(id) {
     if (!confirm('¿Estás seguro de eliminar este campeonato?')) return;
-    await api.from('campeonatos').delete({ eq_id: id });
+    const { error } = await api.from('campeonatos').eq('id', id).delete();
+    if (error) {
+      alert('Error al eliminar campeonato: ' + error.message);
+      return;
+    }
     delete cacheFechasCamp.current[id];
     delete cacheTablasGenerales.current[id];
     setCampeonatoSeleccionado(null);
@@ -491,7 +499,7 @@ export default function Campeonatos({ esAdmin }) {
                 <div className="sm:col-span-2 lg:col-span-4 flex justify-end pt-2">
                   <button
                     type="submit"
-                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-6 py-2.5 rounded-lg transition cursor-pointer"
+                    className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-6 py-2.5 rounded-lg transition shadow cursor-pointer"
                   >
                     GUARDAR RESULTADOS DE ESTA FECHA
                   </button>

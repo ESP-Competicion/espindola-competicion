@@ -190,11 +190,13 @@ export default function Resultados() {
 
   async function eliminarResultado(id) {
     if (!confirm('¿Estás seguro de eliminar este registro?')) return;
-    const { error } = await api.from('resultados_sesiones').delete({ eq_id: id });
-    if (!error) {
-      cargarResultadosAPI();
-      setSesionSeleccionada(null);
+    const { error } = await api.from('resultados_sesiones').eq('id', id).delete();
+    if (error) {
+      alert('Error al eliminar registro: ' + error.message);
+      return;
     }
+    setSesionSeleccionada(null);
+    await cargarResultadosAPI();
   }
 
   const listaPilotos = Array.isArray(sesionSeleccionada?.datos_json) ? sesionSeleccionada.datos_json : [];

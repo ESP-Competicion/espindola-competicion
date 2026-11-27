@@ -1,73 +1,50 @@
-const API_BASE_URL = 'https://espindola-api.argproseries.workers.dev';
-const SESSION_STORAGE_KEY = 'espindola_session_token';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://espindolacompeticion.com').replace(/\/+$/, '');
+const TOKEN_STORAGE_KEY = 'espindola_session_token';
 
-let memorySessionToken = '';
-
-function getSessionToken() {
-  if (memorySessionToken) return memorySessionToken;
+function getToken() {
   try {
-    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY) || '';
-    memorySessionToken = saved;
-    return saved;
+    return localStorage.getItem(TOKEN_STORAGE_KEY) || '';
   } catch {
     return '';
   }
 }
 
-export function setSessionToken(token) {
-  memorySessionToken = (token || '').trim();
+function setToken(token) {
   try {
-    if (memorySessionToken) {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, memorySessionToken);
+    if (token) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
     } else {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
   } catch {
-    // ignorar si sessionStorage no está disponible
+    // ignorar si storage no está disponible
   }
 }
 
-export function clearSessionToken() {
-  setSessionToken('');
-}
-
-function buildAuthHeaders(extraHeaders = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...extraHeaders
-  };
-  const token = getSessionToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-}
-
-function buildQueryString(filters = {}, extra = {}) {
-  const params = new URLSearchParams();
-
-  for (const [key, val] of Object.entries(filters || {})) {
-    if (val === undefined || val === null || val === '') continue;
-    if (key.startsWith('eq_') || key.startsWith('in_')) {
-      params.set(key, Array.isArray(val) ? val.join(',') : String(val));
-    } else {
-      params.set(`eq_${key}`, String(val));
+function buildQueryString(params = {}) {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      sp.set(key, String(value));
     }
-  }
-
-  for (const [key, val] of Object.entries(extra || {})) {
-    if (val === undefined || val === null || val === '') continue;
-    params.set(key, String(val));
-  }
-
-  const str = params.toString();
-  return str ? `?${str}` : '';
+  });
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
 }
 
 async function request(path, options = {}) {
+  const token = getToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: buildAuthHeaders(options.headers || {})
+    headers
   });
 
   const text = await res.text();
@@ -79,10 +56,8 @@ async function request(path, options = {}) {
   }
 
   if (!res.ok) {
-    const message =
-      (json && typeof json === 'object' && (json.error || json.message)) ||
-      `Error HTTP ${res.status}`;
-    const err = new Error(message);
+    const msg = (json && (json.error || json.message)) || `Error HTTP ${res.status}`;
+    const err = new Error(msg);
     err.status = res.status;
     err.data = json;
     throw err;
@@ -95,8 +70,6 @@ class QueryBuilder {
   constructor(table) {
     this.table = table;
     this._filters = {};
-    this._order = null;
-    this._limit = null;
     this._single = false;
   }
 
@@ -110,13 +83,13 @@ class QueryBuilder {
     return this;
   }
 
-  order(column, { ascending = true } = {}) {
-    this._order = `${column}.${ascending ? 'asc' : 'desc'}`;
+  order(orderStr) {
+    this._filters.order = orderStr;
     return this;
   }
 
-  limit(count) {
-    this._limit = count;
+  limit(n) {
+    this._filters.limit = n;
     return this;
   }
 
@@ -125,38 +98,39 @@ class QueryBuilder {
     return this;
   }
 
-  async select(filters = {}) {
+  async select(params = {}) {
     try {
-      const mergedFilters = { ...this._filters, ...filters };
-      const qs = buildQueryString(mergedFilters, {
-        order: this._order,
-        limit: this._limit
+      const merged = { ...this._filters, ...params };
+      const qs = buildQueryString(merged);
+      const data = await request(`/api/${this.table}${qs}`, {
+        method: 'GET'
       });
-      const data = await request(`/api/${this.table}${qs}`, { method: 'GET' });
+
       if (this._single) {
-        return { data: Array.isArray(data) ? (data[0] ?? null) : data, error: null };
+        if (Array.isArray(data)) {
+          return { data: data[0] || null, error: null };
+        }
+        return { data: data || null, error: null };
       }
-      return { data, error: null };
+
+      return { data: Array.isArray(data) ? data : (data ? [data] : []), error: null };
     } catch (error) {
-      return { data: null, error };
+      return { data: this._single ? null : [], error };
     }
   }
 
-  async insert(payload, { upsert = false } = {}) {
+  async insert(payload, options = {}) {
     try {
-      const qs = upsert ? '?upsert=true' : '';
+      const qs = buildQueryString(options);
       const data = await request(`/api/${this.table}${qs}`, {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-      return { data, error: null };
+      const row = Array.isArray(data) ? data[0] : data;
+      return { data: row, error: null };
     } catch (error) {
       return { data: null, error };
     }
-  }
-
-  async upsert(payload) {
-    return this.insert(payload, { upsert: true });
   }
 
   async update(payload, filters = {}) {
@@ -182,7 +156,7 @@ class QueryBuilder {
       });
       return { data, error: null };
     } catch (error) {
-      return { data, error: null };
+      return { data: null, error };
     }
   }
 }
@@ -192,37 +166,56 @@ export const api = {
     return new QueryBuilder(table);
   },
 
-  async login(email, password) {
-    try {
-      const data = await request('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
-      });
-      const token = data?.sessionToken || data?.adminToken || '';
-      if (token) {
-        setSessionToken(token);
-      } else {
-        clearSessionToken();
-      }
-      return { data, error: null };
-    } catch (error) {
-      clearSessionToken();
-      return { data: null, error };
-    }
+  setSessionToken(token) {
+    setToken(token);
+  },
+
+  getSessionToken() {
+    return getToken();
   },
 
   logout() {
-    clearSessionToken();
+    setToken('');
+  },
+
+  async login(email, password) {
+    const data = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (data?.token) {
+      setToken(data.token);
+    }
+    return data;
+  },
+
+  async register(payload) {
+    const data = await request('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (data?.token) {
+      setToken(data.token);
+    }
+    return data;
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    return request('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
   },
 
   async getTablaCampeonato(campeonatoId) {
     try {
-      const data = await request(`/api/campeonatos/${encodeURIComponent(campeonatoId)}/tabla`, {
+      const qs = buildQueryString({ campeonato_id: campeonatoId });
+      const data = await request(`/api/campeonatos/tabla${qs}`, {
         method: 'GET'
       });
-      return { data, error: null };
+      return { data: Array.isArray(data) ? data : [], error: null };
     } catch (error) {
-      return { data: null, error };
+      return { data: [], error };
     }
   }
 };

@@ -243,7 +243,7 @@ export default function ResultadosRallyServer({
 
     try {
       setBorrando(true);
-      const { error } = await api.from('resultados_sesiones').delete({ eq_id: id });
+      const { error } = await api.from('resultados_sesiones').eq('id', id).delete();
 
       if (error) {
         alert('Error al borrar la sesión: ' + error.message);
@@ -274,14 +274,11 @@ export default function ResultadosRallyServer({
 
     try {
       setBorrando(true);
-      const ids = sesionesServidor.map(s => s.id);
-      if (ids.length > 0) {
-        const { error } = await api.from('resultados_sesiones').delete({
-          in_id: ids.join(',')
-        });
-
+      for (const s of sesionesServidor) {
+        const { error } = await api.from('resultados_sesiones').eq('id', s.id).delete();
         if (error) {
-          alert('Error al resetear resultados: ' + error.message);
+          alert('Error al borrar sesión #' + s.id + ': ' + error.message);
+          await cargarSesionesServidor();
           return;
         }
       }

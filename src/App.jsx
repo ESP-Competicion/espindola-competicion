@@ -70,7 +70,7 @@ const obtenerBanderaPais = (pais) => {
   else if (p.includes('MEXICO') || p.includes('MÉXICO') || p === 'MX') codigoIso = 'mx';
   else if (p.includes('CANARIAS') || p.includes('ISLAS CANARIAS') || p === 'IC') codigoIso = 'ic';
   else if (p.includes('ESPAÑA') || p.includes('SPAIN') || p === 'ES') codigoIso = 'es';
-  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p === 'EEUU' || p === 'US') codigoIso = 'us';
+  else if (p.includes('ESTADOS UNIDOS') || p.includes('USA') || p.includes('EEUU') || p === 'US') codigoIso = 'us';
   else if (p.includes('ITALIA') || p === 'IT') codigoIso = 'it';
   else if (p.includes('FRANCIA') || p === 'FR') codigoIso = 'fr';
 
