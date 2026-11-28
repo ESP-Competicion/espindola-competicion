@@ -2,12 +2,64 @@ import { useState, useEffect } from 'react';
 import { api } from './api';
 import SubirImagen from './SubirImagen';
 
+function construirFechaCalendarioCumple(fechaNac) {
+  // Espera 'YYYY-MM-DD'
+  if (!fechaNac || !/^\d{4}-\d{2}-\d{2}$/.test(fechaNac)) return null;
+  const [, mes, dia] = fechaNac.split('-');
+  const hoy = new Date();
+  const anioActual = hoy.getFullYear();
+  const candidato = `${anioActual}-${mes}-${dia}`;
+  const hoyStr = hoy.toISOString().slice(0, 10);
+  // Si ya pasó este año, lo agenda para el próximo año; si no, este año
+  const anioFinal = candidato < hoyStr ? anioActual + 1 : anioActual;
+  return `${anioFinal}-${mes}-${dia}`;
+}
+
+async function sincronizarCumpleanosCalendario(nombrePiloto, fechaNac) {
+  if (!nombrePiloto || !fechaNac) return;
+  const fechaEvento = construirFechaCalendarioCumple(fechaNac);
+  if (!fechaEvento) return;
+
+  const tituloCumple = `🎂 Cumpleaños de ${nombrePiloto}`;
+
+  try {
+    const { data: existentes } = await api.from('calendario').select();
+    const lista = Array.isArray(existentes) ? existentes : [];
+    const yaExiste = lista.find(
+      (ev) =>
+        String(ev.titulo || '').toLowerCase() === tituloCumple.toLowerCase() ||
+        String(ev.titulo || '').toLowerCase().includes(`cumpleaños de ${nombrePiloto.toLowerCase()}`)
+    );
+
+    if (yaExiste?.id) {
+      await api
+        .from('calendario')
+        .eq('id', yaExiste.id)
+        .update({
+          titulo: tituloCumple,
+          fecha: fechaEvento,
+          descripcion: `Cumpleaños de ${nombrePiloto} (${fechaNac})`
+        });
+    } else {
+      await api.from('calendario').insert({
+        titulo: tituloCumple,
+        fecha: fechaEvento,
+        descripcion: `Cumpleaños de ${nombrePiloto} (${fechaNac})`
+      });
+    }
+  } catch (err) {
+    // No frenamos el guardado del perfil si el calendario requiere permisos de admin
+    console.warn('No se pudo sincronizar automáticamente al calendario:', err);
+  }
+}
+
 export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado, onActualizado }) {
   const [nombrePiloto, setNombrePiloto] = useState(perfil?.nombre_piloto || '');
   const [steamId, setSteamId] = useState(perfil?.steam_id || '');
   const [nacionalidad, setNacionalidad] = useState(perfil?.nacionalidad || 'Argentina 🇦🇷');
   const [provincia, setProvincia] = useState(perfil?.provincia || '');
   const [telefono, setTelefono] = useState(perfil?.telefono || '');
+  const [cumpleanos, setCumpleanos] = useState(perfil?.cumpleanos || '');
   const [avatarUrl, setAvatarUrl] = useState(perfil?.avatar_url || '');
   const [guardando, setGuardando] = useState(false);
 
@@ -26,6 +78,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
         setNacionalidad(data.nacionalidad || 'Argentina 🇦🇷');
         setProvincia(data.provincia || '');
         setTelefono(data.telefono || '');
+        setCumpleanos(data.cumpleanos || '');
         setAvatarUrl(data.avatar_url || '');
       }
     }
@@ -40,6 +93,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
     try {
       const nombreLimpio = nombrePiloto.trim();
       const fotoLimpia = (avatarUrl || '').trim() || null;
+      const cumpleLimpio = (cumpleanos || '').trim() || null;
 
       // UPDATE puntual: no usa INSERT OR REPLACE para jamás borrar email ni password_hash
       const { error } = await api
@@ -51,6 +105,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
           nacionalidad: nacionalidad.trim(),
           provincia: provincia.trim(),
           telefono: telefono.trim(),
+          cumpleanos: cumpleLimpio,
           avatar_url: fotoLimpia,
           updated_at: new Date().toISOString()
         });
@@ -65,6 +120,10 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
           .from('salon_fama')
           .eq('nombre', nombreLimpio.toUpperCase())
           .update({ foto: fotoLimpia });
+      }
+
+      if (cumpleLimpio && nombreLimpio) {
+        await sincronizarCumpleanosCalendario(nombreLimpio, cumpleLimpio);
       }
 
       alert('¡Perfil actualizado con éxito!');
@@ -127,15 +186,26 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Número de Teléfono (WhatsApp)</label>
-            <input
-              type="text"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="Ej: +54 9 376..."
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Número de Teléfono (WhatsApp)</label>
+              <input
+                type="text"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="Ej: +54 9 376..."
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Fecha de Cumpleaños</label>
+              <input
+                type="date"
+                value={cumpleanos}
+                onChange={(e) => setCumpleanos(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
+              />
+            </div>
           </div>
 
           <div>
