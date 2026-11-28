@@ -1,58 +1,24 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from './api';
 
-const normalizarCategoriaAuto = (j, nombreAuto = '') => {
-  const rawCat = String(
-    j?.carClass ||
-    j?.class ||
-    j?.category ||
-    j?.categoria ||
-    j?.car?.class ||
-    j?.car?.category ||
-    ''
-  ).trim().toUpperCase();
-
-  if (rawCat && rawCat !== '---' && rawCat !== 'GENERAL') {
-    return rawCat;
-  }
-
-  const autoUpper = String(nombreAuto || '').trim().toUpperCase();
-  const categoriasConocidas = [
-    'RALLY1', 'RC1',
-    'RALLY2', 'RC2',
-    'RALLY3', 'RC3',
-    'RALLY4', 'RC4',
-    'RALLY5', 'RC5',
-    'AYGO CUP', 'AYGO',
-    'GT3', 'GT4', 'GTE',
-    'TCR', 'N5', 'MAXI', 'HISTORIC', 'GROUP A', 'GROUP B'
-  ];
-
-  for (const cat of categoriasConocidas) {
-    if (autoUpper.includes(cat)) {
-      return cat;
-    }
-  }
-
-  return 'GENERAL';
-};
-
 export default function Campeonatos({ esAdmin }) {
   const [campeonatos, setCampeonatos] = useState([]);
   const [campeonatoSeleccionado, setCampeonatoSeleccionado] = useState(null);
   const [fechasCampeonato, setFechasCampeonato] = useState([]);
   const [todosResultadosCamp, setTodosResultadosCamp] = useState([]);
-  const [categoriasDeSesiones, setCategoriasDeSesiones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [calculandoAuto, setCalculandoAuto] = useState(false);
+
+  // Panel de herramientas admin plegable
+  const [mostrarHerramientasAdmin, setMostrarHerramientasAdmin] = useState(false);
 
   const cacheResultadosFecha = useRef({});
   const cacheTodosResultadosCamp = useRef({});
   const cacheFechasCamp = useRef({});
 
-  // Formulario de creación
+  // Formulario de creación de campeonato
   const [nuevoNombre, setNuevoNombre] = useState('');
-  const [modalidadTorneo, setModalidadTorneo] = useState('rally'); // 'rally' o 'pista'
+  const [modalidadTorneo, setModalidadTorneo] = useState('rally');
   const [cantidadFechas, setCantidadFechas] = useState(5);
 
   // Escalas de puntos
@@ -61,15 +27,16 @@ export default function Campeonatos({ esAdmin }) {
   const [strPuntosF2, setStrPuntosF2] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
   const [strPuntosTramo, setStrPuntosTramo] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
 
-  // Gestión de resultados por fecha y filtros
+  // Fecha activa, resultados de fecha y filtro por categoría
   const [fechaSeleccionadaId, setFechaSeleccionadaId] = useState('');
   const [resultadosFecha, setResultadosFecha] = useState([]);
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('TODAS');
+  const [filtroCategoria, setFiltroCategoria] = useState('GENERAL');
+  const [vistaTabla, setVistaTabla] = useState('acumulado'); // 'acumulado' (F1+F2...) o 'fecha'
 
-  // Formulario de carga manual
+  // Carga manual de piloto en la fecha
   const [formCargaPiloto, setFormCargaPiloto] = useState({
     piloto_nombre: '',
-    categoria: 'RALLY2',
+    categoria: 'RC2',
     posicion_final: 1,
     pos_qualy: 1,
     pos_final1: 1,
@@ -80,31 +47,6 @@ export default function Campeonatos({ esAdmin }) {
   useEffect(() => {
     cargarCampeonatos();
   }, []);
-
-  async function cargarCategoriasDesdeSesiones(campId) {
-    try {
-      const { data: sesiones } = await api.from('resultados_sesiones').select({
-        eq_campeonato_id: String(campId),
-        limit: 50
-      });
-
-      const encontradas = new Set();
-      (Array.isArray(sesiones) ? sesiones : []).forEach((s) => {
-        if (!Array.isArray(s?.datos_json)) return;
-        s.datos_json.forEach((j) => {
-          const autoNombre = typeof j?.auto === 'object' ? (j.auto?.name || '') : (j?.auto || j?.car || '');
-          const cat = normalizarCategoriaAuto(j, autoNombre);
-          if (cat && cat !== 'GENERAL') {
-            encontradas.add(cat);
-          }
-        });
-      });
-
-      setCategoriasDeSesiones(Array.from(encontradas));
-    } catch {
-      setCategoriasDeSesiones([]);
-    }
-  }
 
   async function cargarCampeonatos(forzarRefresco = false) {
     setCargando(true);
@@ -137,7 +79,7 @@ export default function Campeonatos({ esAdmin }) {
 
   async function seleccionarCampeonato(camp, forzarRefresco = false) {
     setCampeonatoSeleccionado(camp);
-    setCategoriaSeleccionada('TODAS');
+    setFiltroCategoria('GENERAL');
 
     if (camp.puntos_final1 && Array.isArray(camp.puntos_final1)) {
       setStrPuntosF1(camp.puntos_final1.join(', '));
@@ -149,8 +91,6 @@ export default function Campeonatos({ esAdmin }) {
     if (camp.puntos_final2 && Array.isArray(camp.puntos_final2)) {
       setStrPuntosF2(camp.puntos_final2.join(', '));
     }
-
-    await cargarCategoriasDesdeSesiones(camp.id);
 
     let fechas = cacheFechasCamp.current[camp.id];
     if (!fechas || forzarRefresco) {
@@ -226,56 +166,25 @@ export default function Campeonatos({ esAdmin }) {
     return str.split(',').map(n => parseInt(n.trim()) || 0);
   }
 
-  const opcionesCategorias = useMemo(() => {
-    const base = new Set(['RALLY2', 'RALLY4', 'AYGO CUP', ...categoriasDeSesiones]);
-    [...resultadosFecha, ...todosResultadosCamp].forEach((r) => {
+  const categoriasDisponibles = useMemo(() => {
+    const setCats = new Set();
+    [...todosResultadosCamp, ...resultadosFecha].forEach((r) => {
       const cat = String(r.categoria || '').trim().toUpperCase();
-      if (cat && cat !== 'GENERAL') base.add(cat);
-    });
-    return Array.from(base);
-  }, [categoriasDeSesiones, resultadosFecha, todosResultadosCamp]);
-
-  const categoriasFiltroDropdown = useMemo(() => {
-    const setCats = new Set(opcionesCategorias);
-    [...resultadosFecha, ...todosResultadosCamp].forEach((r) => {
-      const cat = String(r.categoria || '').trim().toUpperCase();
-      if (cat) setCats.add(cat);
-    });
-    return ['TODAS', ...Array.from(setCats)];
-  }, [opcionesCategorias, resultadosFecha, todosResultadosCamp]);
-
-  const resultadosFechaFiltrados = useMemo(() => {
-    const normalizados = resultadosFecha.map((r, idx) => ({
-      ...r,
-      categoria: String(r.categoria || 'GENERAL').trim().toUpperCase(),
-      posicion_final: Number(r.posicion_final) || idx + 1,
-      puntos_total: Number(r.puntos_total) || 0
-    }));
-
-    const filtrados =
-      categoriaSeleccionada === 'TODAS'
-        ? normalizados
-        : normalizados.filter((item) => item.categoria === categoriaSeleccionada);
-
-    return filtrados.sort((a, b) => {
-      if (categoriaSeleccionada === 'TODAS' && a.categoria !== b.categoria) {
-        return a.categoria.localeCompare(b.categoria);
+      if (cat && cat !== 'GENERAL') {
+        setCats.add(cat);
       }
-      if (a.posicion_final !== b.posicion_final) {
-        return a.posicion_final - b.posicion_final;
-      }
-      return b.puntos_total - a.puntos_total;
     });
-  }, [resultadosFecha, categoriaSeleccionada]);
+    return ['GENERAL', ...Array.from(setCats)];
+  }, [todosResultadosCamp, resultadosFecha]);
 
-  // Tabla general acumulada (FECHA 1 + FECHA 2 + ...) filtrable por categoría
-  const tablaGeneralCalculada = useMemo(() => {
+  // Sumatoria de todas las fechas (F1 + F2 + ...) con soporte para categoría específica o general
+  const filasAcumuladas = useMemo(() => {
     const mapaFechas = new Map();
-    fechasCampeonato.forEach((f, i) => {
-      mapaFechas.set(String(f.id), Number(f.numero_fecha) || i + 1);
+    fechasCampeonato.forEach((f, idx) => {
+      mapaFechas.set(String(f.id), Number(f.numero_fecha) || idx + 1);
     });
 
-    const agrupado = new Map();
+    const mapa = new Map();
 
     todosResultadosCamp.forEach((r) => {
       const piloto = String(r.piloto_nombre || '').trim().toUpperCase();
@@ -284,27 +193,52 @@ export default function Campeonatos({ esAdmin }) {
       const numFecha = mapaFechas.get(String(r.fecha_id)) || 1;
       const pts = Number(r.puntos_total) || 0;
 
-      if (categoriaSeleccionada !== 'TODAS' && categoria !== categoriaSeleccionada) {
+      if (filtroCategoria !== 'GENERAL' && categoria !== filtroCategoria) {
         return;
       }
 
-      const clave = categoriaSeleccionada === 'TODAS' ? `${piloto}__${categoria}` : piloto;
-      if (!agrupado.has(clave)) {
-        agrupado.set(clave, {
+      const clave = filtroCategoria === 'GENERAL' ? `${piloto}__${categoria}` : piloto;
+      if (!mapa.has(clave)) {
+        mapa.set(clave, {
+          id: r.id,
           nombre: piloto,
           categoria,
           total: 0,
-          puntosPorFecha: {}
+          porFecha: {}
         });
       }
 
-      const entry = agrupado.get(clave);
-      entry.puntosPorFecha[numFecha] = (entry.puntosPorFecha[numFecha] || 0) + pts;
-      entry.total += pts;
+      const item = mapa.get(clave);
+      item.porFecha[numFecha] = (item.porFecha[numFecha] || 0) + pts;
+      item.total += pts;
     });
 
-    return Array.from(agrupado.values()).sort((a, b) => b.total - a.total);
-  }, [todosResultadosCamp, fechasCampeonato, categoriaSeleccionada]);
+    return Array.from(mapa.values()).sort((a, b) => b.total - a.total);
+  }, [todosResultadosCamp, fechasCampeonato, filtroCategoria]);
+
+  // Filas de una fecha concreta filtradas por categoría
+  const filasPorFecha = useMemo(() => {
+    const normalizadas = resultadosFecha.map((r, idx) => ({
+      id: r.id,
+      nombre: String(r.piloto_nombre || '').trim().toUpperCase(),
+      categoria: String(r.categoria || 'GENERAL').trim().toUpperCase(),
+      posicion: Number(r.posicion_final) || idx + 1,
+      total: Number(r.puntos_total) || 0
+    }));
+
+    const filtradas =
+      filtroCategoria === 'GENERAL'
+        ? normalizadas
+        : normalizadas.filter((item) => item.categoria === filtroCategoria);
+
+    return filtradas.sort((a, b) => {
+      if (filtroCategoria === 'GENERAL' && a.categoria !== b.categoria) {
+        return a.categoria.localeCompare(b.categoria);
+      }
+      if (a.posicion !== b.posicion) return a.posicion - b.posicion;
+      return b.total - a.total;
+    });
+  }, [resultadosFecha, filtroCategoria]);
 
   async function handleFinalizarRallyPorCategoria() {
     if (!esAdmin || !campeonatoSeleccionado || !fechaSeleccionadaId || resultadosFecha.length === 0) return;
@@ -366,12 +300,6 @@ export default function Campeonatos({ esAdmin }) {
 
       await cargarResultadosFecha(fechaSeleccionadaId, true);
       await cargarTodosResultadosCampeonato(campeonatoSeleccionado.id, listaFechas, true);
-
-      const fechaObj = listaFechas.find(f => String(f.id) === String(fechaSeleccionadaId));
-      alert(`¡${fechaObj?.titulo_fecha || 'Fecha'} guardada en el historial y puntos sumados a la tabla general!`);
-    } catch (err) {
-      console.error('Error al asignar puntos al finalizar el rally:', err);
-      alert('Ocurrió un error al asignar los puntos de la fecha.');
     } finally {
       setCalculandoAuto(false);
     }
@@ -402,7 +330,7 @@ export default function Campeonatos({ esAdmin }) {
     }
 
     const fechasInsertar = [];
-    for (let i = 1; i <= parseInt(cantidadFechas); i++) {
+    for (let i = 1; i <= parseInt(cantidadFechas, 10); i++) {
       fechasInsertar.push({
         campeonato_id: campNuevo.id,
         numero_fecha: i,
@@ -413,9 +341,7 @@ export default function Campeonatos({ esAdmin }) {
     }
 
     await api.from('campeonato_fechas').insert(fechasInsertar);
-
     setNuevoNombre('');
-    alert('¡Campeonato creado con éxito!');
     await cargarCampeonatos(true);
   }
 
@@ -425,26 +351,26 @@ export default function Campeonatos({ esAdmin }) {
 
     const esRally = campeonatoSeleccionado?.modalidad === 'rally';
     const nombrePiloto = formCargaPiloto.piloto_nombre.toUpperCase().trim();
-    const categoriaPiloto = (formCargaPiloto.categoria || 'RALLY2').toUpperCase().trim();
-    const posFinal = Math.max(1, parseInt(formCargaPiloto.posicion_final) || 1);
+    const categoriaPiloto = (formCargaPiloto.categoria || 'RC2').toUpperCase().trim();
+    const posFinal = Math.max(1, parseInt(formCargaPiloto.posicion_final, 10) || 1);
 
-    let ptsQ = 0, ptsF1 = 0, ptsF2 = 0, ptsT1 = 0, ptsT2 = 0, ptsT3 = 0, ptsT4 = 0;
+    let ptsQ = 0, ptsF1 = 0, ptsF2 = 0;
 
     if (!esRally) {
       const arrQ = campeonatoSeleccionado?.puntos_qualy || parsearEscalaPuntos(strPuntosQ);
       const arrF1 = campeonatoSeleccionado?.puntos_final1 || parsearEscalaPuntos(strPuntosF1);
       const arrF2 = campeonatoSeleccionado?.puntos_final2 || parsearEscalaPuntos(strPuntosF2);
 
-      const pq = parseInt(formCargaPiloto.pos_qualy) || 0;
-      const pf1 = parseInt(formCargaPiloto.pos_final1) || 0;
-      const pf2 = parseInt(formCargaPiloto.pos_final2) || 0;
+      const pq = parseInt(formCargaPiloto.pos_qualy, 10) || 0;
+      const pf1 = parseInt(formCargaPiloto.pos_final1, 10) || 0;
+      const pf2 = parseInt(formCargaPiloto.pos_final2, 10) || 0;
 
       ptsQ = pq > 0 && pq <= arrQ.length ? arrQ[pq - 1] : 0;
       ptsF1 = pf1 > 0 && pf1 <= arrF1.length ? arrF1[pf1 - 1] : 0;
       ptsF2 = pf2 > 0 && pf2 <= arrF2.length ? arrF2[pf2 - 1] : 0;
     }
 
-    const total = ptsQ + ptsF1 + ptsF2 + ptsT1 + ptsT2 + ptsT3 + ptsT4;
+    const total = ptsQ + ptsF1 + ptsF2;
 
     const { data: existentes } = await api.from('campeonato_resultados_fecha').select({
       eq_fecha_id: fechaSeleccionadaId,
@@ -458,10 +384,10 @@ export default function Campeonatos({ esAdmin }) {
       puntos_qualy: ptsQ,
       puntos_final1: ptsF1,
       puntos_final2: ptsF2,
-      puntos_tramo1: ptsT1,
-      puntos_tramo2: ptsT2,
-      puntos_tramo3: ptsT3,
-      puntos_tramo4: ptsT4,
+      puntos_tramo1: 0,
+      puntos_tramo2: 0,
+      puntos_tramo3: 0,
+      puntos_tramo4: 0,
       puntos_total: total,
       sancion_aplicada: formCargaPiloto.sancion.toUpperCase()
     };
@@ -495,7 +421,7 @@ export default function Campeonatos({ esAdmin }) {
   async function eliminarResultadoPiloto(id) {
     const { error } = await api.from('campeonato_resultados_fecha').eq('id', id).delete();
     if (error) {
-      alert('Error al eliminar resultado del piloto: ' + error.message);
+      alert('Error al eliminar resultado: ' + error.message);
       return;
     }
     delete cacheResultadosFecha.current[fechaSeleccionadaId];
@@ -504,319 +430,320 @@ export default function Campeonatos({ esAdmin }) {
     await cargarTodosResultadosCampeonato(campeonatoSeleccionado.id, fechasCampeonato, true);
   }
 
-  async function eliminarCampeonato(id) {
-    if (!confirm('¿Estás seguro de eliminar este campeonato?')) return;
-    const { error } = await api.from('campeonatos').eq('id', id).delete();
-    if (error) {
-      alert('Error al eliminar campeonato: ' + error.message);
-      return;
-    }
-    delete cacheFechasCamp.current[id];
-    delete cacheTodosResultadosCamp.current[id];
-    setCampeonatoSeleccionado(null);
-    await cargarCampeonatos(true);
-  }
-
-  const esRallyActivo = campeonatoSeleccionado?.modalidad === 'rally';
-  const fechaActualObj = fechasCampeonato.find(f => String(f.id) === String(fechaSeleccionadaId));
+  const filasActivas = vistaTabla === 'acumulado' ? filasAcumuladas : filasPorFecha;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto font-wrc text-white uppercase">
+    <div className="space-y-4 max-w-6xl mx-auto font-wrc text-white uppercase">
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-neutral-900/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
-        <div>
-          <h2 className="text-3xl text-[#38bdf8] tracking-wide">CAMPEONATOS OFICIALES</h2>
-          <p className="text-neutral-300 text-xs">
-            {esRallyActivo
-              ? 'RALLY: PUNTOS POR CATEGORÍA AL TERMINAR LA FECHA Y ACUMULADO GENERAL.'
-              : 'GESTIÓN DE PISTA (QUALY + FINALES).'}
-          </p>
-        </div>
+      {/* Barra superior: Título + Botón desplegable Admin */}
+      <div className="flex flex-wrap justify-between items-center gap-3 bg-neutral-900/65 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-3 shadow-xl">
+        <h2 className="text-2xl md:text-3xl text-[#38bdf8] tracking-wide">
+          CAMPEONATOS OFICIALES
+        </h2>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={categoriaSeleccionada}
-            onChange={(e) => setCategoriaSeleccionada(e.target.value)}
-            className="bg-neutral-950 border border-[#38bdf8]/60 text-[#38bdf8] text-xs rounded-xl px-3 py-2.5 outline-none font-wrc cursor-pointer shadow-lg"
+        {esAdmin && (
+          <button
+            type="button"
+            onClick={() => setMostrarHerramientasAdmin(!mostrarHerramientasAdmin)}
+            className="bg-neutral-950 hover:bg-neutral-900 text-[#38bdf8] border border-[#38bdf8]/60 text-xs font-black px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer transition"
           >
-            {categoriasFiltroDropdown.map((cat) => (
-              <option key={cat} value={cat} className="bg-neutral-900 text-white">
-                {cat === 'TODAS' ? 'CAT: TODAS' : `CAT: ${cat}`}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={campeonatoSeleccionado?.id || ''}
-            onChange={(e) => {
-              const enc = campeonatos.find(c => c.id === e.target.value);
-              if (enc) seleccionarCampeonato(enc);
-            }}
-            className="bg-neutral-950 border border-[#38bdf8]/60 text-white text-xs rounded-xl px-3 py-2.5 outline-none font-wrc cursor-pointer shadow-lg"
-          >
-            {campeonatos.map(c => (
-              <option key={c.id} value={c.id} className="bg-neutral-900 text-white">{c.nombre} ({c.modalidad?.toUpperCase()})</option>
-            ))}
-          </select>
-
-          {esAdmin && campeonatoSeleccionado && (
-            <button
-              onClick={() => eliminarCampeonato(campeonatoSeleccionado.id)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-2.5 rounded-xl text-xs cursor-pointer transition"
-              title="Eliminar campeonato"
-            >
-              🗑️
-            </button>
-          )}
-        </div>
+            <span>⚙️ HERRAMIENTAS ADMIN</span>
+            <span>{mostrarHerramientasAdmin ? '▲' : '▼'}</span>
+          </button>
+        )}
       </div>
 
-      {/* PANEL DE ADMIN: CREAR TORNEO PISTA VS RALLY */}
-      {esAdmin && (
-        <div className="bg-neutral-900/90 backdrop-blur-md border border-[#38bdf8]/50 rounded-2xl p-5 shadow-2xl space-y-4">
-          <h3 className="text-sm text-[#38bdf8] font-black">➕ CREAR NUEVO CAMPEONATO (ELEGIR MODALIDAD)</h3>
-
-          <form onSubmit={handleCrearCampeonato} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE DEL TORNEO</label>
-                <input
-                  type="text"
-                  value={nuevoNombre}
-                  onChange={(e) => setNuevoNombre(e.target.value)}
-                  placeholder="EJ: RALLY MISIONES 2027"
-                  required
-                  className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8]"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] text-[#38bdf8] mb-1">MODALIDAD</label>
-                <select
-                  value={modalidadTorneo}
-                  onChange={(e) => setModalidadTorneo(e.target.value)}
-                  className="w-full bg-neutral-950 border border-[#38bdf8]/60 rounded-lg px-3 py-2 text-xs text-white outline-none cursor-pointer font-wrc"
-                >
-                  <option value="rally">RALLY (POR CATEGORÍA AL FINALIZAR)</option>
-                  <option value="pista">PISTA (QUALY + FINALES)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] text-neutral-300 mb-1">CANTIDAD DE FECHAS</label>
-                <input
-                  type="number"
-                  value={cantidadFechas}
-                  onChange={(e) => setCantidadFechas(e.target.value)}
-                  min="1" max="20"
-                  required
-                  className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8]"
-                />
-              </div>
+      {/* Herramientas Admin desplegables */}
+      {esAdmin && mostrarHerramientasAdmin && (
+        <div className="bg-neutral-950/90 backdrop-blur-md border border-[#38bdf8]/40 rounded-2xl p-4 shadow-2xl space-y-4">
+          <form onSubmit={handleCrearCampeonato} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end border-b border-white/10 pb-4">
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE CAMPEONATO</label>
+              <input
+                type="text"
+                value={nuevoNombre}
+                onChange={(e) => setNuevoNombre(e.target.value)}
+                placeholder="EJ: RALLY ESPÍNDOLA"
+                required
+                className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+              />
             </div>
-
-            {modalidadTorneo === 'rally' ? (
-              <div className="border-t border-white/10 pt-3">
-                <label className="block text-[10px] text-[#38bdf8] mb-1">ESCALA DE PUNTOS POR POSICIÓN EN CATEGORÍA (1º, 2º, 3º... SEPARADAS POR COMA)</label>
-                <input
-                  type="text"
-                  value={strPuntosTramo}
-                  onChange={(e) => setStrPuntosTramo(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8] font-mono"
-                />
-              </div>
-            ) : (
-              <div className="border-t border-white/10 pt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] text-[#38bdf8] mb-1">PUNTOS QUALY (1º, 2º, 3º... SEPARADAS POR COMA)</label>
-                  <input
-                    type="text"
-                    value={strPuntosQ}
-                    onChange={(e) => setStrPuntosQ(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8] font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-[#38bdf8] mb-1">PUNTOS FINAL 1 (1º, 2º, 3º... SEPARADAS POR COMA)</label>
-                  <input
-                    type="text"
-                    value={strPuntosF1}
-                    onChange={(e) => setStrPuntosF1(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8] font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-[#38bdf8] mb-1">PUNTOS FINAL 2 (1º, 2º, 3º... SEPARADAS POR COMA)</label>
-                  <input
-                    type="text"
-                    value={strPuntosF2}
-                    onChange={(e) => setStrPuntosF2(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8] font-mono"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-6 py-2.5 rounded-lg transition shadow cursor-pointer"
+            <div>
+              <label className="block text-[10px] text-[#38bdf8] mb-1">MODALIDAD</label>
+              <select
+                value={modalidadTorneo}
+                onChange={(e) => setModalidadTorneo(e.target.value)}
+                className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none cursor-pointer"
               >
-                CREAR CAMPEONATO
-              </button>
+                <option value="rally">RALLY</option>
+                <option value="pista">PISTA</option>
+              </select>
             </div>
+            <div>
+              <label className="block text-[10px] text-neutral-300 mb-1">CANT. FECHAS</label>
+              <input
+                type="number"
+                value={cantidadFechas}
+                onChange={(e) => setCantidadFechas(e.target.value)}
+                min="1"
+                max="30"
+                required
+                className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs py-2 px-4 rounded-lg cursor-pointer transition"
+            >
+              + CREAR CAMPEONATO
+            </button>
           </form>
-        </div>
-      )}
 
-      {/* VISTA PRINCIPAL */}
-      {!campeonatoSeleccionado ? (
-        <div className="bg-neutral-900/60 border border-white/10 rounded-2xl p-10 text-center text-neutral-400 text-xs">
-          {cargando ? 'CARGANDO CAMPEONATOS...' : 'NO HAY CAMPEONATOS CREADOS. CREÁ UNO NUEVO ARRIBA.'}
-        </div>
-      ) : (
-        <div className="space-y-6">
-
-          {/* RESULTADOS POR FECHA (FECHA 1, FECHA 2...) */}
-          <div className="bg-neutral-950/90 border border-[#38bdf8]/40 rounded-2xl p-5 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-3">
-              <div>
-                <h3 className="text-[#38bdf8] text-xs font-black">
-                  🏁 PUNTOS DE LA FECHA ({fechaActualObj?.titulo_fecha || 'FECHA'}) • {campeonatoSeleccionado.modalidad?.toUpperCase()}
-                </h3>
-                <p className="text-[10px] text-neutral-400">
-                  CATEGORÍA ACTIVA: <span className="text-sky-300 font-bold">{categoriaSeleccionada}</span>
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {esAdmin && esRallyActivo && (
-                  <button
-                    type="button"
-                    onClick={handleFinalizarRallyPorCategoria}
-                    disabled={calculandoAuto || !fechaSeleccionadaId || resultadosFecha.length === 0}
-                    className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 font-black text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer disabled:opacity-50"
+          {campeonatoSeleccionado && fechaSeleccionadaId && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <span className="text-xs text-[#38bdf8] font-bold">
+                  CARGA DE RESULTADOS • {campeonatoSeleccionado.nombre}
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={fechaSeleccionadaId}
+                    onChange={(e) => {
+                      setFechaSeleccionadaId(e.target.value);
+                      cargarResultadosFecha(e.target.value);
+                    }}
+                    className="bg-neutral-900 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer"
                   >
-                    {calculandoAuto ? 'GUARDANDO...' : '🏁 TERMINAR RALLY Y DAR PUNTOS'}
-                  </button>
-                )}
+                    {fechasCampeonato.map((f, i) => (
+                      <option key={f.id} value={f.id}>
+                        {f.titulo_fecha || `FECHA ${f.numero_fecha || i + 1}`}
+                      </option>
+                    ))}
+                  </select>
 
-                <select
-                  value={fechaSeleccionadaId}
-                  onChange={(e) => {
-                    setFechaSeleccionadaId(e.target.value);
-                    cargarResultadosFecha(e.target.value);
-                  }}
-                  className="bg-neutral-900 border border-neutral-700 text-white text-xs rounded-lg px-3 py-1.5 outline-none font-wrc cursor-pointer"
-                >
-                  {fechasCampeonato.map(f => (
-                    <option key={f.id} value={f.id} className="bg-neutral-900 text-white">{f.titulo_fecha}</option>
-                  ))}
-                </select>
+                  {campeonatoSeleccionado.modalidad === 'rally' && (
+                    <button
+                      type="button"
+                      onClick={handleFinalizarRallyPorCategoria}
+                      disabled={calculandoAuto || resultadosFecha.length === 0}
+                      className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 text-[11px] font-black px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-40"
+                    >
+                      {calculandoAuto ? 'CALCULANDO...' : 'TERMINAR RALLY Y DAR PUNTOS'}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {esAdmin && (
-              <form onSubmit={handleGuardarPuntosPiloto} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+              <form onSubmit={handleGuardarPuntosPiloto} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                 <div>
                   <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE PILOTO</label>
                   <input
                     type="text"
                     value={formCargaPiloto.piloto_nombre}
                     onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, piloto_nombre: e.target.value })}
-                    placeholder="EJ: LEO ESPINDOLA"
+                    placeholder="NOMBRE PILOTO"
                     required
-                    className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8]"
+                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
                   />
                 </div>
-
-                {esRallyActivo ? (
-                  <>
-                    <div>
-                      <label className="block text-[10px] text-[#38bdf8] mb-1">CATEGORÍA DEL AUTO</label>
-                      <select
-                        value={formCargaPiloto.categoria}
-                        onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, categoria: e.target.value })}
-                        className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white uppercase outline-none focus:border-[#38bdf8] cursor-pointer"
-                      >
-                        {opcionesCategorias.map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN EN CATEGORÍA</label>
-                      <input
-                        type="number"
-                        value={formCargaPiloto.posicion_final}
-                        onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, posicion_final: e.target.value })}
-                        min="1"
-                        max="50"
-                        required
-                        className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN QUALY</label>
-                      <input type="number" value={formCargaPiloto.pos_qualy} onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_qualy: e.target.value })} min="1" max="30" className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN FINAL 1</label>
-                      <input type="number" value={formCargaPiloto.pos_final1} onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_final1: e.target.value })} min="1" max="30" className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN FINAL 2</label>
-                      <input type="number" value={formCargaPiloto.pos_final2} onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_final2: e.target.value })} min="1" max="30" className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white font-mono" />
-                    </div>
-                  </>
-                )}
-
                 <div>
-                  <button
-                    type="submit"
-                    className="w-full bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-4 py-2 rounded-lg transition shadow cursor-pointer"
-                  >
-                    GUARDAR EN FECHA
-                  </button>
+                  <label className="block text-[10px] text-[#38bdf8] mb-1">CATEGORÍA</label>
+                  <input
+                    type="text"
+                    value={formCargaPiloto.categoria}
+                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, categoria: e.target.value })}
+                    placeholder="EJ: RC2 / AYGO CUP"
+                    required
+                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
                 </div>
+                <div>
+                  <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN EN CATEGORÍA</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={formCargaPiloto.posicion_final}
+                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, posicion_final: e.target.value })}
+                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs py-2 px-4 rounded-lg cursor-pointer transition"
+                >
+                  GUARDAR PILOTO
+                </button>
               </form>
-            )}
+            </div>
+          )}
+        </div>
+      )}
 
-            {/* Tabla de la fecha: POS, NOMBRE, CATEGORÍA, PUNTOS */}
-            <div className="overflow-x-auto bg-black/50 border border-white/10 rounded-xl">
-              <table className="w-full text-left text-xs">
+      {/* Cuerpo principal: Izquierda Historial de Campeonatos Activos | Derecha Tabla con Filtro por Categoría */}
+      {cargando && campeonatos.length === 0 ? (
+        <div className="bg-neutral-900/65 backdrop-blur-md border border-white/15 rounded-2xl p-8 text-center text-xs text-neutral-300">
+          CARGANDO CAMPEONATOS...
+        </div>
+      ) : campeonatos.length === 0 ? (
+        <div className="bg-neutral-900/65 backdrop-blur-md border border-white/15 rounded-2xl p-8 text-center text-xs text-neutral-400">
+          NO HAY CAMPEONATOS CREADOS TODAVÍA.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+          {/* Columna izquierda: Historial de campeonatos activos y sus fechas */}
+          <div className="lg:col-span-4 bg-neutral-900/65 backdrop-blur-md border border-white/15 rounded-2xl p-4 shadow-2xl space-y-3">
+            <h3 className="text-xs font-black text-[#38bdf8] border-b border-white/10 pb-2 tracking-wider">
+              HISTORIAL DE CAMPEONATOS ACTIVOS
+            </h3>
+
+            <div className="space-y-2.5">
+              {campeonatos.map((camp) => {
+                const seleccionado = String(camp.id) === String(campeonatoSeleccionado?.id);
+                return (
+                  <div
+                    key={camp.id}
+                    className={`rounded-xl border transition overflow-hidden ${
+                      seleccionado
+                        ? 'bg-neutral-950/90 border-[#38bdf8] shadow-[0_0_15px_rgba(56,189,248,0.2)]'
+                        : 'bg-neutral-950/60 border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => seleccionarCampeonato(camp)}
+                      className="w-full text-left px-3.5 py-2.5 flex justify-between items-center cursor-pointer"
+                    >
+                      <span className="text-sm font-black text-white">{camp.nombre}</span>
+                      <span className="text-[10px] text-[#38bdf8]">{camp.modalidad || 'RALLY'}</span>
+                    </button>
+
+                    {seleccionado && fechasCampeonato.length > 0 && (
+                      <div className="px-3 pb-3 pt-1 border-t border-white/10 space-y-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setVistaTabla('acumulado')}
+                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] flex justify-between items-center cursor-pointer transition ${
+                            vistaTabla === 'acumulado'
+                              ? 'bg-[#38bdf8] text-slate-950 font-black'
+                              : 'bg-neutral-900 text-neutral-200 hover:bg-neutral-800'
+                          }`}
+                        >
+                          <span>SUMATORIA GENERAL (TODAS LAS FECHAS)</span>
+                          <span>TOTAL</span>
+                        </button>
+
+                        {fechasCampeonato.map((f, idx) => {
+                          const numF = Number(f.numero_fecha) || idx + 1;
+                          const activaFecha = vistaTabla === 'fecha' && String(f.id) === String(fechaSeleccionadaId);
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => {
+                                setVistaTabla('fecha');
+                                setFechaSeleccionadaId(f.id);
+                                cargarResultadosFecha(f.id);
+                              }}
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] flex justify-between items-center cursor-pointer transition ${
+                                activaFecha
+                                  ? 'bg-[#38bdf8]/25 text-[#38bdf8] border border-[#38bdf8]/60 font-black'
+                                  : 'bg-neutral-900/70 text-neutral-300 hover:bg-neutral-800'
+                              }`}
+                            >
+                              <span>{f.titulo_fecha || `FECHA ${numF}`}</span>
+                              <span className="text-[10px] font-mono text-neutral-400">{f.fecha_programada || ''}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Columna derecha: Selector de categoría + Tabla POSICION / NOMBRE / CATEGORIA / PUNTOS */}
+          <div className="lg:col-span-8 bg-neutral-900/65 backdrop-blur-md border border-white/15 rounded-2xl p-4 shadow-2xl space-y-3">
+            <div className="flex flex-wrap justify-between items-center gap-2 border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] text-[#38bdf8] font-bold">
+                  {campeonatoSeleccionado?.nombre} • {vistaTabla === 'acumulado' ? 'ACUMULADO F1 + F2...' : 'POR FECHA'}
+                </span>
+                <h3 className="text-base md:text-lg font-black text-white">
+                  {filtroCategoria === 'GENERAL' ? 'SUMATORIA GENERAL' : `CATEGORÍA: ${filtroCategoria}`}
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-neutral-300">CATEGORÍA:</label>
+                <select
+                  value={filtroCategoria}
+                  onChange={(e) => setFiltroCategoria(e.target.value)}
+                  className="bg-neutral-950 border border-[#38bdf8]/60 text-[#38bdf8] text-xs font-black rounded-xl px-3 py-1.5 outline-none cursor-pointer"
+                >
+                  {categoriasDisponibles.map((cat) => (
+                    <option key={cat} value={cat} className="bg-neutral-900 text-white">
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto bg-neutral-950/80 border border-white/10 rounded-xl">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="text-[#38bdf8] border-b border-white/10 bg-white/5">
-                    <th className="py-2 px-3 w-14">POS</th>
-                    <th className="py-2 px-3">NOMBRE</th>
-                    <th className="py-2 px-3">CATEGORÍA</th>
-                    <th className="py-2 px-3 text-right">PUNTOS</th>
-                    {esAdmin && <th className="py-2 px-3 text-center w-20">ACCIÓN</th>}
+                  <tr className="border-b border-white/15 text-[#38bdf8] bg-black/60">
+                    <th className="py-2.5 px-3 w-20">POSICION</th>
+                    <th className="py-2.5 px-3">NOMBRE</th>
+                    <th className="py-2.5 px-3">CATEGORIA</th>
+                    {vistaTabla === 'acumulado' &&
+                      fechasCampeonato.map((f, i) => (
+                        <th key={f.id} className="py-2.5 px-2 text-center text-neutral-300">
+                          F{Number(f.numero_fecha) || i + 1}
+                        </th>
+                      ))}
+                    <th className="py-2.5 px-3 text-right">PUNTOS</th>
+                    {esAdmin && vistaTabla === 'fecha' && <th className="py-2.5 px-3 text-center w-16">ACCION</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {resultadosFechaFiltrados.length === 0 ? (
+                <tbody className="divide-y divide-white/10">
+                  {filasActivas.length === 0 ? (
                     <tr>
-                      <td colSpan={esAdmin ? 5 : 4} className="py-6 px-3 text-center text-neutral-400">
-                        NO HAY PILOTOS CARGADOS EN ESTA FECHA PARA LA CATEGORÍA SELECCIONADA.
+                      <td
+                        colSpan={4 + (vistaTabla === 'acumulado' ? fechasCampeonato.length : esAdmin ? 1 : 0)}
+                        className="py-8 px-4 text-center text-neutral-400"
+                      >
+                        SIN PUNTOS REGISTRADOS PARA ESTE FILTRO.
                       </td>
                     </tr>
                   ) : (
-                    resultadosFechaFiltrados.map((rf, idx) => (
-                      <tr key={rf.id || idx} className="hover:bg-white/5">
-                        <td className="py-2 px-3 font-mono text-[#38bdf8]">{rf.posicion_final || idx + 1}º</td>
-                        <td className="py-2 px-3 font-bold text-white">{rf.piloto_nombre}</td>
-                        <td className="py-2 px-3 font-mono text-sky-200">{rf.categoria}</td>
-                        <td className="py-2 px-3 text-right font-mono font-black text-[#38bdf8]">
-                          {Number(rf.puntos_total) || 0} PTS
+                    filasActivas.map((fila, idx) => (
+                      <tr key={`${fila.nombre}-${fila.categoria}-${idx}`} className="hover:bg-white/5 transition">
+                        <td className="py-2.5 px-3 font-black text-[#38bdf8]">{idx + 1}º</td>
+                        <td className="py-2.5 px-3 font-bold text-white">{fila.nombre}</td>
+                        <td className="py-2.5 px-3 font-mono text-sky-200">{fila.categoria}</td>
+                        {vistaTabla === 'acumulado' &&
+                          fechasCampeonato.map((f, i) => {
+                            const numF = Number(f.numero_fecha) || i + 1;
+                            return (
+                              <td key={f.id} className="py-2.5 px-2 text-center font-mono text-neutral-300">
+                                {fila.porFecha?.[numF] || 0}
+                              </td>
+                            );
+                          })}
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-[#38bdf8]">
+                          {fila.total} PTS
                         </td>
-                        {esAdmin && (
-                          <td className="py-2 px-3 text-center">
+                        {esAdmin && vistaTabla === 'fecha' && (
+                          <td className="py-2.5 px-3 text-center">
                             <button
                               type="button"
-                              onClick={() => eliminarResultadoPiloto(rf.id)}
-                              className="text-red-400 hover:text-red-300 text-xs cursor-pointer"
+                              onClick={() => eliminarResultadoPiloto(fila.id)}
+                              className="text-red-400 hover:text-red-300 cursor-pointer"
                             >
                               🗑️
                             </button>
@@ -828,126 +755,6 @@ export default function Campeonatos({ esAdmin }) {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* HISTORIAL DE FECHAS Y TABLA GENERAL ACUMULADA (FECHA 1 + FECHA 2...) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-neutral-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl space-y-3">
-              <h3 className="text-[#38bdf8] text-xs font-black border-b border-white/10 pb-2">
-                HISTORIAL DE FECHAS ({fechasCampeonato.length})
-              </h3>
-
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                {fechasCampeonato.map((f, index) => {
-                  const activa = String(f.id) === String(fechaSeleccionadaId);
-                  const numF = Number(f.numero_fecha) || index + 1;
-                  const ptsEnFecha = todosResultadosCamp
-                    .filter(r => String(r.fecha_id) === String(f.id))
-                    .reduce((acc, r) => acc + (Number(r.puntos_total) || 0), 0);
-
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => {
-                        setFechaSeleccionadaId(f.id);
-                        cargarResultadosFecha(f.id);
-                      }}
-                      className={`w-full text-left rounded-xl p-3 flex justify-between items-center border transition cursor-pointer ${
-                        activa
-                          ? 'bg-[#38bdf8]/15 border-[#38bdf8]'
-                          : 'bg-neutral-950/70 border-white/5 hover:border-white/25'
-                      }`}
-                    >
-                      <div>
-                        <span className="text-[10px] text-[#38bdf8] font-bold">
-                          {f.titulo_fecha || `FECHA ${numF}`}
-                        </span>
-                        <p className="text-xs text-white">{f.fecha_programada}</p>
-                        <p className="text-[10px] text-neutral-400 font-mono">{ptsEnFecha} PTS REPARTIDOS</p>
-                      </div>
-                      <span className="text-[9px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-300">
-                        {(f.estado || 'PENDIENTE').toUpperCase()}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 bg-neutral-950/85 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-gradient-to-r from-[#38bdf8]/20 via-neutral-900 to-neutral-900 px-4 py-3 border-b border-[#38bdf8]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-white text-xs tracking-wider font-black">
-                  🏆 TABLA GENERAL - {campeonatoSeleccionado.nombre} ({categoriaSeleccionada})
-                </h3>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
-                  <thead>
-                    <tr className="border-b border-white/15 text-[#38bdf8] tracking-wider bg-black/70">
-                      <th className="py-2.5 px-3 text-center w-10">POS</th>
-                      <th className="py-2.5 px-3">PILOTO</th>
-                      <th className="py-2.5 px-3">CATEGORÍA</th>
-                      {fechasCampeonato.map((f, idx) => {
-                        const numF = Number(f.numero_fecha) || idx + 1;
-                        return (
-                          <th key={f.id} className="py-2.5 px-2.5 text-center">
-                            F{numF}
-                          </th>
-                        );
-                      })}
-                      <th className="py-2.5 px-3 text-right text-[#38bdf8] border-l border-white/10">TOTAL</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {tablaGeneralCalculada.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={3 + fechasCampeonato.length + 1}
-                          className="text-center py-10 text-neutral-400 text-xs"
-                        >
-                          TODAVÍA NO HAY PUNTOS REGISTRADOS PARA ESTE FILTRO.
-                        </td>
-                      </tr>
-                    ) : (
-                      tablaGeneralCalculada.map((p, idx) => {
-                        const esPrimero = idx === 0;
-                        const colorPos = esPrimero
-                          ? 'bg-[#38bdf8] text-slate-950 font-black'
-                          : idx === 1
-                            ? 'bg-neutral-300 text-black font-black'
-                            : idx === 2
-                              ? 'bg-sky-700 text-white font-black'
-                              : 'text-neutral-300 font-bold';
-
-                        return (
-                          <tr key={`${p.nombre}-${p.categoria}-${idx}`} className={`hover:bg-white/5 transition ${esPrimero ? 'bg-[#38bdf8]/10' : ''}`}>
-                            <td className="py-2.5 px-3 text-center">
-                              <span className={`inline-block w-5 h-5 leading-5 rounded text-[11px] ${colorPos}`}>{idx + 1}</span>
-                            </td>
-                            <td className="py-2.5 px-3 font-bold text-white">{p.nombre}</td>
-                            <td className="py-2.5 px-3 font-mono text-sky-200">{p.categoria}</td>
-                            {fechasCampeonato.map((f, fIdx) => {
-                              const numF = Number(f.numero_fecha) || fIdx + 1;
-                              return (
-                                <td key={f.id} className="py-2.5 px-2.5 text-center font-mono text-neutral-300">
-                                  {p.puntosPorFecha[numF] || 0}
-                                </td>
-                              );
-                            })}
-                            <td className="py-2.5 px-3 text-right font-mono font-black text-[#38bdf8] border-l border-white/10 bg-sky-950/20 text-sm">
-                              {p.total} PTS
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
           </div>
 
         </div>
