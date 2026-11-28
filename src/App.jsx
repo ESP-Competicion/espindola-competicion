@@ -18,6 +18,8 @@ const ADMINS_EMAILS = [
   'lucashutter6@gmail.com'
 ];
 
+const FOTO_DEFAULT_FAMA = 'https://files.catbox.moe/f3xmld.png';
+
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 const SESION_STORAGE_KEY = 'esp_sesion_usuario';
 
@@ -569,7 +571,13 @@ export default function App() {
   };
 
   const obtenerFotoFama = (piloto) => {
-    if (piloto?.foto) return piloto.foto;
+    const fotoGuardada = String(piloto?.foto || '').trim();
+    const esFotoManual = fotoGuardada && fotoGuardada !== FOTO_DEFAULT_FAMA;
+
+    // 1. Prioriza la foto manual cargada en Salón de la Fama (si no es la genérica)
+    if (esFotoManual) return fotoGuardada;
+
+    // 2. Sincroniza automáticamente con la foto de perfil del miembro
     const nombreBuscado = String(piloto?.nombre || '').trim().toUpperCase();
     if (nombreBuscado) {
       const miembroMatch = miembros.find(
@@ -577,7 +585,9 @@ export default function App() {
       );
       if (miembroMatch?.avatar_url) return miembroMatch.avatar_url;
     }
-    return 'https://files.catbox.moe/f3xmld.png';
+
+    // 3. Fallback si no hay foto manual ni avatar en el perfil
+    return FOTO_DEFAULT_FAMA;
   };
 
   const handleGuardarPilotoFama = async (e) => {
@@ -585,15 +595,22 @@ export default function App() {
     if (!nuevoPilotoFama.nombre.trim()) return;
 
     const nombreLimpio = nuevoPilotoFama.nombre.trim().toUpperCase();
+    const fotoIngresada = (nuevoPilotoFama.foto || '').trim();
     const miembroMatch = miembros.find(
       (m) => String(m.nombre_piloto || '').trim().toUpperCase() === nombreLimpio
     );
+
+    const esIgualAPerfil = miembroMatch?.avatar_url && fotoIngresada === miembroMatch.avatar_url;
+    const fotoParaGuardar =
+      !fotoIngresada || fotoIngresada === FOTO_DEFAULT_FAMA || esIgualAPerfil
+        ? ''
+        : fotoIngresada;
 
     const datosPiloto = {
       nombre: nombreLimpio,
       nacionalidad: (nuevoPilotoFama.nacionalidad || 'ARGENTINA').trim().toUpperCase(),
       campeonatos: parseInt(nuevoPilotoFama.campeonatos, 10) || 0,
-      foto: (nuevoPilotoFama.foto || '').trim() || miembroMatch?.avatar_url || 'https://files.catbox.moe/f3xmld.png'
+      foto: fotoParaGuardar
     };
 
     const { error } = editandoId !== null
@@ -612,11 +629,12 @@ export default function App() {
 
   const handleEditarPilotoFama = (piloto) => {
     setEditandoId(piloto.id);
+    const fotoGuardada = String(piloto?.foto || '').trim();
     setNuevoPilotoFama({
       nombre: piloto.nombre || '',
       nacionalidad: piloto.nacionalidad || 'ARGENTINA',
       campeonatos: piloto.campeonatos ?? '',
-      foto: obtenerFotoFama(piloto)
+      foto: fotoGuardada !== FOTO_DEFAULT_FAMA ? fotoGuardada : ''
     });
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
