@@ -21,11 +21,11 @@ export default function Campeonatos({ esAdmin }) {
   const [modalidadTorneo, setModalidadTorneo] = useState('rally');
   const [cantidadFechas, setCantidadFechas] = useState(5);
 
-  // Escalas de puntos
+  // Escalas de puntos editables (1º, 2º, 3º... separadas por coma)
   const [strPuntosQ, setStrPuntosQ] = useState('10, 8, 6, 4, 2');
   const [strPuntosF1, setStrPuntosF1] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
   const [strPuntosF2, setStrPuntosF2] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
-  const [strPuntosTramo, setStrPuntosTramo] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
+  const [strPuntosPruebaRally, setStrPuntosPruebaRally] = useState('25, 18, 15, 12, 10, 8, 6, 4, 2, 1');
 
   // Fecha activa, resultados de fecha y filtro por categoría
   const [fechaSeleccionadaId, setFechaSeleccionadaId] = useState('');
@@ -81,14 +81,14 @@ export default function Campeonatos({ esAdmin }) {
     setCampeonatoSeleccionado(camp);
     setFiltroCategoria('GENERAL');
 
-    if (camp.puntos_final1 && Array.isArray(camp.puntos_final1)) {
+    if (camp.puntos_final1 && Array.isArray(camp.puntos_final1) && camp.puntos_final1.length > 0) {
       setStrPuntosF1(camp.puntos_final1.join(', '));
-      setStrPuntosTramo(camp.puntos_final1.join(', '));
+      setStrPuntosPruebaRally(camp.puntos_final1.join(', '));
     }
-    if (camp.puntos_qualy && Array.isArray(camp.puntos_qualy)) {
+    if (camp.puntos_qualy && Array.isArray(camp.puntos_qualy) && camp.puntos_qualy.length > 0) {
       setStrPuntosQ(camp.puntos_qualy.join(', '));
     }
-    if (camp.puntos_final2 && Array.isArray(camp.puntos_final2)) {
+    if (camp.puntos_final2 && Array.isArray(camp.puntos_final2) && camp.puntos_final2.length > 0) {
       setStrPuntosF2(camp.puntos_final2.join(', '));
     }
 
@@ -163,7 +163,10 @@ export default function Campeonatos({ esAdmin }) {
   }
 
   function parsearEscalaPuntos(str) {
-    return str.split(',').map(n => parseInt(n.trim()) || 0);
+    return str
+      .split(',')
+      .map(n => parseInt(n.trim(), 10))
+      .filter(n => !Number.isNaN(n));
   }
 
   const categoriasDisponibles = useMemo(() => {
@@ -248,7 +251,7 @@ export default function Campeonatos({ esAdmin }) {
 
       const escala = Array.isArray(campeonatoSeleccionado?.puntos_final1) && campeonatoSeleccionado.puntos_final1.length > 0
         ? campeonatoSeleccionado.puntos_final1.map(n => Number(n) || 0)
-        : parsearEscalaPuntos(strPuntosTramo);
+        : parsearEscalaPuntos(strPuntosPruebaRally);
 
       const porCategoria = new Map();
       resultadosFecha.forEach((r, idx) => {
@@ -310,9 +313,9 @@ export default function Campeonatos({ esAdmin }) {
     if (!nuevoNombre.trim()) return;
 
     const esCreacionRally = modalidadTorneo === 'rally';
-    const escalaFinal = parsearEscalaPuntos(strPuntosTramo);
+    const escalaPruebaRally = parsearEscalaPuntos(strPuntosPruebaRally);
     const arrQ = esCreacionRally ? [] : parsearEscalaPuntos(strPuntosQ);
-    const arrF1 = esCreacionRally ? escalaFinal : parsearEscalaPuntos(strPuntosF1);
+    const arrF1 = esCreacionRally ? escalaPruebaRally : parsearEscalaPuntos(strPuntosF1);
     const arrF2 = esCreacionRally ? [] : parsearEscalaPuntos(strPuntosF2);
 
     const { data: campNuevo, error } = await api.from('campeonatos').insert({
@@ -456,47 +459,99 @@ export default function Campeonatos({ esAdmin }) {
       {/* Herramientas Admin desplegables */}
       {esAdmin && mostrarHerramientasAdmin && (
         <div className="bg-neutral-950/90 backdrop-blur-md border border-[#38bdf8]/40 rounded-2xl p-4 shadow-2xl space-y-4">
-          <form onSubmit={handleCrearCampeonato} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end border-b border-white/10 pb-4">
-            <div>
-              <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE CAMPEONATO</label>
-              <input
-                type="text"
-                value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
-                placeholder="EJ: RALLY ESPÍNDOLA"
-                required
-                className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-[#38bdf8] mb-1">MODALIDAD</label>
-              <select
-                value={modalidadTorneo}
-                onChange={(e) => setModalidadTorneo(e.target.value)}
-                className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none cursor-pointer"
+          <form onSubmit={handleCrearCampeonato} className="space-y-3 border-b border-white/10 pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+              <div>
+                <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE CAMPEONATO</label>
+                <input
+                  type="text"
+                  value={nuevoNombre}
+                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  placeholder="EJ: RALLY ESPÍNDOLA"
+                  required
+                  className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-[#38bdf8] mb-1">MODALIDAD</label>
+                <select
+                  value={modalidadTorneo}
+                  onChange={(e) => setModalidadTorneo(e.target.value)}
+                  className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none cursor-pointer"
+                >
+                  <option value="rally">RALLY</option>
+                  <option value="pista">PISTA</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] text-neutral-300 mb-1">CANT. FECHAS</label>
+                <input
+                  type="number"
+                  value={cantidadFechas}
+                  onChange={(e) => setCantidadFechas(e.target.value)}
+                  min="1"
+                  max="30"
+                  required
+                  className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs py-2 px-4 rounded-lg cursor-pointer transition"
               >
-                <option value="rally">RALLY</option>
-                <option value="pista">PISTA</option>
-              </select>
+                + CREAR CAMPEONATO
+              </button>
             </div>
-            <div>
-              <label className="block text-[10px] text-neutral-300 mb-1">CANT. FECHAS</label>
-              <input
-                type="number"
-                value={cantidadFechas}
-                onChange={(e) => setCantidadFechas(e.target.value)}
-                min="1"
-                max="30"
-                required
-                className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs py-2 px-4 rounded-lg cursor-pointer transition"
-            >
-              + CREAR CAMPEONATO
-            </button>
+
+            {modalidadTorneo === 'rally' ? (
+              <div>
+                <label className="block text-[10px] text-[#38bdf8] mb-1">
+                  PUNTOS DE LA PRUEBA (1º, 2º, 3º... SEPARADOS POR COMA - SERVIDOR DE PRÁCTICAS)
+                </label>
+                <input
+                  type="text"
+                  value={strPuntosPruebaRally}
+                  onChange={(e) => setStrPuntosPruebaRally(e.target.value)}
+                  className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] text-[#38bdf8] mb-1">
+                    PUNTOS QUALY (1º, 2º, 3º... SEPARADOS POR COMA)
+                  </label>
+                  <input
+                    type="text"
+                    value={strPuntosQ}
+                    onChange={(e) => setStrPuntosQ(e.target.value)}
+                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#38bdf8] mb-1">
+                    PUNTOS FINAL 1 (1º, 2º, 3º... SEPARADOS POR COMA)
+                  </label>
+                  <input
+                    type="text"
+                    value={strPuntosF1}
+                    onChange={(e) => setStrPuntosF1(e.target.value)}
+                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#38bdf8] mb-1">
+                    PUNTOS FINAL 2 (1º, 2º, 3º... SEPARADOS POR COMA)
+                  </label>
+                  <input
+                    type="text"
+                    value={strPuntosF2}
+                    onChange={(e) => setStrPuntosF2(e.target.value)}
+                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+              </div>
+            )}
           </form>
 
           {campeonatoSeleccionado && fechaSeleccionadaId && (
@@ -534,7 +589,7 @@ export default function Campeonatos({ esAdmin }) {
                 </div>
               </div>
 
-              <form onSubmit={handleGuardarPuntosPiloto} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+              <form onSubmit={handleGuardarPuntosPiloto} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
                 <div>
                   <label className="block text-[10px] text-neutral-300 mb-1">NOMBRE PILOTO</label>
                   <input
@@ -557,17 +612,57 @@ export default function Campeonatos({ esAdmin }) {
                     className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN EN CATEGORÍA</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={formCargaPiloto.posicion_final}
-                    onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, posicion_final: e.target.value })}
-                    className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
-                  />
-                </div>
+
+                {campeonatoSeleccionado.modalidad === 'rally' ? (
+                  <div>
+                    <label className="block text-[10px] text-[#38bdf8] mb-1">POSICIÓN EN CATEGORÍA</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={formCargaPiloto.posicion_final}
+                      onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, posicion_final: e.target.value })}
+                      className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-[10px] text-[#38bdf8] mb-1">POS. QUALY</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={formCargaPiloto.pos_qualy}
+                        onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_qualy: e.target.value })}
+                        className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-[#38bdf8] mb-1">POS. FINAL 1</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={formCargaPiloto.pos_final1}
+                        onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_final1: e.target.value })}
+                        className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-[#38bdf8] mb-1">POS. FINAL 2</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={formCargaPiloto.pos_final2}
+                        onChange={(e) => setFormCargaPiloto({ ...formCargaPiloto, pos_final2: e.target.value })}
+                        className="w-full bg-neutral-900 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                      />
+                    </div>
+                  </>
+                )}
+
                 <button
                   type="submit"
                   className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs py-2 px-4 rounded-lg cursor-pointer transition"
