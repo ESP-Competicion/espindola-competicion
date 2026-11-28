@@ -10,7 +10,6 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
   const [telefono, setTelefono] = useState(perfil?.telefono || '');
   const [avatarUrl, setAvatarUrl] = useState(perfil?.avatar_url || '');
   const [guardando, setGuardando] = useState(false);
-  const [passwordHash, setPasswordHash] = useState(perfil?.password_hash || null);
 
   useEffect(() => {
     async function cargar() {
@@ -28,7 +27,6 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
         setProvincia(data.provincia || '');
         setTelefono(data.telefono || '');
         setAvatarUrl(data.avatar_url || '');
-        setPasswordHash(data.password_hash || null);
       }
     }
     cargar();
@@ -43,28 +41,19 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
       const nombreLimpio = nombrePiloto.trim();
       const fotoLimpia = (avatarUrl || '').trim() || null;
 
-      const { data: actual } = await api
+      // UPDATE puntual: no usa INSERT OR REPLACE para jamás borrar email ni password_hash
+      const { error } = await api
         .from('perfiles')
         .eq('id', usuario.id)
-        .single()
-        .select();
-
-      const hashFinal = actual?.password_hash || passwordHash || null;
-
-      const { error } = await api.from('perfiles').insert(
-        {
-          id: usuario.id,
+        .update({
           nombre_piloto: nombreLimpio,
           steam_id: steamId.trim(),
           nacionalidad: nacionalidad.trim(),
           provincia: provincia.trim(),
           telefono: telefono.trim(),
           avatar_url: fotoLimpia,
-          password_hash: hashFinal,
           updated_at: new Date().toISOString()
-        },
-        { upsert: true }
-      );
+        });
 
       if (error) {
         alert('Error al guardar perfil: ' + error.message);
