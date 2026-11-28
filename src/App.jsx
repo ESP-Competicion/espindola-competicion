@@ -178,6 +178,18 @@ export default function App() {
   const [editandoId, setEditandoId] = useState(null);
 
   const [miembros, setMiembros] = useState([]);
+  const [miembroSeleccionadoAdmin, setMiembroSeleccionadoAdmin] = useState(null);
+  const [formMiembroAdmin, setFormMiembroAdmin] = useState({
+    nombre_piloto: '',
+    email: '',
+    telefono: '',
+    steam_id: '',
+    cumpleanos: '',
+    nacionalidad: 'ARGENTINA 🇦🇷',
+    provincia: '',
+    avatar_url: ''
+  });
+  const [guardandoMiembroAdmin, setGuardandoMiembroAdmin] = useState(false);
 
   const totalCampeonatosEquipo = hallFama.reduce((acc, piloto) => acc + (parseInt(piloto.campeonatos, 10) || 0), 0);
 
@@ -298,6 +310,70 @@ export default function App() {
     const { data } = await api.from('perfiles').select();
     if (Array.isArray(data)) setMiembros(data);
   }
+
+  const abrirModalMiembroAdmin = (miembro) => {
+    setMiembroSeleccionadoAdmin(miembro);
+    setFormMiembroAdmin({
+      nombre_piloto: miembro.nombre_piloto || '',
+      email: miembro.email || '',
+      telefono: miembro.telefono || '',
+      steam_id: miembro.steam_id || '',
+      cumpleanos: miembro.cumpleanos || '',
+      nacionalidad: miembro.nacionalidad || 'ARGENTINA 🇦🇷',
+      provincia: miembro.provincia || '',
+      avatar_url: miembro.avatar_url || ''
+    });
+  };
+
+  const handleGuardarMiembroAdmin = async (e) => {
+    e.preventDefault();
+    if (!esAdminEfectivo || !miembroSeleccionadoAdmin?.id) return;
+
+    setGuardandoMiembroAdmin(true);
+    try {
+      const nombreLimpio = (formMiembroAdmin.nombre_piloto || '').trim();
+      const emailLimpio = (formMiembroAdmin.email || '').trim().toLowerCase();
+      const fotoLimpia = (formMiembroAdmin.avatar_url || '').trim() || null;
+
+      const payloadActualizacion = {
+        nombre_piloto: nombreLimpio,
+        telefono: (formMiembroAdmin.telefono || '').trim(),
+        steam_id: (formMiembroAdmin.steam_id || '').trim(),
+        cumpleanos: (formMiembroAdmin.cumpleanos || '').trim() || null,
+        nacionalidad: (formMiembroAdmin.nacionalidad || '').trim(),
+        provincia: (formMiembroAdmin.provincia || '').trim(),
+        avatar_url: fotoLimpia,
+        updated_at: new Date().toISOString()
+      };
+
+      if (emailLimpio) {
+        payloadActualizacion.email = emailLimpio;
+      }
+
+      const { error } = await api
+        .from('perfiles')
+        .eq('id', miembroSeleccionadoAdmin.id)
+        .update(payloadActualizacion);
+
+      if (error) {
+        alert('Error al actualizar datos del miembro: ' + error.message);
+        return;
+      }
+
+      if (usuario?.id && String(usuario.id) === String(miembroSeleccionadoAdmin.id)) {
+        await verificarAdminYPerfil(usuario);
+      }
+
+      await cargarMiembros();
+      alert('¡Datos del piloto actualizados con éxito!');
+      setMiembroSeleccionadoAdmin(null);
+    } catch (err) {
+      console.error('Error al guardar datos de miembro en vista admin:', err);
+      alert('Ocurrió un error inesperado al guardar los datos.');
+    } finally {
+      setGuardandoMiembroAdmin(false);
+    }
+  };
 
   async function cargarAsistentesCalendario(calendarioId) {
     const { data } = await api.from('asistencias_calendario').select({
@@ -574,10 +650,8 @@ export default function App() {
     const fotoGuardada = String(piloto?.foto || '').trim();
     const esFotoManual = fotoGuardada && fotoGuardada !== FOTO_DEFAULT_FAMA;
 
-    // 1. Prioriza la foto manual cargada en Salón de la Fama (si no es la genérica)
     if (esFotoManual) return fotoGuardada;
 
-    // 2. Sincroniza automáticamente con la foto de perfil del miembro
     const nombreBuscado = String(piloto?.nombre || '').trim().toUpperCase();
     if (nombreBuscado) {
       const miembroMatch = miembros.find(
@@ -586,7 +660,6 @@ export default function App() {
       if (miembroMatch?.avatar_url) return miembroMatch.avatar_url;
     }
 
-    // 3. Fallback si no hay foto manual ni avatar en el perfil
     return FOTO_DEFAULT_FAMA;
   };
 
@@ -1685,9 +1758,16 @@ export default function App() {
 
         {pestanaActiva === 'miembros' && (
           <div className="space-y-4 max-w-4xl mx-auto">
-            <div>
-              <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">PILOTOS REGISTRADOS</h2>
-              <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">COMUNIDAD DE PILOTOS Y MIEMBROS DE ESPÍNDOLA COMPETICIÓN.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="font-wrc text-xl md:text-2xl text-[#38bdf8] tracking-wide">PILOTOS REGISTRADOS</h2>
+                <p className="text-neutral-300 text-[10px] md:text-[11px] font-wrc">COMUNIDAD DE PILOTOS Y MIEMBROS DE ESPÍNDOLA COMPETICIÓN.</p>
+              </div>
+              {esAdminEfectivo && (
+                <span className="text-[10px] font-wrc px-3 py-1 rounded-full bg-[#38bdf8]/15 border border-[#38bdf8]/40 text-[#38bdf8]">
+                  ⚙️ VISTA ADMIN ACTIVA • {miembros.length} PILOTOS
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1700,40 +1780,52 @@ export default function App() {
                   const provinciaTexto = (m.provincia || '').toString().trim().toUpperCase();
 
                   return (
-                    <div key={m.id} className="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-lg flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-full bg-neutral-800 border border-[#38bdf8]/50 flex items-center justify-center overflow-hidden font-wrc text-[#38bdf8] text-sm flex-shrink-0">
-                        {m.avatar_url ? (
-                          <img
-                            src={m.avatar_url}
-                            alt=""
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              if (e.currentTarget.nextSibling) {
-                                e.currentTarget.nextSibling.style.display = 'flex';
-                              }
-                            }}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : null}
-                        <span
-                          style={{ display: m.avatar_url ? 'none' : 'flex' }}
-                          className="w-full h-full items-center justify-center"
-                        >
-                          {inicial}
-                        </span>
+                    <div key={m.id} className="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-lg flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-neutral-800 border border-[#38bdf8]/50 flex items-center justify-center overflow-hidden font-wrc text-[#38bdf8] text-sm flex-shrink-0">
+                          {m.avatar_url ? (
+                            <img
+                              src={m.avatar_url}
+                              alt=""
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                if (e.currentTarget.nextSibling) {
+                                  e.currentTarget.nextSibling.style.display = 'flex';
+                                }
+                              }}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : null}
+                          <span
+                            style={{ display: m.avatar_url ? 'none' : 'flex' }}
+                            className="w-full h-full items-center justify-center"
+                          >
+                            {inicial}
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5 overflow-hidden leading-tight">
+                          <h3 className="font-wrc text-sm text-white truncate">{nombrePiloto}</h3>
+                          <p className="text-[10px] font-wrc uppercase truncate">
+                            <span className="text-[#38bdf8]">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
+                          </p>
+                          {provinciaTexto && (
+                            <p className="text-[10px] font-wrc uppercase truncate">
+                              <span className="text-[#38bdf8]">PROVINCIA:</span> <span className="text-neutral-200">{provinciaTexto}</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-0.5 overflow-hidden leading-tight">
-                        <h3 className="font-wrc text-sm text-white truncate">{nombrePiloto}</h3>
-                        <p className="text-[10px] font-wrc uppercase truncate">
-                          <span className="text-[#38bdf8]">PAÍS:</span> <span className="text-white">{obtenerBanderaPais(m.nacionalidad)}</span>
-                        </p>
-                        {provinciaTexto && (
-                          <p className="text-[10px] font-wrc uppercase truncate">
-                            <span className="text-[#38bdf8]">PROVINCIA:</span> <span className="text-neutral-200">{provinciaTexto}</span>
-                          </p>
-                        )}
-                      </div>
+                      {esAdminEfectivo && (
+                        <button
+                          type="button"
+                          onClick={() => abrirModalMiembroAdmin(m)}
+                          className="bg-[#38bdf8]/15 hover:bg-[#38bdf8] text-[#38bdf8] hover:text-slate-950 border border-[#38bdf8]/40 font-wrc text-[10px] font-black px-2.5 py-1.5 rounded-lg transition cursor-pointer shrink-0"
+                        >
+                          VER / EDITAR
+                        </button>
+                      )}
                     </div>
                   );
                 })
@@ -1863,6 +1955,133 @@ export default function App() {
           )}
         </div>
       </footer>
+
+      {miembroSeleccionadoAdmin && esAdminEfectivo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="bg-neutral-900 border border-[#38bdf8]/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto normal-case">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] text-[#38bdf8] font-bold uppercase">FICHA Y EDICIÓN DE MIEMBRO (ADMIN)</span>
+                <h3 className="font-wrc text-xl text-white uppercase">
+                  {miembroSeleccionadoAdmin.nombre_piloto || 'PILOTO'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMiembroSeleccionadoAdmin(null)}
+                className="text-neutral-400 hover:text-white text-sm px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleGuardarMiembroAdmin} className="space-y-3">
+              <div>
+                <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Nombre y Apellido</label>
+                <input
+                  type="text"
+                  value={formMiembroAdmin.nombre_piloto}
+                  onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, nombre_piloto: e.target.value })}
+                  required
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Correo (Gmail)</label>
+                  <input
+                    type="email"
+                    value={formMiembroAdmin.email}
+                    onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, email: e.target.value })}
+                    placeholder="piloto@email.com"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Teléfono / WhatsApp</label>
+                  <input
+                    type="text"
+                    value={formMiembroAdmin.telefono}
+                    onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, telefono: e.target.value })}
+                    placeholder="+54 9 376..."
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Steam ID 64</label>
+                  <input
+                    type="text"
+                    value={formMiembroAdmin.steam_id}
+                    onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, steam_id: e.target.value })}
+                    placeholder="76561199..."
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Cumpleaños</label>
+                  <input
+                    type="date"
+                    value={formMiembroAdmin.cumpleanos}
+                    onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, cumpleanos: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">País</label>
+                  <input
+                    type="text"
+                    value={formMiembroAdmin.nacionalidad}
+                    onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, nacionalidad: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Provincia</label>
+                  <input
+                    type="text"
+                    value={formMiembroAdmin.provincia}
+                    onChange={(e) => setFormMiembroAdmin({ ...formMiembroAdmin, provincia: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-neutral-300 font-bold uppercase mb-1">Foto de Perfil</label>
+                <SubirImagen
+                  currentUrl={formMiembroAdmin.avatar_url}
+                  inicial={(formMiembroAdmin.nombre_piloto || 'E').charAt(0).toUpperCase()}
+                  onUpload={(base64) => setFormMiembroAdmin({ ...formMiembroAdmin, avatar_url: base64 })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setMiembroSeleccionadoAdmin(null)}
+                  className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs px-4 py-2 rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoMiembroAdmin}
+                  className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-black text-xs px-5 py-2 rounded-xl cursor-pointer"
+                >
+                  {guardandoMiembroAdmin ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {eventoHistorialModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-5">
