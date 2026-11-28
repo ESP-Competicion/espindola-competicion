@@ -7,6 +7,7 @@ import LiveTiming from './LiveTiming';
 import ResultadosRallyServer from './ResultadosRallyServer';
 import Campeonatos from './Campeonatos';
 import SubirImagen from './SubirImagen';
+import { descargarImagenSalonFama } from './exportarSalonFama';
 
 const fotosRally = [
   '/FondoTaller.png'
@@ -1401,17 +1402,51 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="bg-black/65 backdrop-blur-md border border-[#38bdf8]/40 px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-xl">
-                <div className="w-7 h-7 rounded-lg bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-sm">
-                  🏆
-                </div>
-                <div>
-                  <span className="block text-[9px] font-wrc text-neutral-400 uppercase tracking-widest">
-                    CAMPEONATOS EN TOTAL
-                  </span>
-                  <span className="font-wrc text-base md:text-lg text-[#38bdf8] leading-none">
-                    {totalCampeonatosEquipo} TÍTULOS
-                  </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    descargarImagenSalonFama({
+                      hallFama,
+                      totalTitulos: totalCampeonatosEquipo,
+                      obtenerFoto: obtenerFotoFama,
+                      formato: '16:9'
+                    })
+                  }
+                  disabled={hallFama.length === 0}
+                  className="bg-neutral-900/90 hover:bg-neutral-800 text-[#38bdf8] border border-[#38bdf8]/50 font-wrc text-[10px] md:text-xs px-3 py-2 rounded-xl transition cursor-pointer disabled:opacity-40"
+                >
+                  📥 DESCARGAR 16:9
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    descargarImagenSalonFama({
+                      hallFama,
+                      totalTitulos: totalCampeonatosEquipo,
+                      obtenerFoto: obtenerFotoFama,
+                      formato: '9:16'
+                    })
+                  }
+                  disabled={hallFama.length === 0}
+                  className="bg-[#38bdf8] hover:bg-[#7dd3fc] text-slate-950 font-wrc font-black text-[10px] md:text-xs px-3 py-2 rounded-xl transition cursor-pointer disabled:opacity-40"
+                >
+                  📱 DESCARGAR 9:16
+                </button>
+
+                <div className="bg-black/65 backdrop-blur-md border border-[#38bdf8]/40 px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-xl">
+                  <div className="w-7 h-7 rounded-lg bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-sm">
+                    🏆
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-wrc text-neutral-400 uppercase tracking-widest">
+                      CAMPEONATOS EN TOTAL
+                    </span>
+                    <span className="font-wrc text-base md:text-lg text-[#38bdf8] leading-none">
+                      {totalCampeonatosEquipo} TÍTULOS
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
