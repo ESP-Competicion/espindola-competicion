@@ -6,6 +6,7 @@ import CambiarPasswordModal from './CambiarPasswordModal';
 import LiveTiming from './LiveTiming';
 import ResultadosRallyServer from './ResultadosRallyServer';
 import Campeonatos from './Campeonatos';
+import SubirImagen from './SubirImagen';
 
 const fotosRally = [
   '/FondoTaller.png'
@@ -199,6 +200,7 @@ export default function App() {
     } else if (pestanaActiva === 'calendario') {
       cargarCalendario();
     } else if (pestanaActiva === 'fama') {
+      cargarMiembros();
       cargarSalonDeLaFama();
     } else if (pestanaActiva === 'miembros') {
       cargarMiembros();
@@ -565,15 +567,32 @@ export default function App() {
     await cargarCalendario();
   };
 
+  const obtenerFotoFama = (piloto) => {
+    if (piloto?.foto) return piloto.foto;
+    const nombreBuscado = String(piloto?.nombre || '').trim().toUpperCase();
+    if (nombreBuscado) {
+      const miembroMatch = miembros.find(
+        (m) => String(m.nombre_piloto || '').trim().toUpperCase() === nombreBuscado
+      );
+      if (miembroMatch?.avatar_url) return miembroMatch.avatar_url;
+    }
+    return 'https://files.catbox.moe/f3xmld.png';
+  };
+
   const handleGuardarPilotoFama = async (e) => {
     e.preventDefault();
     if (!nuevoPilotoFama.nombre.trim()) return;
 
+    const nombreLimpio = nuevoPilotoFama.nombre.trim().toUpperCase();
+    const miembroMatch = miembros.find(
+      (m) => String(m.nombre_piloto || '').trim().toUpperCase() === nombreLimpio
+    );
+
     const datosPiloto = {
-      nombre: nuevoPilotoFama.nombre.trim().toUpperCase(),
+      nombre: nombreLimpio,
       nacionalidad: (nuevoPilotoFama.nacionalidad || 'ARGENTINA').trim().toUpperCase(),
       campeonatos: parseInt(nuevoPilotoFama.campeonatos, 10) || 0,
-      foto: (nuevoPilotoFama.foto || '').trim() || 'https://files.catbox.moe/f3xmld.png'
+      foto: (nuevoPilotoFama.foto || '').trim() || miembroMatch?.avatar_url || 'https://files.catbox.moe/f3xmld.png'
     };
 
     const { error } = editandoId !== null
@@ -596,7 +615,7 @@ export default function App() {
       nombre: piloto.nombre || '',
       nacionalidad: piloto.nacionalidad || 'ARGENTINA',
       campeonatos: piloto.campeonatos ?? '',
-      foto: piloto.foto || ''
+      foto: obtenerFotoFama(piloto)
     });
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
@@ -1398,11 +1417,11 @@ export default function App() {
             </div>
 
             {esAdminEfectivo && (
-              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2">
+              <form onSubmit={handleGuardarPilotoFama} className="bg-neutral-900/75 backdrop-blur-md border border-[#38bdf8]/30 rounded-xl p-3.5 shadow-xl space-y-2.5">
                 <h3 className="font-wrc text-xs text-[#38bdf8] tracking-wider">
                   ⚙️ {editandoId !== null ? 'EDITAR PILOTO DEL SALÓN DE LA FAMA' : 'AGREGAR PILOTO AL SALÓN DE LA FAMA'} (ADMIN)
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <input
                     type="text"
                     placeholder="NOMBRE"
@@ -1426,14 +1445,12 @@ export default function App() {
                     className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
                     required
                   />
-                  <input
-                    type="text"
-                    placeholder="URL FOTO"
-                    value={nuevoPilotoFama.foto}
-                    onChange={(e) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: e.target.value })}
-                    className="bg-neutral-950 border border-white/15 rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-[#38bdf8]"
-                  />
                 </div>
+                <SubirImagen
+                  currentUrl={nuevoPilotoFama.foto}
+                  inicial={(nuevoPilotoFama.nombre || 'E').charAt(0).toUpperCase()}
+                  onUpload={(base64) => setNuevoPilotoFama({ ...nuevoPilotoFama, foto: base64 })}
+                />
                 <div className="flex justify-end gap-2">
                   {editandoId !== null && (
                     <button
@@ -1465,7 +1482,7 @@ export default function App() {
                       <span>🥈</span> 2º PUESTO
                     </div>
                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-neutral-300 mt-2.5 mb-1.5 shadow bg-neutral-900">
-                      <img src={hallFama[1].foto || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[1].nombre} className="w-full h-full object-cover" />
+                      <img src={obtenerFotoFama(hallFama[1])} alt={hallFama[1].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
                       <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[1].nombre}</h3>
@@ -1499,7 +1516,7 @@ export default function App() {
                       <span>🥇</span> 1º PUESTO
                     </div>
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#38bdf8] mt-2.5 mb-1.5 shadow-[0_0_12px_rgba(56,189,248,0.35)] bg-neutral-900">
-                      <img src={hallFama[0].foto || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[0].nombre} className="w-full h-full object-cover" />
+                      <img src={obtenerFotoFama(hallFama[0])} alt={hallFama[0].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
                       <h3 className="font-wrc text-lg md:text-xl text-[#38bdf8] tracking-wide leading-tight">{hallFama[0].nombre}</h3>
@@ -1533,7 +1550,7 @@ export default function App() {
                       <span>🥉</span> 3º PUESTO
                     </div>
                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-sky-500 mt-2.5 mb-1.5 shadow bg-neutral-900">
-                      <img src={hallFama[2].foto || 'https://files.catbox.moe/f3xmld.png'} alt={hallFama[2].nombre} className="w-full h-full object-cover" />
+                      <img src={obtenerFotoFama(hallFama[2])} alt={hallFama[2].nombre} className="w-full h-full object-cover" />
                     </div>
                     <div className="space-y-0.5">
                       <h3 className="font-wrc text-base md:text-lg text-white tracking-wide leading-tight">{hallFama[2].nombre}</h3>
@@ -1575,7 +1592,7 @@ export default function App() {
                       <div className="flex items-center gap-2.5">
                         <span className="font-wrc text-[#38bdf8] text-xs w-6 text-center">#{idx + 4}</span>
                         <img
-                          src={piloto.foto || 'https://files.catbox.moe/f3xmld.png'}
+                          src={obtenerFotoFama(piloto)}
                           alt={piloto.nombre}
                           className="w-7 h-7 rounded-full object-cover border border-white/20 bg-neutral-900"
                         />

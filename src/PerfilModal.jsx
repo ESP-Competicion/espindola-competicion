@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from './api';
+import SubirImagen from './SubirImagen';
 
 export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado, onActualizado }) {
   const [nombrePiloto, setNombrePiloto] = useState(perfil?.nombre_piloto || '');
@@ -39,7 +40,9 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
     setGuardando(true);
 
     try {
-      const urlLimpia = avatarUrl.trim();
+      const nombreLimpio = nombrePiloto.trim();
+      const fotoLimpia = (avatarUrl || '').trim() || null;
+
       const { data: actual } = await api
         .from('perfiles')
         .eq('id', usuario.id)
@@ -51,12 +54,12 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
       const { error } = await api.from('perfiles').insert(
         {
           id: usuario.id,
-          nombre_piloto: nombrePiloto.trim(),
+          nombre_piloto: nombreLimpio,
           steam_id: steamId.trim(),
           nacionalidad: nacionalidad.trim(),
           provincia: provincia.trim(),
           telefono: telefono.trim(),
-          avatar_url: urlLimpia || null,
+          avatar_url: fotoLimpia,
           password_hash: hashFinal,
           updated_at: new Date().toISOString()
         },
@@ -65,12 +68,20 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
 
       if (error) {
         alert('Error al guardar perfil: ' + error.message);
-      } else {
-        alert('¡Perfil actualizado con éxito!');
-        if (onPerfilGuardado) onPerfilGuardado();
-        if (onActualizado) onActualizado();
-        onClose();
+        return;
       }
+
+      if (fotoLimpia && nombreLimpio) {
+        await api
+          .from('salon_fama')
+          .eq('nombre', nombreLimpio.toUpperCase())
+          .update({ foto: fotoLimpia });
+      }
+
+      alert('¡Perfil actualizado con éxito!');
+      if (onPerfilGuardado) onPerfilGuardado();
+      if (onActualizado) onActualizado();
+      onClose();
     } catch (err) {
       console.error('Error inesperado al guardar perfil:', err);
       alert('Ocurrió un error inesperado al guardar el perfil.');
@@ -88,7 +99,7 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
           Configurar Perfil de Piloto
         </h2>
         <p className="text-neutral-400 text-xs mb-6">
-          Actualiza tus datos personales y pega una URL para tu foto de perfil.
+          Actualizá tus datos personales y subí tu foto para tu perfil, miembros y Salón de la Fama.
         </p>
 
         <form onSubmit={handleGuardar} className="space-y-4">
@@ -150,38 +161,12 @@ export default function PerfilModal({ usuario, perfil, onClose, onPerfilGuardado
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">URL del Avatar (Imagen)</label>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-neutral-950 border border-[#38bdf8]/50 flex items-center justify-center overflow-hidden font-wrc text-[#38bdf8] text-base flex-shrink-0">
-                {avatarUrl.trim() ? (
-                  <img
-                    src={avatarUrl.trim()}
-                    alt="Vista previa"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.nextSibling) {
-                        e.currentTarget.nextSibling.style.display = 'flex';
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                ) : null}
-                <span
-                  style={{ display: avatarUrl.trim() ? 'none' : 'flex' }}
-                  className="w-full h-full items-center justify-center"
-                >
-                  {inicial}
-                </span>
-              </div>
-
-              <input
-                type="url"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://..."
-                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
-              />
-            </div>
+            <label className="block text-xs font-bold text-neutral-300 uppercase mb-1">Foto de Perfil</label>
+            <SubirImagen
+              currentUrl={avatarUrl}
+              inicial={inicial}
+              onUpload={(base64) => setAvatarUrl(base64)}
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
