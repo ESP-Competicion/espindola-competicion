@@ -534,8 +534,8 @@ export async function descargarImagenSalonFama({
 
   const link = document.createElement('a');
   link.download = esVertical
-    ? 'salon-de-la-fama-espindola-9x16.jpg'
-    : 'salon-de-la-fama-espindola-16x9.jpg';
-  link.href = canvas.toDataURL('image/jpeg', 0.94);
+    ? 'salon-de-la-fama-espindola-9x16.png'
+    : 'salon-de-la-fama-espindola-16x9.png';
+  link.href = canvas.toDataURL('image/png');
   link.click();
 }
